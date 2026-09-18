@@ -1,0 +1,15 @@
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+coverage
+.vite
+*.tsbuildinfo
+.supabase
+playwright-report
+test-results
+_to_delete/

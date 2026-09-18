@@ -1,0 +1,96 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   Delta Ridge brand tokens.
+   Sampled from the DDR logo at delta-ridge.com: steel navy (#1D5F80) and
+   warm gold (#B0A070). Type per the site: Oswald (display), Poppins (UI).
+   Designed dark-first: reps work outdoors, and a dark UI with high-contrast
+   controls reads better in glare than a white field app.
+--------------------------------------------------------------------------- */
+@theme {
+  --font-display: 'Oswald', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #eef7fb;
+  --color-brand-100: #d5ebf4;
+  --color-brand-200: #abd6e8;
+  --color-brand-300: #74b8d6;
+  --color-brand-400: #3d90b5;
+  --color-brand-500: #1d5f80;
+  --color-brand-600: #17506e;
+  --color-brand-700: #133f57;
+  --color-brand-800: #102f41;
+  --color-brand-900: #0d2532;
+  --color-brand-950: #08171f;
+
+  --color-gold-50: #faf8f1;
+  --color-gold-100: #f2eddc;
+  --color-gold-200: #e4d9ba;
+  --color-gold-300: #d0be8d;
+  --color-gold-400: #bfa670;
+  --color-gold-500: #b0a070;
+  --color-gold-600: #94824f;
+  --color-gold-700: #766641;
+  --color-gold-800: #5b4f36;
+  --color-gold-900: #453c2c;
+
+  --color-ink: #272727;
+  --color-surface: #0f1a20;
+  --color-surface-2: #16242c;
+  --color-surface-3: #1e3139;
+
+  /* Lead / pin status colors. Chosen for contrast against satellite imagery
+     and to stay distinguishable for the most common forms of color blindness
+     (no red/green-only pairings carry meaning — shape/label always backs it). */
+  --color-status-untouched: #94a3b8;
+  --color-status-target: #b0a070;
+  --color-status-attempted: #a855f7;
+  --color-status-noanswer: #64748b;
+  --color-status-spoke: #38bdf8;
+  --color-status-interested: #22d3ee;
+  --color-status-appointment: #3b82f6;
+  --color-status-inspected: #8b5cf6;
+  --color-status-proposal: #f59e0b;
+  --color-status-sold: #10b981;
+  --color-status-lost: #ef4444;
+  --color-status-dnc: #1f2937;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-surface);
+    color: #e8eef2;
+    font-family: var(--font-sans);
+    /* Respect notches and the iOS home indicator. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overscroll-behavior-y: none;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+  }
+
+  /* Field ergonomics: every interactive target clears 44px, the minimum
+     a gloved thumb can hit reliably while standing on a roof. */
+  button, a[role='button'], [data-field-target] {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

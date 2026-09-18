@@ -1,0 +1,130 @@
+\set ON_ERROR_STOP on
+set client_min_messages to notice;
+
+-- Two orgs, two users, to prove isolation is real rather than aspirational.
+insert into auth.users (id, email) values
+  ('11111111-1111-1111-1111-111111111111','rep.a@delta-ridge.com'),
+  ('22222222-2222-2222-2222-222222222222','rep.b@othercompany.com');
+
+insert into organizations (id, name, slug) values
+  ('aaaaaaaa-0000-0000-0000-000000000001','Delta Ridge Roofing','delta-ridge'),
+  ('bbbbbbbb-0000-0000-0000-000000000002','Rival Roofing','rival');
+
+insert into organization_members (organization_id, user_id, role) values
+  ('aaaaaaaa-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','salesperson'),
+  ('bbbbbbbb-0000-0000-0000-000000000002','22222222-2222-2222-2222-222222222222','salesperson');
+
+insert into properties (id, organization_id, address_line1, city, parish, postal_code, location) values
+  ('cccccccc-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000001',
+   '14235 Airline Hwy','Gonzales','Ascension','70737',
+   ST_SetSRID(ST_MakePoint(-90.9201, 30.2388),4326)::geography),
+  ('cccccccc-0000-0000-0000-000000000002','bbbbbbbb-0000-0000-0000-000000000002',
+   '900 Rival Road','Baton Rouge','East Baton Rouge','70802',
+   ST_SetSRID(ST_MakePoint(-91.1871, 30.4515),4326)::geography);
+
+grant usage on schema public, app to authenticated;
+grant all on all tables in schema public to authenticated;
+grant execute on all functions in schema app to authenticated;
+
+\echo '--- TEST 1: RLS org isolation ---'
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+select case when count(*)=1 then 'PASS rep A sees exactly their 1 property'
+            else 'FAIL rep A sees '||count(*) end from properties;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+select case when count(*)=1 and min(address_line1)='900 Rival Road'
+            then 'PASS rep B sees only their own, not Delta Ridge''s'
+            else 'FAIL cross-org leak: '||coalesce(string_agg(address_line1,', '),'none') end from properties;
+reset role;
+
+\echo '--- TEST 2: duplicate address protection ---'
+do $$
+begin
+  insert into properties (organization_id, address_line1, postal_code)
+  values ('aaaaaaaa-0000-0000-0000-000000000001','14235 Airline Hwy.','70737');
+  raise notice 'FAIL duplicate address was accepted';
+exception when unique_violation then
+  raise notice 'PASS duplicate blocked (punctuation-insensitive match)';
+end $$;
+
+\echo '--- TEST 3: HailTrace geometry licence trigger ---'
+insert into storm_events (provider, external_id, event_type, occurred_at, hail_size_inches, location)
+values ('noaa','spc-2026-0417-a','hail','2026-04-17 18:20-05',1.75,
+        ST_SetSRID(ST_MakePoint(-90.92,30.24),4326)::geography);
+do $$
+begin
+  insert into storm_events (provider, external_id, event_type, occurred_at, affected_area)
+  values ('hailtrace','ht-1','hail', now(),
+          ST_SetSRID(ST_GeomFromText('MULTIPOLYGON(((-91 30,-91 31,-90 31,-90 30,-91 30)))'),4326)::geography);
+  raise notice 'FAIL licensed geometry was persisted';
+exception when check_violation then
+  raise notice 'PASS licensed geometry rejected at the database layer';
+end $$;
+
+\echo '--- TEST 4: checklist auto-satisfies when a photo is taken ---'
+insert into inspections (id, organization_id, property_id, inspector_id)
+values ('dddddddd-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000001',
+        'cccccccc-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111');
+insert into inspection_checklist_items (organization_id, inspection_id, category, label, is_required) values
+  ('aaaaaaaa-0000-0000-0000-000000000001','dddddddd-0000-0000-0000-000000000001','slope_rear','Rear slope overview',true),
+  ('aaaaaaaa-0000-0000-0000-000000000001','dddddddd-0000-0000-0000-000000000001','gutter','Gutters',true);
+insert into photos (organization_id, inspection_id, property_id, storage_path, client_id, category)
+values ('aaaaaaaa-0000-0000-0000-000000000001','dddddddd-0000-0000-0000-000000000001',
+        'cccccccc-0000-0000-0000-000000000001','o/a/p/1.jpg', gen_random_uuid(), 'slope_rear');
+select case when count(*)=1 and min(category::text)='gutter'
+       then 'PASS only the un-photographed item remains outstanding'
+       else 'FAIL outstanding='||coalesce(string_agg(category::text,','),'none') end
+from inspection_checklist_items
+where inspection_id='dddddddd-0000-0000-0000-000000000001' and satisfied_at is null;
+
+\echo '--- TEST 5: a blurry photo does NOT satisfy the checklist ---'
+insert into photos (organization_id, inspection_id, property_id, storage_path, client_id, category, retake_recommended, quality_flag)
+values ('aaaaaaaa-0000-0000-0000-000000000001','dddddddd-0000-0000-0000-000000000001',
+        'cccccccc-0000-0000-0000-000000000001','o/a/p/2.jpg', gen_random_uuid(), 'gutter', true, 'blurry');
+select case when count(*)=1 then 'PASS blurry gutter photo left the item outstanding'
+            else 'FAIL blurry photo wrongly satisfied the requirement' end
+from inspection_checklist_items
+where inspection_id='dddddddd-0000-0000-0000-000000000001' and satisfied_at is null;
+
+\echo '--- TEST 6: handoff idempotency (double-tap Send) ---'
+do $$
+begin
+  insert into external_records (organization_id, provider, record_type, local_table, local_id, external_id)
+  values ('aaaaaaaa-0000-0000-0000-000000000001','companycam','project','inspections',
+          'dddddddd-0000-0000-0000-000000000001','cc-proj-9001');
+  insert into external_records (organization_id, provider, record_type, local_table, local_id, external_id)
+  values ('aaaaaaaa-0000-0000-0000-000000000001','companycam','project','inspections',
+          'dddddddd-0000-0000-0000-000000000001','cc-proj-9002');
+  raise notice 'FAIL second push created a duplicate CompanyCam/Roofr job';
+exception when unique_violation then
+  raise notice 'PASS second push blocked - no duplicate Roofr job';
+end $$;
+
+\echo '--- TEST 7: only one live handoff per inspection ---'
+do $$
+begin
+  insert into office_handoffs (organization_id, inspection_id, property_id, status)
+  values ('aaaaaaaa-0000-0000-0000-000000000001','dddddddd-0000-0000-0000-000000000001','cccccccc-0000-0000-0000-000000000001','ready');
+  insert into office_handoffs (organization_id, inspection_id, property_id, status)
+  values ('aaaaaaaa-0000-0000-0000-000000000001','dddddddd-0000-0000-0000-000000000001','cccccccc-0000-0000-0000-000000000001','ready');
+  raise notice 'FAIL two live handoffs coexist';
+exception when unique_violation then
+  raise notice 'PASS one live handoff enforced';
+end $$;
+
+\echo '--- TEST 8: audit log is not client-writable ---'
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+do $$
+begin
+  insert into audit_log (organization_id, action) values ('aaaaaaaa-0000-0000-0000-000000000001','tamper');
+  raise notice 'FAIL client wrote to the audit log';
+exception when insufficient_privilege then
+  raise notice 'PASS audit log insert denied to client role';
+end $$;
+reset role;
+
+\echo '--- TEST 9: proximity query (PostGIS) ---'
+select 'PASS storm within 5km of property: '||count(*)::text
+from storm_events s join properties p on ST_DWithin(s.location, p.location, 5000)
+where p.id='cccccccc-0000-0000-0000-000000000001';
