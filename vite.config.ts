@@ -32,6 +32,16 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Without navigateFallback a reload with no signal hits the browser's
+        // "No internet" page: workbox only has the precached ASSETS, nothing
+        // telling it to answer a navigation with the app shell. Verified by
+        // going offline and reloading - the whole premise of the app fails
+        // without this line.
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/assets\//, /^\/api\//],
+        // Take control on first activation so the very first visit is already
+        // offline-capable, rather than only from the second load onward.
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         // Field reality: map tiles and Supabase reads get network-first with a
