@@ -34,10 +34,10 @@ export interface LocalInspection {
   latitude?: number
   longitude?: number
   propertyType: 'residential' | 'multi_family' | 'commercial' | 'other'
-  stories?: number
+  stories?: number | undefined
   roofMaterial: string
   // Homeowner-supplied, explicitly labelled as such
-  homeownerStatedRoofAgeYears?: number
+  homeownerStatedRoofAgeYears?: number | undefined
   homeownerStatedInsurer?: string
   inspectorRecommendation?: string
   waivedCategories?: PhotoCategory[]

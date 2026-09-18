@@ -4,7 +4,7 @@
 **Vercel project:** `deltaridge` (`prj_wUaznrMlrHN3JOw7cIbDZcbYerDy`)
 **Team:** `pearsonprojects` (`team_HQxssrWtf0ZN98RlOhjmnvKi`)
 
-## Status as of 2026-09-18
+## Status as of 2026-09-18 — LIVE
 
 | Step | State |
 | --- | --- |
@@ -12,9 +12,26 @@
 | Vercel project created with env vars | Done |
 | Domain attached to project, verified by Vercel | Done |
 | Repo linked (`.vercel/project.json`) | Done |
-| **Vercel CLI authentication** | **Needed from Ned** |
-| First production deploy | Blocked on the above |
-| **Cloudflare CNAME** | **Needed from Ned** |
+| Vercel CLI authentication | Done (device-code OAuth, `Neds_ASUS`) |
+| First production deploy | Done — `deltaridge-3e5d6ljc1` |
+| Cloudflare CNAME | Done — `deltaridge` -> `cname.vercel-dns.com`, DNS only |
+| Custom domain serving over TLS | Verified — HTTP 200, app renders |
+
+### What the first deploy caught
+
+The build failed on the first attempt with four TypeScript errors that
+`tsc --noEmit` had not surfaced locally, because `npm run build` runs `tsc -b`
+across both project references and the local check had only covered the app
+project:
+
+- `ReviewPanel.tsx` passed `{ stories: number | undefined }` into
+  `Partial<LocalInspection>`, which `exactOptionalPropertyTypes` rejects. Fixed at
+  the type, not the flag: the two clearable numeric fields in `LocalInspection`
+  are now `?: number | undefined`, so a rep can still blank them out.
+- `vite.config.ts` could not resolve `node:url` or `import.meta.url`. `@types/node`
+  was missing from devDependencies and `tsconfig.node.json` had no `types` entry.
+
+Run `npm run build`, not `npm run typecheck`, before trusting a deploy.
 
 ## Deploying
 
