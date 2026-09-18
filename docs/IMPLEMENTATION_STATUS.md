@@ -116,3 +116,49 @@ then widen.
 5. **Licensed geometry is blocked in the database, not in a code comment.**
 6. **`exactOptionalPropertyTypes` is kept on.** Fields a rep can clear are typed
    `?: T | undefined` rather than loosening the compiler flag.
+
+---
+
+## Update — end of 2026-09-18
+
+**Live at https://deltaridge.bridgebox.ai**
+
+- Vercel project, domain attached, Cloudflare CNAME (DNS only), production
+  deploy verified end to end.
+- **Offline fixed.** The first live build failed an offline reload — workbox had
+  no `navigateFallback`, so a navigation with no signal fell through to a dead
+  network. Fixed and verified in production: the service worker controls the
+  page, offline reload renders, offline deep links render.
+- **Schema applied.** All 27 tables live on Supabase project
+  `udrxvpkihkbrudvwggpr`. Verified through the REST API rather than by trusting
+  the editor: every table returns `[]` to an anonymous key, and an anonymous
+  insert is refused with `42501 row-level security policy`. RLS is enforcing,
+  not merely declared.
+- **Dependencies installed** — 633 packages, targeted at Windows with
+  `--os=win32 --cpu=x64`, so the tree carries `@esbuild/win32-x64` and the win32
+  rollup binaries rather than the Linux ones the installing shell would have
+  fetched by default. `package-lock.json` is committed.
+- **`.env` no longer ships to Vercel.**
+
+### The one remaining blocker
+
+`github.com/nedpearson/DeltaRidge` has **zero commits** — everything has only
+ever existed locally. The remote is now configured; the push needs the GitHub
+credentials in Windows Credential Manager:
+
+```
+git push -u origin main
+```
+
+This is also the exact cause of Railway's "Could not find latest commit for
+repo" error. Railway is reporting the truth: there is no commit to deploy.
+
+### On Railway
+
+Delta Ridge is a static Vite SPA and is already served from Vercel's edge on the
+production domain. Railway bills for a container running continuously, so
+deploying this app there buys a slower, costlier second copy and a second deploy
+path to maintain. Railway earns its place on the parts that do not exist yet —
+the CompanyCam sync worker, the Roofr webhook receiver, the AI photo-analysis
+endpoint — which are long-running server work that does not belong on an edge
+CDN.
