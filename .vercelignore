@@ -1,3 +1,9 @@
+# Never ship local secrets to the build. .env is read at build time from
+# Vercel's own environment variables, never from an uploaded file.
+.env
+.env.*
+!.env.example
+
 _to_delete
 node_modules
 dist
