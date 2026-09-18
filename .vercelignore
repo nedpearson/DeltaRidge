@@ -1,0 +1,10 @@
+_to_delete
+node_modules
+dist
+dev-dist
+coverage
+tests
+docs
+supabase
+.git
+*.log
