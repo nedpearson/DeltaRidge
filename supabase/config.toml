@@ -1,0 +1,7 @@
+# Supabase CLI project configuration.
+# Links this repo to the DeltaRidge project so `supabase db push` knows where
+# migrations go. Contains no secrets.
+project_id = "udrxvpkihkbrudvwggpr"
+
+[db]
+major_version = 17
