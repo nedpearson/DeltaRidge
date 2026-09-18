@@ -4,34 +4,28 @@
 **Vercel project:** `deltaridge` (`prj_wUaznrMlrHN3JOw7cIbDZcbYerDy`)
 **Team:** `pearsonprojects` (`team_HQxssrWtf0ZN98RlOhjmnvKi`)
 
-## Status as of 2026-09-18 — LIVE
+## Status as of 2026-09-18
+
+**Live at https://deltaridge.bridgebox.ai**
 
 | Step | State |
 | --- | --- |
-| App built, typechecked, linted, tested, smoke-tested | Done |
-| Vercel project created with env vars | Done |
-| Domain attached to project, verified by Vercel | Done |
-| Repo linked (`.vercel/project.json`) | Done |
-| Vercel CLI authentication | Done (device-code OAuth, `Neds_ASUS`) |
-| First production deploy | Done — `deltaridge-3e5d6ljc1` |
-| Cloudflare CNAME | Done — `deltaridge` -> `cname.vercel-dns.com`, DNS only |
-| Custom domain serving over TLS | Verified — HTTP 200, app renders |
+| App built, typechecked, linted, tested | Done |
+| Vercel project + env vars | Done |
+| Domain attached and verified | Done |
+| Cloudflare CNAME (deltaridge -> cname.vercel-dns.com, DNS only) | Done |
+| First production deploy | Done |
+| Offline navigation fix (233ec2e) | **Committed, not yet deployed** |
 
-### What the first deploy caught
+Verified against the live site: JS and CSS assets serve, manifest / sw.js /
+icons all 200, SPA deep links rewrite correctly, an inspection can be created
+end to end, the required-photo checklist surfaces 9 items, the blocker gate
+holds, the evidence-gap warning fires from a dictated observation, and there
+are zero console errors.
 
-The build failed on the first attempt with four TypeScript errors that
-`tsc --noEmit` had not surfaced locally, because `npm run build` runs `tsc -b`
-across both project references and the local check had only covered the app
-project:
-
-- `ReviewPanel.tsx` passed `{ stories: number | undefined }` into
-  `Partial<LocalInspection>`, which `exactOptionalPropertyTypes` rejects. Fixed at
-  the type, not the flag: the two clearable numeric fields in `LocalInspection`
-  are now `?: number | undefined`, so a rep can still blank them out.
-- `vite.config.ts` could not resolve `node:url` or `import.meta.url`. `@types/node`
-  was missing from devDependencies and `tsconfig.node.json` had no `types` entry.
-
-Run `npm run build`, not `npm run typecheck`, before trusting a deploy.
+One defect was found on the live site and fixed in 233ec2e: going offline and
+reloading served the browser's "No internet" page instead of the app, because
+workbox had no navigateFallback. Deploy that commit to ship the fix.
 
 ## Deploying
 
