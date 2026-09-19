@@ -5,6 +5,7 @@ import HomePage from '@/pages/HomePage'
 import InspectionsPage from '@/pages/InspectionsPage'
 import NewInspectionPage from '@/pages/NewInspectionPage'
 import InspectionPage from '@/pages/InspectionPage'
+import LeadsPage from '@/pages/LeadsPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import { SessionProvider } from '@/features/auth/session'
 import { useSync } from '@/features/auth/useSync'
@@ -23,6 +24,7 @@ export default function App() {
       <AppShell>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/leads" element={<LeadsPage />} />
           <Route path="/inspections" element={<InspectionsPage />} />
           <Route path="/new" element={<NewInspectionPage />} />
           <Route path="/inspection/:id" element={<InspectionPage />} />

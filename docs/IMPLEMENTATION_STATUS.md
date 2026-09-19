@@ -162,3 +162,21 @@ path to maintain. Railway earns its place on the parts that do not exist yet —
 the CompanyCam sync worker, the Roofr webhook receiver, the AI photo-analysis
 endpoint — which are long-running server work that does not belong on an edge
 CDN.
+
+## Update - lead generation shipped ahead of the sync work
+
+`/leads` is live: hail reports crossed with East Baton Rouge permit records,
+producing a ranked, explainable door list. It runs entirely in the browser - the
+NWS storm feed, the parish permit feed and the parish address locator are all
+public, keyless and CORS-open - so it needs no backend and no Supabase.
+
+This shipped on its own, ahead of the offline-to-Supabase sync rework and the
+office handoff, because those depend on migration 0010 (client_id columns) which
+is not yet applied to the live database. Verified against production on
+2026-09-19: `column inspections.client_id does not exist`. Until that migration
+runs, the sync rework stays on `phase1-field-core`.
+
+Honest limits, all surfaced in the app: East Baton Rouge only (Ascension has
+required re-roof permits since August 2025 but publishes no feed; Livingston is
+view-only), the permit history starts in 2011 so roofs older than about 15 years
+are invisible, and a roof replaced without a permit leaves no trace.
