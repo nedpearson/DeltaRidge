@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { syncOutbox, type SyncResult } from '@/lib/sync/index'
-import { outboxCount } from '@/lib/db'
+import { pendingWork, syncOutbox, type SyncResult } from '@/lib/sync/index'
+import { listStalledOutbox, retryStalledOutbox } from '@/lib/sync-store'
+import type { OutboxItem } from '@/lib/db'
 import { useSession } from './session'
 
 /**
@@ -9,16 +10,26 @@ import { useSession } from './session'
  * Deliberately conservative: one drain at a time, on an interval and on
  * regaining connectivity. A rep is not waiting on this — their work is already
  * safe locally — so there is no reason to be aggressive about it.
+ *
+ * `stalled` is the part that matters to a rep. Items that have exhausted their
+ * retries stop being attempted, and a queue that has quietly stopped trying
+ * looks exactly like a queue that lost the work. These are surfaced with their
+ * error and a manual retry rather than being left to a background loop nobody
+ * can see.
  */
 export function useSync() {
   const { session, membership } = useSession()
   const [pending, setPending] = useState(0)
+  const [stalled, setStalled] = useState<OutboxItem[]>([])
   const [last, setLast] = useState<SyncResult | null>(null)
   const [running, setRunning] = useState(false)
   const inFlight = useRef(false)
 
   const refreshPending = useCallback(() => {
-    void outboxCount().then(setPending).catch(() => undefined)
+    void pendingWork()
+      .then(({ total }) => setPending(total))
+      .catch(() => undefined)
+    void listStalledOutbox().then(setStalled).catch(() => undefined)
   }, [])
 
   const run = useCallback(async () => {
@@ -35,6 +46,12 @@ export function useSync() {
     }
   }, [membership, session, refreshPending])
 
+  /** Clears the give-up flag on stalled items and drains immediately. */
+  const retryFailed = useCallback(async () => {
+    await retryStalledOutbox()
+    await run()
+  }, [run])
+
   useEffect(() => {
     refreshPending()
     const onOnline = () => void run()
@@ -50,5 +67,5 @@ export function useSync() {
     }
   }, [run, refreshPending, session, membership])
 
-  return { pending, last, running, syncNow: run }
+  return { pending, stalled, last, running, syncNow: run, retryFailed }
 }

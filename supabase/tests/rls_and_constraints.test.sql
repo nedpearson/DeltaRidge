@@ -136,6 +136,14 @@ where p.id='cccccccc-0000-0000-0000-000000000001';
 -- invited address must come out with exactly the granted role, and an
 -- uninvited address must come out with no organisation access at all.
 -- -----------------------------------------------------------------------------
+-- The real Delta Ridge organisation row lives in production only; it was seeded
+-- by hand rather than by a migration. Cases 10-12 exercise the invite trigger
+-- against that specific id, so the fixture has to create it here or the whole
+-- block fails on a foreign key and the suite cannot be run locally at all.
+insert into organizations (id, name, slug) values
+  ('d17a0000-0000-4000-8000-000000000001','Delta Ridge Roofing (production id)','delta-ridge-prod')
+on conflict (id) do nothing;
+
 insert into organization_invites (organization_id, email, role)
 values ('d17a0000-0000-4000-8000-000000000001', 'Owner.Test@Example.COM', 'admin');
 
@@ -180,5 +188,86 @@ begin
   end if;
 
   raise notice 'PASS 10-12: invite grants admin, uninvited signup gets nothing';
+end;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- TEST 13-15: idempotent field sync.
+--
+-- The field app pushes from a phone that regularly loses signal between the
+-- write and the acknowledgement. Every one of those pushes is an UPSERT keyed on
+-- (organization_id, client_id), and these cases assert the two properties that
+-- depends on: a repeated push updates instead of duplicating, and a later push
+-- carries the rep's edits through rather than being ignored.
+-- -----------------------------------------------------------------------------
+\echo '--- TEST 13-15: idempotent field sync ---'
+do $$
+declare
+  org uuid := 'aaaaaaaa-0000-0000-0000-000000000001';
+  prop uuid := 'cccccccc-0000-0000-0000-000000000001';
+  cid uuid := '5eed0000-0000-4000-8000-00000000001d';
+  obs_cid uuid := '5eed0000-0000-4000-8000-00000000002d';
+  n integer;
+  final_status text;
+  final_note text;
+  obs_count integer;
+begin
+  -- First push from the field: inspection created, still in progress.
+  insert into inspections (organization_id, client_id, property_id, status)
+  values (org, cid, prop, 'in_progress')
+  on conflict (organization_id, client_id)
+    do update set status = excluded.status, inspector_recommendation = excluded.inspector_recommendation;
+
+  -- The acknowledgement was lost, so the phone retries the identical push.
+  insert into inspections (organization_id, client_id, property_id, status)
+  values (org, cid, prop, 'in_progress')
+  on conflict (organization_id, client_id)
+    do update set status = excluded.status, inspector_recommendation = excluded.inspector_recommendation;
+
+  select count(*) into n from inspections where organization_id = org and client_id = cid;
+  if n <> 1 then
+    raise exception 'FAIL 13: retried push created % inspections, expected 1', n;
+  end if;
+
+  -- The rep finishes and sends. The same client_id must UPDATE, not insert, and
+  -- the edits must actually land — this is the bug where an inspection reached
+  -- the office once at creation and then stopped receiving changes forever.
+  insert into inspections (organization_id, client_id, property_id, status, inspector_recommendation)
+  values (org, cid, prop, 'sent_to_office', 'Full replacement.')
+  on conflict (organization_id, client_id)
+    do update set status = excluded.status, inspector_recommendation = excluded.inspector_recommendation;
+
+  select count(*), max(status::text), max(inspector_recommendation)
+    into n, final_status, final_note
+    from inspections where organization_id = org and client_id = cid;
+
+  if n <> 1 then
+    raise exception 'FAIL 14: completing created % inspections, expected 1', n;
+  end if;
+  if final_status is distinct from 'sent_to_office' then
+    raise exception 'FAIL 14: status stuck at %, the rep''s edit never landed', final_status;
+  end if;
+  if final_note is distinct from 'Full replacement.' then
+    raise exception 'FAIL 14: recommendation was not carried through on update';
+  end if;
+
+  -- Observations carry the same guarantee.
+  insert into inspection_observations (organization_id, client_id, inspection_id, finding)
+  select org, obs_cid, id, 'Possible hail impacts, rear slope'
+    from inspections where organization_id = org and client_id = cid
+  on conflict (organization_id, client_id) do update set finding = excluded.finding;
+
+  insert into inspection_observations (organization_id, client_id, inspection_id, finding)
+  select org, obs_cid, id, 'Possible hail impacts, rear slope'
+    from inspections where organization_id = org and client_id = cid
+  on conflict (organization_id, client_id) do update set finding = excluded.finding;
+
+  select count(*) into obs_count
+    from inspection_observations where organization_id = org and client_id = obs_cid;
+  if obs_count <> 1 then
+    raise exception 'FAIL 15: retried observation push created % rows, expected 1', obs_count;
+  end if;
+
+  raise notice 'PASS 13-15: retried pushes update one row, and rep edits reach the server';
 end;
 $$;

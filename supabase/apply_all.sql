@@ -1,5 +1,5 @@
 -- Delta Ridge — all migrations, concatenated for one-shot application.
--- Generated 2026-09-18T22:16Z from supabase/migrations/.
+-- Generated 2026-09-19T03:46Z from supabase/migrations/.
 -- Source of truth is the individual migration files; prefer 'supabase db push'.
 -- Postgres runs this as a single implicit transaction: it applies fully or not at all.
 
@@ -1151,4 +1151,294 @@ create policy ai_runs_read on ai_runs
 -- client. Absence of INSERT/UPDATE/DELETE policies is intentional.
 create policy audit_log_read on audit_log
   for select using (app.has_org_role(organization_id, array['admin', 'manager']::app_role[]));
+
+-- =================================================================
+-- 20260918_0007_invites.sql
+-- =================================================================
+-- -----------------------------------------------------------------------------
+-- 0007 — Invite-based membership provisioning.
+--
+-- The site is publicly reachable, so "first user becomes admin" is not safe: a
+-- stranger who signed up before the owner would own the organisation. Instead an
+-- admin (or a seed migration) records an invite against an email address, and
+-- the existing on_auth_user_created trigger grants membership when, and only
+-- when, a user appears with that address.
+--
+-- Auth is magic-link only (signInWithOtp). There are no passwords anywhere in
+-- this system, so there is nothing to provision beyond the membership row.
+-- -----------------------------------------------------------------------------
+
+create table if not exists organization_invites (
+  id              uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations (id) on delete cascade,
+  email           text not null,
+  role            app_role not null default 'salesperson',
+  invited_by      uuid references auth.users (id) on delete set null,
+  accepted_at     timestamptz,
+  accepted_by     uuid references auth.users (id) on delete set null,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  constraint organization_invites_email_shape check (position('@' in email) > 1)
+);
+
+-- One open invite per address per org. Accepted rows are kept as an audit trail
+-- and do not block re-inviting someone who was removed.
+create unique index if not exists organization_invites_open_email_idx
+  on organization_invites (organization_id, lower(email))
+  where accepted_at is null;
+
+create index if not exists organization_invites_email_idx
+  on organization_invites (lower(email)) where accepted_at is null;
+
+drop trigger if exists touch_organization_invites on organization_invites;
+create trigger touch_organization_invites before update on organization_invites
+  for each row execute function app.touch_updated_at();
+
+alter table organization_invites enable row level security;
+
+-- Only admins and managers of the org can see or manage its invites. The
+-- trigger below is SECURITY DEFINER, so provisioning does not depend on these.
+drop policy if exists organization_invites_read on organization_invites;
+create policy organization_invites_read on organization_invites
+  for select using (app.has_org_role(organization_id, array['admin', 'manager']::app_role[]));
+
+drop policy if exists organization_invites_write on organization_invites;
+create policy organization_invites_write on organization_invites
+  for all using (app.has_org_role(organization_id, array['admin']::app_role[]))
+  with check (app.has_org_role(organization_id, array['admin']::app_role[]));
+
+-- -----------------------------------------------------------------------------
+-- Extend the existing signup trigger. It already creates the profile row; now
+-- it also redeems any open invite for the new user's address.
+-- -----------------------------------------------------------------------------
+create or replace function app.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_catalog
+as $$
+declare
+  inv record;
+begin
+  insert into profiles (id, full_name)
+  values (new.id, coalesce(new.raw_user_meta_data ->> 'full_name', new.email))
+  on conflict (id) do nothing;
+
+  if new.email is null then
+    return new;
+  end if;
+
+  for inv in
+    select id, organization_id, role
+      from organization_invites
+     where lower(email) = lower(new.email)
+       and accepted_at is null
+     order by created_at
+  loop
+    insert into organization_members (organization_id, user_id, role)
+    values (inv.organization_id, new.id, inv.role)
+    on conflict (organization_id, user_id)
+      do update set role = excluded.role, is_active = true, updated_at = now();
+
+    update organization_invites
+       set accepted_at = now(), accepted_by = new.id
+     where id = inv.id;
+
+    update profiles
+       set default_org_id = coalesce(default_org_id, inv.organization_id)
+     where id = new.id;
+  end loop;
+
+  return new;
+end;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- Redeem outstanding invites for users who already exist. Signups that happened
+-- before this migration never saw the loop above; this makes the migration
+-- idempotent with respect to ordering.
+-- -----------------------------------------------------------------------------
+create or replace function app.redeem_pending_invites()
+returns integer
+language plpgsql
+security definer
+set search_path = public, pg_catalog
+as $$
+declare
+  redeemed integer := 0;
+  rec record;
+begin
+  for rec in
+    select i.id as invite_id, i.organization_id, i.role, u.id as user_id
+      from organization_invites i
+      join auth.users u on lower(u.email) = lower(i.email)
+     where i.accepted_at is null
+  loop
+    insert into organization_members (organization_id, user_id, role)
+    values (rec.organization_id, rec.user_id, rec.role)
+    on conflict (organization_id, user_id)
+      do update set role = excluded.role, is_active = true, updated_at = now();
+
+    update organization_invites
+       set accepted_at = now(), accepted_by = rec.user_id
+     where id = rec.invite_id;
+
+    update profiles
+       set default_org_id = coalesce(default_org_id, rec.organization_id)
+     where id = rec.user_id;
+
+    redeemed := redeemed + 1;
+  end loop;
+
+  return redeemed;
+end;
+$$;
+
+revoke all on function app.redeem_pending_invites() from public, anon, authenticated;
+
+-- -----------------------------------------------------------------------------
+-- Seed: the owner is admin of Delta Ridge Roofing on first sign-in.
+-- -----------------------------------------------------------------------------
+-- Guarded on the organisation existing as well as on the invite not existing.
+-- The Delta Ridge org row was seeded by hand in production, not by a migration,
+-- so without this guard the file cannot be replayed anywhere else: a fresh
+-- database (the local harness in supabase/tests, or a staging project) fails
+-- here on a foreign key and leaves the migration half applied.
+insert into organization_invites (organization_id, email, role)
+select 'd17a0000-0000-4000-8000-000000000001'::uuid, 'nedpearson@gmail.com', 'admin'::app_role
+where exists (
+  select 1 from organizations where id = 'd17a0000-0000-4000-8000-000000000001'::uuid
+)
+and not exists (
+  select 1 from organization_invites
+   where organization_id = 'd17a0000-0000-4000-8000-000000000001'::uuid
+     and lower(email) = 'nedpearson@gmail.com'
+);
+
+select app.redeem_pending_invites();
+
+-- =================================================================
+-- 20260918_0008_pin_function_search_paths.sql
+-- =================================================================
+-- -----------------------------------------------------------------------------
+-- 0008 — Pin search_path on the remaining helper functions.
+--
+-- The SECURITY DEFINER functions already pinned theirs (see 0002). These five
+-- are plain trigger/helper functions, so the exposure is smaller, but an
+-- unpinned search_path still lets a caller-supplied schema shadow an unqualified
+-- name inside the body. Supabase's database linter flags all five
+-- (0011_function_search_path_mutable) and it is a one-line fix each.
+--
+-- ALTER FUNCTION ... SET is used rather than CREATE OR REPLACE on purpose:
+-- app.normalize_address backs a generated column on `properties`, and leaving
+-- the body untouched keeps that dependency from being revalidated.
+-- -----------------------------------------------------------------------------
+
+alter function app.touch_updated_at()           set search_path = public, pg_catalog;
+alter function app.normalize_address(text)      set search_path = public, pg_catalog;
+alter function app.bump_lead_activity()         set search_path = public, pg_catalog;
+alter function app.satisfy_checklist_on_photo() set search_path = public, pg_catalog;
+alter function app.enforce_geometry_licence()   set search_path = public, pg_catalog;
+
+-- =================================================================
+-- 20260918_0009_handoff_override.sql
+-- =================================================================
+-- -----------------------------------------------------------------------------
+-- 0009 — Record deliberate completeness overrides.
+--
+-- The completeness engine used to hard-gate completion. In the field that is
+-- the wrong trade: a rep who cannot get on the roof, or whose homeowner walks
+-- off mid-visit, still has to be able to close the visit out. Blocking them
+-- does not produce the missing photo, it produces an inspection that never gets
+-- recorded at all.
+--
+-- So nothing is mandatory any more. What replaces the gate is accountability:
+-- the rep confirms what is missing, and that decision travels with the
+-- inspection so the office sees the gaps before pricing rather than after.
+-- -----------------------------------------------------------------------------
+
+alter table inspections
+  add column if not exists overridden_issue_codes text[] not null default '{}',
+  add column if not exists override_note text;
+
+comment on column inspections.overridden_issue_codes is
+  'Completeness issue codes the inspector knowingly finished without. Empty means nothing was skipped.';
+comment on column inspections.override_note is
+  'Optional reason the inspector gave for finishing with outstanding items.';
+
+-- Cheap partial index: the office view that matters is "show me the ones with
+-- gaps", which is the minority of rows.
+create index if not exists inspections_with_overrides_idx
+  on inspections (organization_id)
+  where cardinality(overridden_issue_codes) > 0;
+
+-- =================================================================
+-- 20260918_0010_client_ids_for_idempotent_sync.sql
+-- =================================================================
+-- =============================================================================
+-- 0010  Client ids on the remaining field-captured tables
+-- =============================================================================
+-- `photos` and `voice_notes` already carry a client-generated `client_id` with
+-- a unique constraint, which is what makes a retried upload safe. `inspections`
+-- and `inspection_observations` did not, so the push layer could only INSERT
+-- them — and an insert that succeeds on the server but whose acknowledgement
+-- never reaches the phone (app killed, signal dropped between the write and the
+-- response) is retried and creates a second copy of the same roof inspection.
+--
+-- The same column also turns the push into an UPSERT, which fixes a quieter and
+-- worse bug: an inspection was pushed once, on creation, and every later edit —
+-- the completion time, the rep's recommendation, the homeowner's stated roof
+-- age, the override note — stayed on the phone forever. The office saw a
+-- permanently in-progress shell.
+--
+-- `office_handoffs` gets one too, keyed to the local inspection id, so a rep
+-- who taps Send twice gets one handoff row, not two.
+--
+-- Backfill uses the existing primary key, which is unique by definition, so
+-- rows written before this migration keep a stable identity.
+-- =============================================================================
+
+alter table inspections add column if not exists client_id uuid;
+update inspections set client_id = id where client_id is null;
+alter table inspections alter column client_id set not null;
+-- A default matters as much as the constraint: rows created by anything other
+-- than the field app (the office, a seed, a future web form) still get a stable
+-- identity instead of failing on a NOT NULL they know nothing about.
+alter table inspections alter column client_id set default gen_random_uuid();
+alter table inspections
+  add constraint inspections_org_client_unique unique (organization_id, client_id);
+
+comment on column inspections.client_id is
+  'UUID generated on the device before the row ever reaches the server. The '
+  'conflict target for upserts, so a retried push updates rather than duplicates.';
+
+alter table inspection_observations add column if not exists client_id uuid;
+update inspection_observations set client_id = id where client_id is null;
+alter table inspection_observations alter column client_id set not null;
+-- A default matters as much as the constraint: rows created by anything other
+-- than the field app (the office, a seed, a future web form) still get a stable
+-- identity instead of failing on a NOT NULL they know nothing about.
+alter table inspection_observations alter column client_id set default gen_random_uuid();
+alter table inspection_observations
+  add constraint observations_org_client_unique unique (organization_id, client_id);
+
+comment on column inspection_observations.client_id is
+  'Device-generated UUID; conflict target for idempotent upserts.';
+
+-- One handoff per local inspection per organization. Note this coexists with
+-- office_handoffs_one_live: an upsert on (organization_id, client_id) resolves
+-- to an UPDATE of the same row, so the partial "one live handoff per
+-- inspection" index is never challenged by a resend.
+alter table office_handoffs add column if not exists client_id uuid;
+update office_handoffs set client_id = inspection_id where client_id is null;
+alter table office_handoffs alter column client_id set not null;
+-- A default matters as much as the constraint: rows created by anything other
+-- than the field app (the office, a seed, a future web form) still get a stable
+-- identity instead of failing on a NOT NULL they know nothing about.
+alter table office_handoffs alter column client_id set default gen_random_uuid();
+alter table office_handoffs
+  add constraint office_handoffs_org_client_unique unique (organization_id, client_id);
+
+comment on column office_handoffs.client_id is
+  'The local inspection id. Tapping Send to office twice updates one row.';
 

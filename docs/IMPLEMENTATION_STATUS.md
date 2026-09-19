@@ -1,6 +1,6 @@
 # Implementation Status
 
-**Last updated:** 2026-09-18
+**Last updated:** 2026-09-18 (Phase 1: field core)
 
 "Complete" here means built, executed, and verified by a command whose output was
 read. UI existing is not complete. Code compiling is not complete.
@@ -14,8 +14,10 @@ read. UI existing is not complete. Code compiling is not complete.
 ### Repository and toolchain
 React 19 + TypeScript (strict, with `noUncheckedIndexedAccess` and
 `exactOptionalPropertyTypes`) + Vite 6 + Tailwind 4 + PWA via `vite-plugin-pwa`.
-ESLint 9 flat config, Vitest. **Verified:** production build on Vercel runs
-`tsc -b && vite build` clean; 72 modules, 370KB JS (113KB gzip).
+ESLint 9 flat config, Vitest. **Verified:** `npm run typecheck`, `npm run lint`,
+`npm test` (60 tests) and `npm run build` all clean; bundle 616KB JS
+(177KB gzip). The 370KB figure previously recorded here predated Mapbox being
+pulled into the graph and was stale, not a regression.
 
 ### Brand tokens
 Extracted from the real logo at delta-ridge.com rather than invented: steel navy
@@ -23,15 +25,24 @@ Extracted from the real logo at delta-ridge.com rather than invented: steel navy
 live site. Full scales and lead-status colors in `src/index.css`. Dark-first,
 because reps read screens in glare. All touch targets floored at 44px.
 
-### Database schema — 6 migrations, 1,125 lines
+### Database schema — 10 migrations
 `supabase/migrations/`, covering organizations and RBAC, customers/properties/
 leads/activities/appointments, inspections with observations and checklists,
 photos with separated AI analysis, voice notes, storm intelligence, office
 handoffs, integration sync, AI run tracking, and an append-only audit log.
 PostGIS throughout; UUID keys so records can be created offline.
 
-**Verified:** all six migrations execute cleanly against PostgreSQL 16.15 +
-PostGIS 3, and 9 assertions on the guarantees pass. See `supabase/tests/`.
+**Verified 2026-09-18 against PostgreSQL 16.13 + PostGIS 3:** all ten
+migrations replay cleanly on an empty database, `supabase/apply_all.sql` applies
+in one shot (31 public tables), and **all 15 assertions pass** — including cases
+10-12, which had never actually been executed before (see the open item that
+used to be here), and the new 13-15 covering idempotent field sync.
+
+Two portability bugs were found by running them for the first time:
+migration 0007 seeded the owner invite against an organisation row that exists
+only in production, so the file could not be replayed anywhere else; and the
+test fixtures assumed that same row. Both are fixed, so the suite now runs on
+any machine with Postgres and PostGIS.
 
 ### Storm provider layer
 `StormProvider` interface with three implementations: NOAA (default),
@@ -61,6 +72,48 @@ offline, which is when it matters. Separates blockers (cannot send) from warning
 no supporting photo, damage close-ups with no slope overview, photos flagged for
 retake, and unconfirmed AI findings. **Verified:** 21 unit tests.
 
+### Offline-to-Supabase sync — the field core
+The outbox drains. `src/lib/sync/` resolves a flat local inspection into the
+customer, property and inspection rows the schema expects, then pushes photos,
+observations, voice notes and the office package.
+
+Everything is an **upsert on (organization_id, client_id)**, added by migration
+0010. That is not a refinement — it fixes two defects that made the core loop
+unreliable:
+
+1. **Edits never reached the server.** `ensureInspection` returned early
+   whenever it already had a remote id, so an inspection was pushed once, at
+   creation, and the completion time, the rep's recommendation, the homeowner's
+   stated roof age and the override note stayed on the phone forever. The
+   office saw a permanently in-progress shell. It now pushes current state on
+   every drain, memoised once per drain so forty photos do not cause forty
+   upserts.
+2. **A lost acknowledgement wedged the queue.** Photos and voice notes already
+   had a unique `client_id`, and the code used `.insert()`, so a retry after the
+   row had been written but the response lost failed with 23505 — permanently,
+   with the item retried every 30 seconds for the rest of the day. Inspections
+   and observations had no `client_id` at all and simply duplicated.
+
+Retries now back off (5s doubling to a 5-minute ceiling, ~5 minutes of real
+attempts before giving up), and an item that gives up is **shown to the rep**
+with its error and a Try again button rather than disappearing into a silent
+loop. Being offline is not a failed attempt: the drain skips without touching
+attempt counts.
+
+### Office handoff
+`src/features/handoff/package.ts` builds the frozen package the office receives
+— customer, property, homeowner statements kept in their own namespace,
+observations with their provenance (`inspector` / `voice` / `ai`) and
+confirmation state intact, every photo with its category and quality flag, voice
+notes with a transcript slot, and the validation result recording what was
+missing and what the rep waived. `packageFingerprint` is stable across rebuilds
+and ignores `generatedAt`, so re-sending unchanged work is a detectable no-op.
+
+Send to office writes an `office_handoffs` row with status **`ready`**, not
+`sent`. Nothing emails anyone and nothing calls CompanyCam yet; marking a row
+sent would be a claim the office would act on. `ready` is the truth: the package
+is complete, validated, and visible to the office in Supabase.
+
 ### Offline-first local store
 `src/lib/db.ts` — IndexedDB (via `idb`) holding inspections, photos, observations
 and voice notes, each with a client-generated UUID and a `syncState`, plus an
@@ -88,12 +141,11 @@ then widen.
 
 | Area | Note |
 | --- | --- |
-| Outbox drain / Supabase sync worker | The queue records; nothing pushes yet. Next. |
-| Supabase auth + RLS session wiring | Client configured, no sign-in flow |
-| Voice transcript structuring | Audio is captured and stored; nothing transcribes it |
+| Office handoff PDF | The package exists as structured jsonb; nothing renders it to PDF yet |
+| Office review screen | The office can read the row; there is no UI built for them |
+| Voice transcript structuring | Audio is captured, stored and uploaded; nothing transcribes it |
 | AI provider implementations | Interface shape settled by the schema; adapters unwritten |
 | Map, pins, filters, PostGIS queries | Needs a Mapbox token |
-| Office handoff PDF generation | |
 | CompanyCam push + sync worker | Needs plan confirmation (Pro/Premium/Elite) |
 | Roofr inbound webhook | |
 | Dashboards, routing, scoring | Deliberately last — scoring needs outcome data first |
@@ -140,18 +192,10 @@ then widen.
   fetched by default. `package-lock.json` is committed.
 - **`.env` no longer ships to Vercel.**
 
-### The one remaining blocker
+### Resolved
 
-`github.com/nedpearson/DeltaRidge` has **zero commits** — everything has only
-ever existed locally. The remote is now configured; the push needs the GitHub
-credentials in Windows Credential Manager:
-
-```
-git push -u origin main
-```
-
-This is also the exact cause of Railway's "Could not find latest commit for
-repo" error. Railway is reporting the truth: there is no commit to deploy.
+The repository now has commits and the Railway "could not find latest commit"
+error is gone with it.
 
 ### On Railway
 
