@@ -178,14 +178,37 @@ export async function processPhoto(file: Blob, maxEdge = 2048): Promise<Processe
   return { full, thumbnail, width, height, byteSize: full.size, quality }
 }
 
-/** Best-effort location. Never blocks capture — a photo without GPS still counts. */
+/**
+ * Best-effort location. Never blocks capture — a photo without GPS still counts.
+ *
+ * The `timeout` option is not sufficient on its own: per spec its clock does not
+ * start until the permission prompt has been answered. A rep who ignores that
+ * prompt, or a WebView that never surfaces it, leaves both callbacks unfired and
+ * the promise pending forever — which stranded "Start inspection" on
+ * "Getting location…" with no way out. Reproduced in a browser whose geolocation
+ * permission was left unanswered. So we keep our own clock and always settle.
+ */
 export function currentPosition(timeoutMs = 6000): Promise<GeolocationPosition | null> {
   return new Promise((resolve) => {
     if (!('geolocation' in navigator)) return resolve(null)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve(pos),
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 30000 },
-    )
+
+    let settled = false
+    const settle = (value: GeolocationPosition | null) => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(timer)
+      resolve(value)
+    }
+    const timer = window.setTimeout(() => settle(null), timeoutMs)
+
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => settle(pos),
+        () => settle(null),
+        { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 30000 },
+      )
+    } catch {
+      settle(null)
+    }
   })
 }
