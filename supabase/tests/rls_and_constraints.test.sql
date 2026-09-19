@@ -128,3 +128,57 @@ reset role;
 select 'PASS storm within 5km of property: '||count(*)::text
 from storm_events s join properties p on ST_DWithin(s.location, p.location, 5000)
 where p.id='cccccccc-0000-0000-0000-000000000001';
+
+-- -----------------------------------------------------------------------------
+-- 10-12. Invite-based provisioning (migration 0007).
+--
+-- The site is publicly reachable, so the guarantee under test is two-sided: an
+-- invited address must come out with exactly the granted role, and an
+-- uninvited address must come out with no organisation access at all.
+-- -----------------------------------------------------------------------------
+insert into organization_invites (organization_id, email, role)
+values ('d17a0000-0000-4000-8000-000000000001', 'Owner.Test@Example.COM', 'admin');
+
+-- Deliberately different capitalisation: the match must be case-insensitive,
+-- because the address a rep types on a phone is not the address we seeded.
+insert into auth.users (id, email) values
+  ('aaaa0000-0000-4000-8000-00000000000a', 'owner.test@example.com'),
+  ('bbbb0000-0000-4000-8000-00000000000b', 'never.invited@example.com');
+
+do $$
+declare
+  granted_role text;
+  uninvited_rows integer;
+  invite_open integer;
+  org_default uuid;
+begin
+  select role::text into granted_role
+    from organization_members
+   where user_id = 'aaaa0000-0000-4000-8000-00000000000a';
+  if granted_role is distinct from 'admin' then
+    raise exception 'FAIL 10: invited address got role %, expected admin', coalesce(granted_role, 'none');
+  end if;
+
+  select count(*) into uninvited_rows
+    from organization_members
+   where user_id = 'bbbb0000-0000-4000-8000-00000000000b';
+  if uninvited_rows <> 0 then
+    raise exception 'FAIL 11: uninvited signup received % membership row(s)', uninvited_rows;
+  end if;
+
+  select count(*) into invite_open
+    from organization_invites
+   where lower(email) = 'owner.test@example.com' and accepted_at is null;
+  if invite_open <> 0 then
+    raise exception 'FAIL 12: invite was not marked accepted after redemption';
+  end if;
+
+  select default_org_id into org_default
+    from profiles where id = 'aaaa0000-0000-4000-8000-00000000000a';
+  if org_default is distinct from 'd17a0000-0000-4000-8000-000000000001'::uuid then
+    raise exception 'FAIL 12b: default_org_id was not set on the invited profile';
+  end if;
+
+  raise notice 'PASS 10-12: invite grants admin, uninvited signup gets nothing';
+end;
+$$;
