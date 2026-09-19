@@ -252,7 +252,7 @@ export default function ReviewPanel({
       <div className="mt-5">
         {confirming ? (
           <Card>
-            <SectionTitle>Finish without these?</SectionTitle>
+            <SectionTitle>FINISH WITHOUT THESE?</SectionTitle>
             <ul className="mt-2 space-y-1.5">
               {report.blockers.map((b) => (
                 <li key={b.code} className="text-[13px] leading-relaxed text-white/70">
