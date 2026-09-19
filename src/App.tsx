@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import AppShell from '@/components/AppShell'
+import UpdateBanner from '@/components/UpdateBanner'
 import HomePage from '@/pages/HomePage'
 import InspectionsPage from '@/pages/InspectionsPage'
 import NewInspectionPage from '@/pages/NewInspectionPage'
@@ -18,6 +19,7 @@ export default function App() {
   return (
     <SessionProvider>
       <SyncRunner />
+      <UpdateBanner />
       <AppShell>
         <Routes>
           <Route path="/" element={<HomePage />} />
