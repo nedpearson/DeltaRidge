@@ -142,9 +142,17 @@ revoke all on function app.redeem_pending_invites() from public, anon, authentic
 -- -----------------------------------------------------------------------------
 -- Seed: the owner is admin of Delta Ridge Roofing on first sign-in.
 -- -----------------------------------------------------------------------------
+-- Guarded on the organisation existing as well as on the invite not existing.
+-- The Delta Ridge org row was seeded by hand in production, not by a migration,
+-- so without this guard the file cannot be replayed anywhere else: a fresh
+-- database (the local harness in supabase/tests, or a staging project) fails
+-- here on a foreign key and leaves the migration half applied.
 insert into organization_invites (organization_id, email, role)
 select 'd17a0000-0000-4000-8000-000000000001'::uuid, 'nedpearson@gmail.com', 'admin'::app_role
-where not exists (
+where exists (
+  select 1 from organizations where id = 'd17a0000-0000-4000-8000-000000000001'::uuid
+)
+and not exists (
   select 1 from organization_invites
    where organization_id = 'd17a0000-0000-4000-8000-000000000001'::uuid
      and lower(email) = 'nedpearson@gmail.com'

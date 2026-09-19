@@ -4,6 +4,7 @@ import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import { listInspections, localStorageFootprint, type LocalInspection } from '@/lib/db'
 import { backendStatus } from '@/lib/backend'
 import AccountPanel from '@/features/auth/AccountPanel'
+import SyncPanel from '@/features/auth/SyncPanel'
 import { readCachedRun, type LeadRun } from '@/features/leads/engine'
 
 function formatBytes(bytes: number): string {
@@ -104,6 +105,8 @@ export default function HomePage() {
 
       <AccountPanel />
 
+      <SyncPanel />
+
       {open.length > 0 && (
         <>
           <SectionTitle hint={`${open.length} open`}>IN PROGRESS</SectionTitle>
@@ -146,7 +149,9 @@ export default function HomePage() {
                 <Card>
                   <p className="truncate text-[15px] font-semibold">{inspectionTitle(i)}</p>
                   <p className="mt-0.5 text-[12px] text-white/40">
-                    Completed {i.completedAt ? relative(i.completedAt) : relative(i.updatedAt)}
+                    {i.sentToOfficeAt
+                      ? `Sent to office ${relative(i.sentToOfficeAt)}`
+                      : `Completed ${relative(i.completedAt ?? i.updatedAt)}`}
                   </p>
                 </Card>
               </Link>

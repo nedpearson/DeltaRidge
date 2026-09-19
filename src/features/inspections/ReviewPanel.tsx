@@ -242,17 +242,29 @@ export default function ReviewPanel({
               </div>
             )}
             <p className="border-t border-white/8 pt-2.5 text-[11px] text-white/30">
-              Delivery to CompanyCam (which syncs into Roofr) turns on once an API token is configured. Until then
-              this package is generated on-device.
+              Sending puts this package in the office queue on the Delta Ridge server, where the office can open it.
+              Automatic delivery into CompanyCam — which syncs onward into Roofr — turns on once an API token is
+              configured.
             </p>
           </div>
         )}
       </Card>
 
       <div className="mt-5">
-        {confirming ? (
+        {inspection.sentToOfficeAt ? (
+          <Card className="!bg-emerald-500/8 ring-emerald-500/20">
+            <p className="text-[14px] font-semibold text-emerald-300">The office has this.</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-emerald-200/70">
+              Sent {new Date(inspection.sentToOfficeAt).toLocaleString()}. If it is still listed as waiting to sync,
+              the package is safe on this device and will go up on its own.
+            </p>
+            <Button variant="secondary" full className="mt-3" onClick={() => onComplete()}>
+              Send the updated package
+            </Button>
+          </Card>
+        ) : confirming ? (
           <Card>
-            <SectionTitle>FINISH WITHOUT THESE?</SectionTitle>
+            <SectionTitle>SEND WITHOUT THESE?</SectionTitle>
             <ul className="mt-2 space-y-1.5">
               {report.blockers.map((b) => (
                 <li key={b.code} className="text-[13px] leading-relaxed text-white/70">
@@ -286,7 +298,7 @@ export default function ReviewPanel({
                   })
                 }}
               >
-                Finish anyway
+                Send anyway
               </Button>
             </div>
           </Card>
@@ -297,9 +309,7 @@ export default function ReviewPanel({
               variant={report.canSend ? 'gold' : 'secondary'}
               onClick={() => (report.canSend ? onComplete() : setConfirming(true))}
             >
-              {report.canSend
-                ? 'Complete inspection'
-                : `Complete anyway — ${report.blockers.length} unresolved`}
+              {report.canSend ? 'Send to office' : `Send anyway — ${report.blockers.length} unresolved`}
             </Button>
             {report.blockers.length > 0 && (
               <p className="mt-2 text-center text-[11px] text-white/40">

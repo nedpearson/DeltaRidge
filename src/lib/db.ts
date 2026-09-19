@@ -50,6 +50,12 @@ export interface LocalInspection {
   overriddenIssueCodes?: string[]
   /** Optional free-text reason attached to that override. */
   overrideNote?: string
+  /**
+   * Set when the rep taps Send to office. The handoff itself is a queued
+   * outbox item like anything else — this timestamp is what the UI reads so it
+   * can say "the office has this" without waiting on a network round trip.
+   */
+  sentToOfficeAt?: string
   syncState: SyncState
 }
 
@@ -95,15 +101,35 @@ export interface LocalVoiceNote {
   syncState: SyncState
 }
 
+export type OutboxEntity = 'inspection' | 'photo' | 'observation' | 'voiceNote' | 'handoff'
+
 export interface OutboxItem {
   id: string
-  entity: 'inspection' | 'photo' | 'observation' | 'voiceNote'
+  entity: OutboxEntity
   entityId: string
   op: 'upsert'
   queuedAt: string
   attempts: number
   lastError?: string
+  /**
+   * Earliest time this item should be attempted again. Absent means "now".
+   *
+   * Without this, a permanently failing item — a photo whose inspection was
+   * deleted, a row rejected by a constraint — is retried every 30 seconds for
+   * the rest of the rep's day, burning battery and signal on a request that
+   * cannot succeed. Backoff is applied in `markOutboxError`.
+   */
+  nextAttemptAt?: string
+  /**
+   * Set once the item has exhausted its attempts. It stops being retried
+   * automatically and starts being *shown*, because a queue that silently stops
+   * trying is indistinguishable from a queue that lost the work.
+   */
+  givenUp?: boolean
 }
+
+/** Attempts before an item stops retrying on its own and asks for a human. */
+export const MAX_SYNC_ATTEMPTS = 6
 
 interface DeltaRidgeDB extends DBSchema {
   inspections: { key: string; value: LocalInspection; indexes: { 'by-updated': string } }
@@ -149,19 +175,49 @@ export function newId(): string {
   })
 }
 
+/**
+ * Queues an entity for push. The id is `entity:entityId`, so editing the same
+ * inspection twenty times before regaining signal leaves one queue item that
+ * pushes the latest state — not twenty pushes of twenty intermediate versions.
+ *
+ * Re-queueing clears any previous failure: a rep who fixes the underlying
+ * problem (fills in the address, signs in) should not have to wait out a
+ * backoff earned by the broken version.
+ */
 async function enqueue(
   db: IDBPDatabase<DeltaRidgeDB>,
-  entity: OutboxItem['entity'],
+  entity: OutboxEntity,
   entityId: string,
 ): Promise<void> {
+  const existing = await db.get('outbox', `${entity}:${entityId}`)
   await db.put('outbox', {
     id: `${entity}:${entityId}`,
     entity,
     entityId,
     op: 'upsert',
-    queuedAt: new Date().toISOString(),
+    queuedAt: existing?.queuedAt ?? new Date().toISOString(),
     attempts: 0,
   })
+}
+
+/**
+ * Marks an inspection as handed to the office and queues the package.
+ *
+ * Deliberately separate from `saveInspection`: completing an inspection and
+ * sending it are different decisions, and only the second one should create a
+ * record the office can act on.
+ */
+export async function queueHandoff(inspectionId: string): Promise<void> {
+  const db = await getDB()
+  const inspection = await db.get('inspections', inspectionId)
+  if (!inspection) throw new Error('inspection missing locally')
+  await db.put('inspections', {
+    ...inspection,
+    sentToOfficeAt: inspection.sentToOfficeAt ?? new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  })
+  await enqueue(db, 'inspection', inspectionId)
+  await enqueue(db, 'handoff', inspectionId)
 }
 
 export async function saveInspection(inspection: LocalInspection): Promise<void> {

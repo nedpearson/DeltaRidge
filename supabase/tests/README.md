@@ -22,7 +22,8 @@ psql -d dr_test -f supabase/tests/rls_and_constraints.test.sql
 `auth` schema, `auth.users`, `auth.uid()`, and the `authenticated`/`anon`/
 `service_role` roles — so migrations run locally exactly as they will hosted.
 
-Last run: 2026-09-18 against PostgreSQL 16.15 + PostGIS 3. All 9 cases passed.
+Last run: 2026-09-18 against PostgreSQL 16.13 + PostGIS 3. All 15 cases passed,
+on a database built by replaying every migration from empty.
 
 | # | Property asserted |
 | --- | --- |
@@ -35,3 +36,5 @@ Last run: 2026-09-18 against PostgreSQL 16.15 + PostGIS 3. All 9 cases passed.
 | 7 | Only one live handoff exists per inspection |
 | 8 | The audit log is not writable from a client role |
 | 9 | PostGIS proximity search finds storms near a property |
+| 10-12 | An invited address becomes admin; an uninvited signup gets nothing |
+| 13-15 | A retried push updates one row instead of duplicating, and a later push carries the rep's edits through |

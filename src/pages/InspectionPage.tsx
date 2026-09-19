@@ -6,7 +6,7 @@ import NotesPanel from '@/features/inspections/NotesPanel'
 import ReviewPanel from '@/features/inspections/ReviewPanel'
 import { requiredCategoriesFor, type PhotoCategory } from '@/features/inspections/photo-categories'
 import {
-  getInspection, listObservations, listPhotos, saveInspection,
+  getInspection, listObservations, listPhotos, queueHandoff, saveInspection,
   type LocalInspection, type LocalObservation, type LocalPhoto,
 } from '@/lib/db'
 
@@ -80,15 +80,25 @@ export default function InspectionPage() {
     }, 60)
   }
 
-  function complete(override?: { codes: string[]; note?: string }) {
-    const now = new Date().toISOString()
-    patch({
+  /**
+   * Completing and sending are one action for the rep, but two writes that must
+   * happen in order: the inspection is saved and awaited BEFORE the handoff is
+   * queued, because the package is built by reading the inspection back out of
+   * IndexedDB. Firing both through `patch` would race — the handoff could be
+   * built from the pre-completion record and reach the office without the
+   * completion time or the override note on it.
+   */
+  async function sendToOffice(current: LocalInspection, override?: { codes: string[]; note?: string }) {
+    const next: LocalInspection = {
+      ...current,
       status: 'complete',
-      completedAt: now,
+      completedAt: current.completedAt ?? new Date().toISOString(),
       ...(override
         ? { overriddenIssueCodes: override.codes, ...(override.note ? { overrideNote: override.note } : {}) }
         : {}),
-    })
+    }
+    await saveInspection(next)
+    await queueHandoff(next.id)
     navigate('/')
   }
 
@@ -154,7 +164,7 @@ export default function InspectionPage() {
             required={required}
             onFix={fixNow}
             onPatch={patch}
-            onComplete={complete}
+            onComplete={(override) => void sendToOffice(inspection, override)}
           />
         )}
       </div>
