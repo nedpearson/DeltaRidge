@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { syncOutbox, type SyncResult } from '@/lib/sync'
+import { syncOutbox, type SyncResult } from '@/lib/sync/index'
 import { outboxCount } from '@/lib/db'
 import { useSession } from './session'
 

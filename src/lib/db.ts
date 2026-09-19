@@ -86,15 +86,6 @@ export interface LocalVoiceNote {
   syncState: SyncState
 }
 
-export interface RemoteId {
-  /** `${entity}:${localId}` */
-  id: string
-  entity: 'inspection' | 'photo' | 'observation' | 'voiceNote' | 'customer' | 'property'
-  localId: string
-  remoteId: string
-  syncedAt: string
-}
-
 export interface OutboxItem {
   id: string
   entity: 'inspection' | 'photo' | 'observation' | 'voiceNote'
@@ -111,22 +102,14 @@ interface DeltaRidgeDB extends DBSchema {
   observations: { key: string; value: LocalObservation; indexes: { 'by-inspection': string } }
   voiceNotes: { key: string; value: LocalVoiceNote; indexes: { 'by-inspection': string } }
   outbox: { key: string; value: OutboxItem }
-  remoteIds: { key: string; value: RemoteId }
 }
 
 let dbPromise: Promise<IDBPDatabase<DeltaRidgeDB>> | null = null
 
 export function getDB(): Promise<IDBPDatabase<DeltaRidgeDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<DeltaRidgeDB>('delta-ridge', 2, {
-      upgrade(db, oldVersion) {
-        if (oldVersion >= 1) {
-          // Field devices already hold inspections; only add what is missing.
-          if (!db.objectStoreNames.contains('remoteIds')) {
-            db.createObjectStore('remoteIds', { keyPath: 'id' })
-          }
-          return
-        }
+    dbPromise = openDB<DeltaRidgeDB>('delta-ridge', 1, {
+      upgrade(db) {
         const inspections = db.createObjectStore('inspections', { keyPath: 'id' })
         inspections.createIndex('by-updated', 'updatedAt')
 
@@ -140,7 +123,6 @@ export function getDB(): Promise<IDBPDatabase<DeltaRidgeDB>> {
         voiceNotes.createIndex('by-inspection', 'inspectionId')
 
         db.createObjectStore('outbox', { keyPath: 'id' })
-        db.createObjectStore('remoteIds', { keyPath: 'id' })
       },
     })
   }
@@ -245,64 +227,4 @@ export async function localStorageFootprint(): Promise<number> {
   const db = await getDB()
   const photos = await db.getAll('photos')
   return photos.reduce((sum, p) => sum + p.byteSize, 0)
-}
-
-// --- sync support -----------------------------------------------------------
-
-export async function listOutbox(): Promise<OutboxItem[]> {
-  const rows = await (await getDB()).getAll('outbox')
-  return rows.sort((a, b) => a.queuedAt.localeCompare(b.queuedAt))
-}
-
-export async function clearOutboxItem(id: string): Promise<void> {
-  await (await getDB()).delete('outbox', id)
-}
-
-export async function markOutboxError(id: string, message: string): Promise<void> {
-  const db = await getDB()
-  const item = await db.get('outbox', id)
-  if (!item) return
-  await db.put('outbox', { ...item, attempts: item.attempts + 1, lastError: message })
-}
-
-export async function getRemoteId(entity: RemoteId['entity'], localId: string): Promise<string | null> {
-  const row = await (await getDB()).get('remoteIds', `${entity}:${localId}`)
-  return row?.remoteId ?? null
-}
-
-export async function setRemoteId(
-  entity: RemoteId['entity'],
-  localId: string,
-  remoteId: string,
-): Promise<void> {
-  await (await getDB()).put('remoteIds', {
-    id: `${entity}:${localId}`,
-    entity,
-    localId,
-    remoteId,
-    syncedAt: new Date().toISOString(),
-  })
-}
-
-export async function setSyncState(
-  store: 'inspections' | 'photos' | 'observations' | 'voiceNotes',
-  id: string,
-  syncState: SyncState,
-): Promise<void> {
-  const db = await getDB()
-  const row = await db.get(store, id)
-  if (!row) return
-  await db.put(store, { ...row, syncState })
-}
-
-export async function getPhoto(id: string): Promise<LocalPhoto | undefined> {
-  return (await getDB()).get('photos', id)
-}
-
-export async function getObservation(id: string): Promise<LocalObservation | undefined> {
-  return (await getDB()).get('observations', id)
-}
-
-export async function getVoiceNote(id: string): Promise<LocalVoiceNote | undefined> {
-  return (await getDB()).get('voiceNotes', id)
 }
