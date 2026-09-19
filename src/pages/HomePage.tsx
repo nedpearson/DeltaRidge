@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import { listInspections, localStorageFootprint, type LocalInspection } from '@/lib/db'
 import { backendStatus } from '@/lib/backend'
+import AccountPanel from '@/features/auth/AccountPanel'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -61,6 +62,8 @@ export default function HomePage() {
           <p className="text-[12px] leading-relaxed text-amber-200/90">{backend.reason}</p>
         </Card>
       )}
+
+      <AccountPanel />
 
       {open.length > 0 && (
         <>
