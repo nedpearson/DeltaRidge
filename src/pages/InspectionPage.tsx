@@ -80,9 +80,15 @@ export default function InspectionPage() {
     }, 60)
   }
 
-  function complete() {
+  function complete(override?: { codes: string[]; note?: string }) {
     const now = new Date().toISOString()
-    patch({ status: 'complete', completedAt: now })
+    patch({
+      status: 'complete',
+      completedAt: now,
+      ...(override
+        ? { overriddenIssueCodes: override.codes, ...(override.note ? { overrideNote: override.note } : {}) }
+        : {}),
+    })
     navigate('/')
   }
 

@@ -5,7 +5,7 @@ import { evaluateCompleteness, type CompletenessIssue } from './completeness'
 import { CATEGORY_LABELS, type PhotoCategory } from './photo-categories'
 
 const TONE: Record<CompletenessIssue['severity'], { ring: string; dot: string; label: string }> = {
-  blocker: { ring: 'ring-red-500/30 bg-red-500/8', dot: 'bg-red-400', label: 'Must fix' },
+  blocker: { ring: 'ring-red-500/30 bg-red-500/8', dot: 'bg-red-400', label: 'Office needs this' },
   warning: { ring: 'ring-amber-500/25 bg-amber-500/8', dot: 'bg-amber-400', label: 'Office will call' },
   advisory: { ring: 'ring-white/10 bg-white/4', dot: 'bg-white/30', label: 'Worth adding' },
 }
@@ -25,9 +25,11 @@ export default function ReviewPanel({
   required: PhotoCategory[]
   onFix: (category: PhotoCategory) => void
   onPatch: (patch: Partial<LocalInspection>) => void
-  onComplete: () => void
+  onComplete: (override?: { codes: string[]; note?: string }) => void
 }) {
   const [showPackage, setShowPackage] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [overrideNote, setOverrideNote] = useState('')
 
   const report = useMemo(
     () =>
@@ -229,6 +231,16 @@ export default function ReviewPanel({
                 {inspection.inspectorRecommendation || <span className="text-white/40">Not yet written.</span>}
               </p>
             </div>
+            {inspection.overriddenIssueCodes && inspection.overriddenIssueCodes.length > 0 && (
+              <div className="rounded-lg bg-amber-500/8 px-3 py-2 ring-1 ring-amber-500/20">
+                <p className="font-display text-[10px] tracking-widest text-amber-300/70">FINISHED WITH GAPS</p>
+                <p className="mt-0.5 text-[12px] leading-relaxed text-white/70">
+                  The rep closed this out with {inspection.overriddenIssueCodes.length} item
+                  {inspection.overriddenIssueCodes.length === 1 ? '' : 's'} outstanding.
+                  {inspection.overrideNote ? ` "${inspection.overrideNote}"` : ''}
+                </p>
+              </div>
+            )}
             <p className="border-t border-white/8 pt-2.5 text-[11px] text-white/30">
               Delivery to CompanyCam (which syncs into Roofr) turns on once an API token is configured. Until then
               this package is generated on-device.
@@ -238,14 +250,69 @@ export default function ReviewPanel({
       </Card>
 
       <div className="mt-5">
-        <Button full variant={report.canSend ? 'gold' : 'secondary'} disabled={!report.canSend} onClick={onComplete}>
-          {report.canSend ? 'Complete inspection' : `Resolve ${report.blockers.length} blocker${report.blockers.length === 1 ? '' : 's'} first`}
-        </Button>
-        {report.warnings.length > 0 && report.canSend && (
-          <p className="mt-2 text-center text-[11px] text-amber-300/70">
-            {report.warnings.length} warning{report.warnings.length === 1 ? '' : 's'} will not stop you — but each one
-            is a likely callback.
-          </p>
+        {confirming ? (
+          <Card>
+            <SectionTitle>Finish without these?</SectionTitle>
+            <ul className="mt-2 space-y-1.5">
+              {report.blockers.map((b) => (
+                <li key={b.code} className="text-[13px] leading-relaxed text-white/70">
+                  • {b.message}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-[12px] leading-relaxed text-white/40">
+              This gets recorded on the inspection so the office knows what is missing before they price it.
+            </p>
+            <div className="mt-3">
+              <Field label="Why (optional)">
+                <TextArea
+                  value={overrideNote}
+                  onChange={(e) => setOverrideNote(e.target.value)}
+                  placeholder="Homeowner would not let me on the roof. Returning Thursday."
+                />
+              </Field>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button variant="secondary" onClick={() => setConfirming(false)}>
+                Keep working
+              </Button>
+              <Button
+                variant="gold"
+                onClick={() => {
+                  const note = overrideNote.trim()
+                  onComplete({
+                    codes: report.blockers.map((b) => b.code),
+                    ...(note ? { note } : {}),
+                  })
+                }}
+              >
+                Finish anyway
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <>
+            <Button
+              full
+              variant={report.canSend ? 'gold' : 'secondary'}
+              onClick={() => (report.canSend ? onComplete() : setConfirming(true))}
+            >
+              {report.canSend
+                ? 'Complete inspection'
+                : `Complete anyway — ${report.blockers.length} unresolved`}
+            </Button>
+            {report.blockers.length > 0 && (
+              <p className="mt-2 text-center text-[11px] text-white/40">
+                Nothing here is mandatory. You will be asked to confirm what is missing.
+              </p>
+            )}
+            {report.warnings.length > 0 && report.canSend && (
+              <p className="mt-2 text-center text-[11px] text-amber-300/70">
+                {report.warnings.length} warning{report.warnings.length === 1 ? '' : 's'} will not stop you — but each
+                one is a likely callback.
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

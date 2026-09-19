@@ -130,6 +130,8 @@ export async function ensureInspection(localId: string, orgId: string, userId: s
       homeowner_stated_roof_age_years: i.homeownerStatedRoofAgeYears ?? null,
       homeowner_stated_insurer: i.homeownerStatedInsurer ?? null,
       inspector_recommendation: i.inspectorRecommendation ?? null,
+      overridden_issue_codes: i.overriddenIssueCodes ?? [],
+      override_note: i.overrideNote ?? null,
       start_location: pointOrNull(i.latitude, i.longitude),
     })
     .select('id')

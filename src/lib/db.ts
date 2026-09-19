@@ -41,6 +41,15 @@ export interface LocalInspection {
   homeownerStatedInsurer?: string
   inspectorRecommendation?: string
   waivedCategories?: PhotoCategory[]
+  /**
+   * Issue codes the rep knowingly finished without. Nothing in the app is a
+   * hard gate — a rep standing in a yard with a dead phone still has to be able
+   * to close out — but an override is recorded rather than silent, so the
+   * office sees exactly what was skipped and by whose decision.
+   */
+  overriddenIssueCodes?: string[]
+  /** Optional free-text reason attached to that override. */
+  overrideNote?: string
   syncState: SyncState
 }
 
