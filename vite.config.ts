@@ -95,5 +95,10 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['tests/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
+    // tests/live/ calls the real parish and NWS services. Useful to run by
+    // hand when an upstream feed changes shape; never in a normal test run,
+    // where a third party being slow would look like our bug.
+    //   npx vitest run --config vite.config.ts tests/live --exclude ''
+    exclude: ['tests/live/**', 'node_modules/**', 'dist/**'],
   },
 })

@@ -114,6 +114,48 @@ Send to office writes an `office_handoffs` row with status **`ready`**, not
 sent would be a claim the office would act on. `ready` is the truth: the package
 is complete, validated, and visible to the office in Supabase.
 
+### Lead generation — the door list
+`/leads`. Hail reports crossed with parish permit records, producing a ranked,
+explainable door list. It runs **entirely in the browser**: the NWS storm feed,
+the East Baton Rouge permit feed and the parish address locator are all public,
+keyless and CORS-open, so this needed no backend, no API key and no Supabase —
+which is why it could ship while the live database is still unreachable.
+
+The join no competitor ships:
+
+```
+hail reports  ×  roof age from permit history  −  roofs already replaced
+```
+
+Three things were learned the hard way and are now encoded:
+
+1. **The parish only began putting coordinates on permits around 2016.**
+   Filtering permits to "built before 2015" — which is how you find a roof old
+   enough to sell — leaves **13** usable records out of **2,327**. The fix is
+   `src/integrations/geocode/ebr.ts`, which geocodes the rest through the
+   parish's own locator and caches every result permanently. Verified live:
+   13 candidates became **590**.
+2. **The batch geocoder only works over POST.** A hundred addresses in a query
+   string exceeds the server's URL limit and returns 404 — which reads as "no
+   such endpoint" rather than "request too long".
+3. **Re-roof permits only exist from 2025 onward**, which matches Act 239
+   making them mandatory that August. So suppression covers storms from 2025
+   on and is blind before that. Stated in the UI rather than implied.
+
+Scoring is deterministic and explainable — hail size, recency, distance, roof
+age, with hand-set weights — and every lead carries the plain-English reasons it
+ranked where it did. It is **not** a model and the UI never calls it a
+probability: there is still no closed-won history to learn one from. The inputs
+are stored on each lead so the weights can be fitted once there is.
+
+Also included: re-roof permits grouped by contractor, which is a free and
+current picture of who is winning which subdivision.
+
+Honest limits, all surfaced in the app: East Baton Rouge only (Ascension has
+required re-roof permits since August 2025 but publishes no feed; Livingston is
+view-only), the permit history starts in 2011 so roofs older than ~15 years are
+invisible, and a roof replaced without a permit leaves no trace.
+
 ### Offline-first local store
 `src/lib/db.ts` — IndexedDB (via `idb`) holding inspections, photos, observations
 and voice notes, each with a client-generated UUID and a `syncState`, plus an

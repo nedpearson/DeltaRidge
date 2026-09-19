@@ -5,7 +5,8 @@ import { outboxCount } from '@/lib/db'
 
 const NAV = [
   { to: '/', label: 'Home', icon: 'home' },
-  { to: '/inspections', label: 'Inspections', icon: 'clipboard' },
+  { to: '/leads', label: 'Leads', icon: 'target' },
+  { to: '/inspections', label: 'Jobs', icon: 'clipboard' },
   { to: '/new', label: 'Inspect', icon: 'camera', primary: true },
 ] as const
 
@@ -13,6 +14,7 @@ function Icon({ name }: { name: string }) {
   const common = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
   if (name === 'home') return <svg {...common} aria-hidden="true"><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /></svg>
   if (name === 'clipboard') return <svg {...common} aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2" /><path d="M9 4V3h6v1" /><path d="M9 10h6M9 14h6M9 18h3" /></svg>
+  if (name === 'target') return <svg {...common} aria-hidden="true"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.2" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2" /></svg>
   return <svg {...common} aria-hidden="true"><path d="M3 8h3.5L8 6h8l1.5 2H21v11H3z" /><circle cx="12" cy="13.5" r="3.5" /></svg>
 }
 
@@ -69,7 +71,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
       {!hideNav && (
         <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-screen-sm border-t border-white/5 bg-[var(--color-surface-2)]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-          <div className="grid grid-cols-3">
+          <div className="grid grid-cols-4">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
