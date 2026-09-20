@@ -9,6 +9,7 @@ import {
   estimatesForInspection,
   isUsable,
   latestVersion,
+  listEstimates,
   marginPolicyFrom,
   readSettings,
   saveVersion,
@@ -87,13 +88,30 @@ export default function EstimatePage() {
   const [photos, setPhotos] = useState<LocalPhoto[]>([])
   const [observations, setObservations] = useState<LocalObservation[]>([])
 
+  const [allSaved, setAllSaved] = useState<readonly SavedEstimate[]>([])
+
   useEffect(() => {
     void readSettings().then((s) => {
       setCosts(s.costs)
       setMargins(s.margins)
       setLoading(false)
     })
+    void listEstimates().then(setAllSaved)
   }, [])
+
+  /**
+   * Reopening a saved estimate. Without this, saving a roof that is not
+   * attached to an inspection is a write nobody can read back - the estimate
+   * sits in the database with no route to it, which is a worse outcome than
+   * not saving at all because the rep believes they have it.
+   */
+  function reopen(saved: SavedEstimate) {
+    const version = latestVersion(saved)
+    if (!version) return
+    setEstimate(saved)
+    setForm((f) => ({ ...f, ...version.geometry }))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // Attaching the estimate to an inspection is the whole reason the findings
   // and photos are here rather than being retyped from memory.
@@ -199,6 +217,7 @@ export default function EstimatePage() {
         },
       )
       setEstimate(next)
+      setAllSaved(await listEstimates())
     } catch (err) {
       setSaveError(
         err instanceof Error
@@ -467,6 +486,38 @@ export default function EstimatePage() {
       )}
 
       <Button full onClick={() => setForm(EMPTY)}>Clear</Button>
+
+      {allSaved.length > 0 && (
+        <>
+          <SectionTitle hint={`${allSaved.length} kept`}>SAVED ESTIMATES</SectionTitle>
+          <Card>
+            <div className="space-y-2">
+              {allSaved.map((s) => {
+                const v = latestVersion(s)
+                const open = estimate?.id === s.id
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => reopen(s)}
+                    className="flex w-full items-baseline gap-3 text-left text-[13px]"
+                  >
+                    <span className={`flex-1 truncate ${open ? 'text-sky-200' : 'text-white/80'}`}>
+                      {s.label}
+                      {open && ' · open'}
+                    </span>
+                    <span className="shrink-0 text-[11px] text-white/35">
+                      v{v?.versionNumber ?? 0} · {new Date(s.updatedAt).toLocaleDateString()}
+                    </span>
+                    <span className="w-20 shrink-0 text-right tabular-nums text-white/80">
+                      {v ? money(v.sellPriceCents as Cents) : '—'}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </Card>
+        </>
+      )}
     </div>
   )
 }
