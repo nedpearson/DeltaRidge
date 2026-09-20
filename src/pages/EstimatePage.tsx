@@ -223,9 +223,9 @@ export default function EstimatePage() {
               <Row label="Stop — decline below this" value={money(built.ladder.stop)} strong />
             </div>
             <p className="mt-3 text-[12px] leading-relaxed text-white/45">
-              The recommended price is above the standard rung because commission is solved for
-              rather than added on. Pricing at the rung and paying commission out of it would not
-              leave the margin it claims.
+              Every rung already has commission taken out of it, so each one leaves the margin it
+              is named for. A rung priced without commission would look lower and quietly miss its
+              margin by the whole commission.
             </p>
           </Card>
 
