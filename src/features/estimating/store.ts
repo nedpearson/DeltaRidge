@@ -174,11 +174,22 @@ interface EstimatingDB extends DBSchema {
 
 let dbPromise: Promise<IDBPDatabase<EstimatingDB>> | null = null
 
+/**
+ * Version 2 and a guarded create.
+ *
+ * A database can exist at version 1 without the store - a deleted-and-
+ * reopened database is the way it happens, and an unguarded
+ * createObjectStore then throws "already exists" on the other path. Bumping
+ * the version means an existing broken database is repaired rather than left
+ * to fail every read.
+ */
 function getDB(): Promise<IDBPDatabase<EstimatingDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<EstimatingDB>('delta-ridge-estimating', 1, {
+    dbPromise = openDB<EstimatingDB>('delta-ridge-estimating', 2, {
       upgrade(db) {
-        db.createObjectStore('settings', { keyPath: 'id' })
+        if (!db.objectStoreNames.contains('settings')) {
+          db.createObjectStore('settings', { keyPath: 'id' })
+        }
       },
     })
   }
@@ -193,10 +204,25 @@ export interface EstimatingSettings {
   readonly updatedAt: string | null
 }
 
+/**
+ * Never rejects.
+ *
+ * Both screens do `readSettings().then(() => setLoading(false))`, so a
+ * rejection leaves them on "Loading…" forever with nothing on screen and
+ * nothing in the console - which is exactly what happened when the database
+ * existed without its object store. Storage can fail for reasons that have
+ * nothing to do with this app: private browsing, a full device, a corrupted
+ * profile. An unusable cost sheet is recoverable; a frozen screen is not.
+ */
 export async function readSettings(): Promise<EstimatingSettings> {
-  const row = await (await getDB()).get('settings', SETTINGS_ID)
-  if (!row) return { costs: {}, margins: DEFAULT_MARGINS, updatedAt: null }
-  return { costs: row.costs, margins: row.margins, updatedAt: row.updatedAt }
+  try {
+    const row = await (await getDB()).get('settings', SETTINGS_ID)
+    if (!row) return { costs: {}, margins: DEFAULT_MARGINS, updatedAt: null }
+    return { costs: row.costs, margins: row.margins, updatedAt: row.updatedAt }
+  } catch {
+    dbPromise = null
+    return { costs: {}, margins: DEFAULT_MARGINS, updatedAt: null }
+  }
 }
 
 export async function writeSettings(

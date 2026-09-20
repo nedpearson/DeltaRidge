@@ -39,9 +39,22 @@ export default function CostBookPage() {
     })
   }, [])
 
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   async function save() {
-    const at = await writeSettings(costs, margins)
-    setSavedAt(at)
+    try {
+      const at = await writeSettings(costs, margins)
+      setSavedAt(at)
+      setSaveError(null)
+    } catch (err) {
+      // Silently losing a cost sheet the owner just typed out is the worst
+      // outcome here: they would go estimate a roof believing it was saved.
+      setSaveError(
+        err instanceof Error
+          ? `Could not save on this device: ${err.message}`
+          : 'Could not save on this device.',
+      )
+    }
   }
 
   const setCost = (key: CostKey) => (e: { target: { value: string } }) => {
@@ -144,6 +157,12 @@ export default function CostBookPage() {
           </Field>
         </div>
       </Card>
+
+      {saveError && (
+        <p className="rounded-lg bg-amber-400/10 px-3 py-2 text-[13px] text-amber-200 ring-1 ring-amber-400/25">
+          {saveError}
+        </p>
+      )}
 
       <Button full onClick={() => void save()}>Save</Button>
     </div>
