@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { normalizeAddress } from '@/lib/address'
 import type { ProviderAvailability } from '@/integrations/storm/types'
 import type { PermitKind, PermitProvider, PermitQuery, PermitRecord } from './types'
+import { boundFetch } from '@/lib/fetch'
 
 /**
  * East Baton Rouge Parish building permits, via the parish's Socrata endpoint.
@@ -98,7 +99,14 @@ export class EbrPermitProvider implements PermitProvider {
   readonly coverage =
     'East Baton Rouge Parish only. Ascension has required re-roof permits since August 2025 but publishes no public feed yet; Livingston is view-only.'
 
-  constructor(private readonly fetchImpl: typeof fetch = fetch) {}
+  private readonly fetchImpl: typeof fetch
+
+  // Bound, never stored raw. Calling an unbound fetch as this.fetchImpl(...)
+  // throws "Illegal invocation" in a browser before the request is made.
+  // See src/lib/fetch.ts.
+  constructor(fetchImpl: typeof fetch = globalThis.fetch) {
+    this.fetchImpl = boundFetch(fetchImpl)
+  }
 
   async availability(): Promise<ProviderAvailability> {
     try {

@@ -25,7 +25,7 @@ class DisabledStormProvider implements StormProvider {
 
 export function createStormProvider(
   which: 'noaa' | 'hailtrace' | 'none',
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch = globalThis.fetch,
 ): StormProvider {
   switch (which) {
     case 'hailtrace':

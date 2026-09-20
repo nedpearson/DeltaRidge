@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { boundFetch } from '@/lib/fetch'
 
 /**
  * East Baton Rouge Parish address locator.
@@ -76,7 +77,12 @@ export function streetLineOf(address: string): string {
 }
 
 export class EbrGeocoder {
-  constructor(private readonly fetchImpl: typeof fetch = fetch) {}
+  private readonly fetchImpl: typeof fetch
+
+  // Bound, never stored raw. See src/lib/fetch.ts.
+  constructor(fetchImpl: typeof fetch = globalThis.fetch) {
+    this.fetchImpl = boundFetch(fetchImpl)
+  }
 
   /**
    * Geocodes a batch. Returns a map keyed by the caller's own index so a

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { boundFetch } from '@/lib/fetch'
 import type {
   ProviderAvailability,
   StormEvent,
@@ -158,7 +159,12 @@ export class NoaaStormProvider implements StormProvider {
   /** Public domain: safe to persist. */
   readonly mayPersistGeometry = true
 
-  constructor(private readonly fetchImpl: typeof fetch = fetch) {}
+  private readonly fetchImpl: typeof fetch
+
+  // Bound, never stored raw. See src/lib/fetch.ts.
+  constructor(fetchImpl: typeof fetch = globalThis.fetch) {
+    this.fetchImpl = boundFetch(fetchImpl)
+  }
 
   async availability(): Promise<ProviderAvailability> {
     // No credential required. Report a transport problem honestly rather than

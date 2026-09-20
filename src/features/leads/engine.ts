@@ -3,6 +3,7 @@ import { EbrGeocoder, type GeocodeResult } from '@/integrations/geocode/ebr'
 import { EbrPermitProvider } from '@/integrations/permits/ebr'
 import type { PermitRecord } from '@/integrations/permits/types'
 import { createStormProvider, type StormEvent } from '@/integrations/storm'
+import { boundFetch } from '@/lib/fetch'
 import {
   candidatesFromPermits,
   contractorActivity,
@@ -166,7 +167,7 @@ export async function runLeadEngine(
   deps: RunDeps = {},
 ): Promise<LeadRun> {
   const now = deps.now ?? new Date()
-  const fetchImpl = deps.fetchImpl ?? fetch
+  const fetchImpl = boundFetch(deps.fetchImpl)
   const notes: string[] = []
 
   const storms = createStormProvider('noaa', fetchImpl)
