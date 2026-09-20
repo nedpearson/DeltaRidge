@@ -105,15 +105,21 @@ describe('a fully costed roof', () => {
   it('leaves the standard margin AFTER commission', () => {
     expect(built.recommended.realisedMargin).toBe(percentToBps(38))
     expect(built.recommended.commission).toBeGreaterThan(0)
-    // The naive price would not survive the commission.
-    expect(built.recommended.price).toBeGreaterThan(built.ladder.standard)
+  })
+
+  it('makes the recommended price the standard rung, not a number beside it', () => {
+    expect(built.recommended.price).toBe(built.ladder.standard)
   })
 
   it('produces a ladder that descends', () => {
     expect(built.ladder.standard).toBeGreaterThan(built.ladder.target)
     expect(built.ladder.target).toBeGreaterThan(built.ladder.floor)
     expect(built.ladder.floor).toBeGreaterThan(built.ladder.stop)
-    expect(marginOf(built.ladder.stop, built.jobCost)).toBe(percentToBps(26))
+  })
+
+  it('prices the stop rung above its bare margin, because commission comes out of it', () => {
+    // 26% after an 8% commission needs a higher price than 26% of job cost.
+    expect(marginOf(built.ladder.stop, built.jobCost)).toBeGreaterThan(percentToBps(26))
   })
 
   it('lands in a believable range for a 32 SQ roof', () => {

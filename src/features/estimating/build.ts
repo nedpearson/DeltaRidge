@@ -1,8 +1,8 @@
-import { areaAtOrAbovePitch, countPenetrations, totalAreaSqFt, type RoofGeometry } from './geometry'
+﻿import { areaAtOrAbovePitch, countPenetrations, totalAreaSqFt, type RoofGeometry } from './geometry'
 import { calculateWaste, type WasteResult } from './waste'
 import { extendScope } from './price-book'
 import { buildJobCost, solvePrice, type JobCostLine, type PricingSolution } from './cost'
-import { priceLadder, type PriceLadder } from './margin'
+import type { PriceLadder } from './margin'
 import { ZERO_CENTS, type Cents } from './money'
 import type { EstimateLine, ScopeEvidence } from './estimate'
 import {
@@ -199,11 +199,29 @@ export function buildEstimate(
   const policy = marginPolicyFrom(margins)
   const rates = ratesFrom(margins)
 
-  // A ladder off a zero cost is meaningless, and solvePrice would divide a
-  // zero into a zero. Return an honest empty rather than a confident $0.
+  /**
+   * Every rung is SOLVED, not laddered.
+   *
+   * priceLadder() ignores price-linked costs, so its rungs are what the price
+   * would be if commission did not exist. Showing those next to a
+   * commission-aware recommended price is worse than showing neither: the
+   * manager floor looked like $16,520 on a job where that price actually
+   * yields well under the 30% the rung claims, and a rep reading the screen
+   * would discount straight through the floor believing they were inside it.
+   *
+   * Caught by putting both on one screen and noticing they disagreed.
+   */
+  const rung = (margin: typeof policy.standardMargin) =>
+    solvePrice(jobCost.total, margin, rates).price
+
   const ladder: PriceLadder =
     jobCost.total > 0
-      ? priceLadder(jobCost.total, policy)
+      ? {
+          standard: rung(policy.standardMargin),
+          target: rung(policy.targetMargin),
+          floor: rung(policy.floorMargin),
+          stop: rung(policy.stopMargin),
+        }
       : { standard: ZERO_CENTS, target: ZERO_CENTS, floor: ZERO_CENTS, stop: ZERO_CENTS }
 
   const recommended =
