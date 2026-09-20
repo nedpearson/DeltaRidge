@@ -509,7 +509,10 @@ where v.organization_id in (select app.current_org_ids());
 
 comment on view estimate_versions_sales is
   'Cost-free projection of estimate_versions for salesperson-facing screens. '
-  'security_invoker keeps the caller RLS in force rather than the view owner.';
+  'Deliberately a definer view: invoker rights would re-apply the base-table '
+  'policy and defeat the purpose, and column privileges cannot express it '
+  'because every app user is the same database role. The organisation filter '
+  'in the view body is therefore load-bearing.';
 
 -- Same projection for the line items: scope and quantity, never unit cost.
 create view estimate_items_sales
