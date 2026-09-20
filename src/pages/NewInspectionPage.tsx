@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, Field, Select, TextInput } from '@/components/ui'
-import { newId, saveInspection, type LocalInspection } from '@/lib/db'
+import { getInspection, newId, saveInspection, type LocalInspection } from '@/lib/db'
 import { currentPosition } from '@/lib/image'
 
 const PARISHES = [
@@ -24,6 +24,7 @@ const MATERIALS: Array<[string, string]> = [
 export default function NewInspectionPage() {
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({
     addressLine1: '',
     city: '',
@@ -44,9 +45,7 @@ export default function NewInspectionPage() {
   async function start() {
     if (!form.addressLine1.trim()) return
     setBusy(true)
-    // Location is best-effort and time-boxed. If the rep is in a metal building
-    // with no fix, we start the inspection anyway rather than making them wait.
-    const pos = await currentPosition(5000)
+    setError(null)
     const now = new Date().toISOString()
     const id = newId()
 
@@ -67,11 +66,44 @@ export default function NewInspectionPage() {
       ...(form.customerPhone.trim() ? { customerPhone: form.customerPhone.trim() } : {}),
       ...(form.customerEmail.trim() ? { customerEmail: form.customerEmail.trim() } : {}),
       ...(form.stories ? { stories: Number(form.stories) } : {}),
-      ...(pos ? { latitude: pos.coords.latitude, longitude: pos.coords.longitude } : {}),
     }
 
-    await saveInspection(inspection)
+    try {
+      await saveInspection(inspection)
+    } catch (err) {
+      // Without this the button sits disabled forever and the rep taps a dead
+      // control. Storage can genuinely fail - a full device is the common one.
+      setBusy(false)
+      setError(
+        err instanceof Error
+          ? `Could not save on this device: ${err.message}`
+          : 'Could not save on this device.',
+      )
+      return
+    }
+
     navigate(`/inspection/${id}`, { replace: true })
+
+    /**
+     * The GPS fix is chased AFTER the inspection exists, not before it.
+     *
+     * Waiting on it cost up to five seconds of a dead-looking button, which is
+     * exactly long enough for a rep to decide the app is broken and tap again.
+     * The address is what the office needs; coordinates are a convenience for
+     * mapping. So: open the inspection immediately, and fold the position in
+     * when it arrives. If it never arrives - metal building, no fix, denied
+     * permission - nothing is lost and nothing was waited on.
+     */
+    void currentPosition(8000).then(async (pos) => {
+      if (!pos) return
+      const latest = await getInspection(id)
+      if (!latest) return
+      await saveInspection({
+        ...latest,
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+      })
+    })
   }
 
   return (
@@ -154,8 +186,14 @@ export default function NewInspectionPage() {
         </div>
       </Card>
 
+      {error && (
+        <p className="rounded-lg bg-amber-400/10 px-3 py-2 text-[13px] text-amber-200 ring-1 ring-amber-400/25">
+          {error}
+        </p>
+      )}
+
       <Button full onClick={() => void start()} disabled={busy || !form.addressLine1.trim()}>
-        {busy ? 'Getting location…' : 'Start inspection'}
+        {busy ? 'Starting…' : 'Start inspection'}
       </Button>
     </div>
   )
