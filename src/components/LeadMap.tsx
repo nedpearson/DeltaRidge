@@ -2,12 +2,12 @@ import { useMemo, useRef, useState } from 'react'
 import { Button, Card, SectionTitle } from '@/components/ui'
 import { basemapUrl, hasBasemap } from '@/features/leads/basemap'
 import {
-  boundsOf,
   offsetCenter,
   padBounds,
   project,
   spanMiles,
   viewForBounds,
+  workingBounds,
   zoomBy,
   type GeoPoint,
   type View,
@@ -92,7 +92,7 @@ export default function LeadMap({
   }, [doors, leads])
 
   const fitted = useMemo(() => {
-    const base = boundsOf(markers.map((m) => m.point))
+    const base = workingBounds(markers.map((m) => m.point))
     return base ? viewForBounds(padBounds(base), VIEW_SIZE) : null
   }, [markers])
 

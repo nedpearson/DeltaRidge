@@ -112,6 +112,35 @@ export function padBounds(bounds: Bounds, fraction = 0.08, minimumDegrees = 0.00
 }
 
 /**
+ * The box that holds most of the work, ignoring the stragglers.
+ *
+ * Fitting every last door means fitting the two outliers eight miles from the
+ * rest, which pushes the centre into a field between subdivisions — so the map
+ * opens on empty ground and zooming in goes nowhere near a house. Trimming the
+ * extremes puts the centre where the doors actually are. The outliers are
+ * still drawn; they are just allowed to sit off the edge until you zoom out.
+ */
+export function workingBounds(points: readonly GeoPoint[], trim = 0.05): Bounds | null {
+  const usable = points.filter((p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude))
+  if (usable.length === 0) return null
+  // Below about twenty doors every point is most of the picture, so trimming
+  // would throw away real work rather than noise.
+  if (usable.length < 20) return boundsOf(usable)
+
+  const lons = usable.map((p) => p.longitude).sort((a, b) => a - b)
+  const lats = usable.map((p) => p.latitude).sort((a, b) => a - b)
+  const low = Math.floor(usable.length * trim)
+  const high = Math.ceil(usable.length * (1 - trim)) - 1
+
+  return {
+    west: lons[low] as number,
+    east: lons[high] as number,
+    south: lats[low] as number,
+    north: lats[high] as number,
+  }
+}
+
+/**
  * The centre of a box in Mercator, not the average of its corners.
  *
  * Averaging the latitudes puts the centre slightly south of where the tiles

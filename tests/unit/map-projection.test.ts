@@ -11,6 +11,7 @@ import {
   spanMiles,
   TILE,
   viewForBounds,
+  workingBounds,
   worldSize,
   zoomBy,
   zoomToFit,
@@ -56,6 +57,44 @@ describe('bounds', () => {
     const padded = padBounds({ west: -91.05, south: 30.35, east: -91.05, north: 30.35 })
     expect(padded.east - padded.west).toBeGreaterThan(0)
     expect(padded.north - padded.south).toBeGreaterThan(0)
+  })
+})
+
+describe('the box that holds most of the work', () => {
+  /** Forty doors in one subdivision, plus two strays miles away. */
+  const cluster = Array.from({ length: 40 }, (_, i) => ({
+    latitude: 30.35 + i * 0.0002,
+    longitude: -91.05 + i * 0.0002,
+  }))
+  const withStragglers = [
+    ...cluster,
+    { latitude: 30.9, longitude: -91.6 },
+    { latitude: 30.1, longitude: -90.5 },
+  ]
+
+  it('ignores the stragglers that would otherwise set the centre', () => {
+    const all = boundsOf(withStragglers) as Bounds
+    const working = workingBounds(withStragglers) as Bounds
+    expect(working.north - working.south).toBeLessThan(all.north - all.south)
+    expect(working.east - working.west).toBeLessThan(all.east - all.west)
+  })
+
+  it('leaves the centre on top of the doors rather than in a field', () => {
+    const centre = centerOf(workingBounds(withStragglers) as Bounds)
+    // Inside the cluster, not halfway to the strays.
+    expect(centre.latitude).toBeGreaterThan(30.35)
+    expect(centre.latitude).toBeLessThan(30.36)
+    expect(centre.longitude).toBeGreaterThan(-91.05)
+    expect(centre.longitude).toBeLessThan(-91.04)
+  })
+
+  it('keeps every door when there are few enough that each one matters', () => {
+    const few = cluster.slice(0, 6)
+    expect(workingBounds(few)).toEqual(boundsOf(few))
+  })
+
+  it('is nothing when there is nothing to plot', () => {
+    expect(workingBounds([])).toBeNull()
   })
 })
 
