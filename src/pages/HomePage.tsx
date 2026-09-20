@@ -4,6 +4,7 @@ import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import { listInspections, localStorageFootprint, type LocalInspection } from '@/lib/db'
 import { backendStatus } from '@/lib/backend'
 import AccountPanel from '@/features/auth/AccountPanel'
+import { readCachedRun, type LeadRun } from '@/features/leads/engine'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -31,31 +32,69 @@ export default function HomePage() {
   const navigate = useNavigate()
   const [inspections, setInspections] = useState<LocalInspection[]>([])
   const [footprint, setFootprint] = useState(0)
+  const [run, setRun] = useState<LeadRun | null>(null)
   const backend = backendStatus()
 
   useEffect(() => {
     void listInspections().then(setInspections)
     void localStorageFootprint().then(setFootprint)
+    // Cache only, never the network: Home has to open instantly in a truck with
+    // one bar, and the door list is a tab away if the rep wants a fresh one.
+    void readCachedRun().then(setRun)
   }, [])
 
   const open = inspections.filter((i) => i.status === 'in_progress')
   const done = inspections.filter((i) => i.status === 'complete')
+  const topDoors = run?.leads.slice(0, 3) ?? []
 
   return (
     <div>
-      <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 ring-1 ring-white/10">
-        <p className="font-display text-lg leading-tight tracking-wide">
-          Document the roof.
-          <br />
-          Leave with nothing missing.
-        </p>
-        <p className="mt-2 max-w-xs text-[13px] leading-relaxed text-white/60">
-          Guided capture, on-device quality checks, and a completeness review before you drive away.
-        </p>
-        <Button variant="gold" full className="mt-4" onClick={() => navigate('/new')}>
-          Start an inspection
-        </Button>
-      </div>
+      {topDoors.length > 0 ? (
+        <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 ring-1 ring-white/10">
+          <p className="font-display text-lg leading-tight tracking-wide">
+            {run?.leads.length} door{run?.leads.length === 1 ? '' : 's'} worth knocking.
+          </p>
+          <p className="mt-1 text-[12px] text-white/50">
+            Built {relative(run?.ranAt ?? new Date().toISOString())} · hail, roof age, nothing already re-roofed
+          </p>
+
+          <ul className="mt-3 space-y-2">
+            {topDoors.map((lead) => (
+              <li key={lead.addressKey} className="rounded-xl bg-black/20 px-3 py-2.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="truncate text-[13.5px] font-semibold">{lead.address}</p>
+                  <span className="shrink-0 font-display text-[15px] text-gold-400">{lead.score}</span>
+                </div>
+                <p className="mt-0.5 truncate text-[11.5px] text-white/50">{lead.reasons[0]}</p>
+              </li>
+            ))}
+          </ul>
+
+          <Button variant="gold" full className="mt-4" onClick={() => navigate('/leads')}>
+            Open the door list
+          </Button>
+          <Button variant="secondary" full className="mt-2" onClick={() => navigate('/new')}>
+            Start an inspection
+          </Button>
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 ring-1 ring-white/10">
+          <p className="font-display text-lg leading-tight tracking-wide">
+            Document the roof.
+            <br />
+            Leave with nothing missing.
+          </p>
+          <p className="mt-2 max-w-xs text-[13px] leading-relaxed text-white/60">
+            Guided capture, on-device quality checks, and a completeness review before you drive away.
+          </p>
+          <Button variant="gold" full className="mt-4" onClick={() => navigate('/new')}>
+            Start an inspection
+          </Button>
+          <Button variant="secondary" full className="mt-2" onClick={() => navigate('/leads')}>
+            Build today's door list
+          </Button>
+        </div>
+      )}
 
       {!backend.configured && (
         <Card className="mt-4 !bg-amber-500/8 ring-amber-500/20">
