@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card, SectionTitle } from '@/components/ui'
-import { basemapUrl, hasBasemap } from '@/features/leads/basemap'
+import { basemapUrl, hasBasemap, MAP_STYLES, type MapStyleKey } from '@/features/leads/basemap'
 import {
   offsetCenter,
   padBounds,
@@ -10,6 +10,7 @@ import {
   workingBounds,
   zoomBy,
   type GeoPoint,
+  type Size,
   type View,
 } from '@/features/leads/map-projection'
 import { STATUS_LABEL, type LeadStatus, type ManagedLead } from '@/features/leads/pipeline'
@@ -22,15 +23,15 @@ import type { StormEvent } from '@/integrations/storm'
  * Streets come from one Mapbox static image, not a map library: a single
  * request instead of a tile stream, and a plain `<img>` that can fail without
  * taking the screen with it. With no token and no signal the dots are still
- * there, which is the case that matters — a rep in a truck with one bar needs
- * to know which houses on this street are done, and that is the shape of the
- * dots rather than the streets under them.
+ * there, which is the case that matters.
  *
- * The overlay projects with exactly the centre and zoom the image was
- * requested at, so a door sits on its own roof rather than near it.
+ * The image is requested at the size the map is actually drawn at, measured
+ * rather than assumed. A fixed request size meant a 640-pixel image stretched
+ * across 1,275 on a desktop, which is why the street names came out blurred.
  */
 
-const VIEW_SIZE = { width: 320, height: 240 }
+/** Until the container has been measured. Replaced on first layout. */
+const FALLBACK_SIZE: Size = { width: 320, height: 260 }
 
 interface Marker {
   id: string
@@ -40,16 +41,27 @@ interface Marker {
   leadId?: string
 }
 
+/**
+ * Chosen to sit on a LIGHT street map. The previous set was tuned for the dark
+ * style and would disappear against a white road, which is the one place a dot
+ * has to be legible.
+ */
 const COLOUR: Record<LeadStatus | 'door', string> = {
-  door: '#9aa3b2',
-  new: '#9aa3b2',
-  attempted: '#f0b429',
-  follow_up: '#f0b429',
-  need_visit: '#4f8ef7',
-  appointment: '#34d399',
-  inspected: '#34d399',
-  not_interested: '#ef4444',
-  do_not_knock: '#ef4444',
+  door: '#475569',
+  new: '#475569',
+  attempted: '#d97706',
+  follow_up: '#d97706',
+  need_visit: '#2563eb',
+  appointment: '#059669',
+  inspected: '#059669',
+  not_interested: '#dc2626',
+  do_not_knock: '#dc2626',
+}
+
+/** The legend sits on the app's dark card, where slate-600 is too dim. */
+const LEGEND_COLOUR: Record<LeadStatus | 'door', string> = {
+  ...COLOUR,
+  door: '#94a3b8',
 }
 
 const LEGEND: { status: LeadStatus | 'door'; label: string }[] = [
@@ -71,6 +83,31 @@ export default function LeadMap({
   storms: readonly StormEvent[]
   onOpenLead: (leadId: string) => void
 }) {
+  const boxRef = useRef<HTMLDivElement | null>(null)
+  const [size, setSize] = useState<Size>(FALLBACK_SIZE)
+
+  /**
+   * The rendered size drives both the image request and the projection, so it
+   * has to be measured, not guessed — and re-measured on rotation or resize.
+   */
+  useEffect(() => {
+    const box = boxRef.current
+    if (!box) return
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return
+      const { width, height } = entry.contentRect
+      if (width > 0 && height > 0) {
+        setSize((s) =>
+          Math.abs(s.width - width) < 1 && Math.abs(s.height - height) < 1
+            ? s
+            : { width: Math.round(width), height: Math.round(height) },
+        )
+      }
+    })
+    observer.observe(box)
+    return () => observer.disconnect()
+  }, [])
+
   const markers: Marker[] = useMemo(() => {
     // Leads first: a door that has become somebody must not be drawn twice,
     // and the pipeline colour is the one that matters.
@@ -93,12 +130,13 @@ export default function LeadMap({
 
   const fitted = useMemo(() => {
     const base = workingBounds(markers.map((m) => m.point))
-    return base ? viewForBounds(padBounds(base), VIEW_SIZE) : null
-  }, [markers])
+    return base ? viewForBounds(padBounds(base), size) : null
+  }, [markers, size])
 
   const [view, setView] = useState<View | null>(null)
   const [drag, setDrag] = useState({ x: 0, y: 0 })
   const [selected, setSelected] = useState<Marker | null>(null)
+  const [style, setStyle] = useState<MapStyleKey>('streets')
   const [tilesFailed, setTilesFailed] = useState(false)
   const from = useRef<{ x: number; y: number } | null>(null)
 
@@ -117,12 +155,13 @@ export default function LeadMap({
     )
   }
 
-  const tiles = tilesFailed ? null : basemapUrl(current, VIEW_SIZE)
+  const tiles = tilesFailed ? null : basemapUrl(current, size, style)
+  const onSatellite = style === 'satellite'
 
-  const placed = markers.map((m) => ({ marker: m, ...project(m.point, current, VIEW_SIZE) }))
+  const placed = markers.map((m) => ({ marker: m, ...project(m.point, current, size) }))
   const stormPoints = storms
     .filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude))
-    .map((s) => ({ id: s.externalId, ...project(s, current, VIEW_SIZE), size: s.hailSizeInches ?? 1 }))
+    .map((s) => ({ id: s.externalId, ...project(s, current, size), size: s.hailSizeInches ?? 1 }))
 
   // Arrows rather than function declarations: a hoisted declaration is
   // analysed without the null check above it, and `current` is only known to
@@ -135,13 +174,10 @@ export default function LeadMap({
   const onPointerMove = (e: React.PointerEvent) => {
     const start = from.current
     if (!start) return
-    // The image and the overlay are shifted together by the same pixels while
-    // the finger is down, and only when it lifts is a new image fetched. The
-    // alternative — refetching mid-drag — costs a request per frame and makes
-    // the streets lag behind the dots.
-    const rect = e.currentTarget.getBoundingClientRect()
-    const perPixel = VIEW_SIZE.width / rect.width
-    setDrag({ x: (e.clientX - start.x) * perPixel, y: (e.clientY - start.y) * perPixel })
+    // The image and the overlay are shifted together while the finger is down,
+    // and only when it lifts is a new image fetched. Refetching mid-drag costs
+    // a request per frame and leaves the streets lagging behind the dots.
+    setDrag({ x: e.clientX - start.x, y: e.clientY - start.y })
   }
 
   const onPointerUp = () => {
@@ -153,12 +189,19 @@ export default function LeadMap({
     setTilesFailed(false)
   }
 
+  const recentre = (next: View | null) => {
+    setView(next)
+    setDrag({ x: 0, y: 0 })
+    setTilesFailed(false)
+  }
+
   return (
     <>
-      <SectionTitle hint={`${spanMiles(current, VIEW_SIZE)} mi across`}>MAP</SectionTitle>
+      <SectionTitle hint={`${spanMiles(current, size)} mi across`}>MAP</SectionTitle>
       <Card className="!p-0 overflow-hidden">
         <div
-          className="relative h-60 w-full touch-none overflow-hidden bg-[#0b1220]"
+          ref={boxRef}
+          className="relative h-72 w-full touch-none overflow-hidden bg-[#e8e6e1]"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -166,22 +209,18 @@ export default function LeadMap({
         >
           {tiles && (
             <img
+              key={tiles}
               src={tiles}
               alt=""
               draggable={false}
               onError={() => setTilesFailed(true)}
-              className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover opacity-80"
-              style={{
-                transform: `translate(${(drag.x / VIEW_SIZE.width) * 100}%, ${
-                  (drag.y / VIEW_SIZE.height) * 100
-                }%)`,
-              }}
+              className="pointer-events-none absolute inset-0 h-full w-full select-none"
+              style={{ transform: `translate(${drag.x}px, ${drag.y}px)` }}
             />
           )}
 
           <svg
-            viewBox={`0 0 ${VIEW_SIZE.width} ${VIEW_SIZE.height}`}
-            preserveAspectRatio="xMidYMid slice"
+            viewBox={`0 0 ${size.width} ${size.height}`}
             className="absolute inset-0 h-full w-full"
           >
             <g transform={`translate(${drag.x} ${drag.y})`}>
@@ -191,12 +230,12 @@ export default function LeadMap({
                   key={s.id}
                   cx={s.x}
                   cy={s.y}
-                  r={6 + s.size * 4}
-                  fill="#f0b429"
-                  fillOpacity={0.08}
-                  stroke="#f0b429"
-                  strokeOpacity={0.3}
-                  strokeWidth={0.5}
+                  r={8 + s.size * 6}
+                  fill="#b45309"
+                  fillOpacity={0.1}
+                  stroke="#b45309"
+                  strokeOpacity={0.35}
+                  strokeWidth={1}
                 />
               ))}
 
@@ -205,62 +244,70 @@ export default function LeadMap({
                   key={marker.id}
                   cx={x}
                   cy={y}
-                  r={marker.status === 'door' ? 2.2 : 3.6}
+                  r={marker.status === 'door' ? 4 : 5.5}
                   fill={COLOUR[marker.status]}
-                  fillOpacity={marker.status === 'door' ? 0.85 : 1}
-                  // A thin dark ring keeps every dot readable over a pale road
-                  // or a dark park without changing its colour.
-                  stroke={selected?.id === marker.id ? '#ffffff' : '#0b1220'}
-                  strokeWidth={selected?.id === marker.id ? 1.4 : 0.6}
+                  // A white halo, so a dot reads on a pale road, a dark park
+                  // and a satellite roof without changing its colour.
+                  stroke={selected?.id === marker.id ? '#111827' : '#ffffff'}
+                  strokeWidth={selected?.id === marker.id ? 3 : 1.5}
                   onClick={() => setSelected(marker)}
                   className="cursor-pointer"
                 />
               ))}
             </g>
           </svg>
-        </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-white/8 px-3 py-2">
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {LEGEND.map((l) => (
-              <span key={l.status} className="flex items-center gap-1.5 text-[10.5px] text-white/45">
-                <span className="size-1.5 rounded-full" style={{ backgroundColor: COLOUR[l.status] }} />
-                {l.label}
-              </span>
+          <div className="absolute right-2 top-2 flex overflow-hidden rounded-lg ring-1 ring-black/10">
+            {(Object.keys(MAP_STYLES) as MapStyleKey[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setStyle(key)
+                  setTilesFailed(false)
+                }}
+                className={`px-2.5 py-1 text-[11px] font-semibold ${
+                  style === key ? 'bg-brand-600 text-white' : 'bg-white/90 text-brand-950'
+                }`}
+              >
+                {MAP_STYLES[key].label}
+              </button>
             ))}
           </div>
-          <div className="flex shrink-0 gap-1">
+
+          <div className="absolute bottom-2 right-2 flex gap-1">
             <button
-              onClick={() => {
-                setView(zoomBy(current, -1))
-                setTilesFailed(false)
-              }}
-              className="rounded-lg bg-white/8 px-2.5 py-1 text-[13px] text-white/70"
+              onClick={() => recentre(zoomBy(current, -1))}
+              className="rounded-lg bg-white/90 px-2.5 py-1 text-[14px] font-semibold text-brand-950 ring-1 ring-black/10"
               aria-label="Zoom out"
             >
               −
             </button>
             <button
-              onClick={() => {
-                setView(zoomBy(current, 1))
-                setTilesFailed(false)
-              }}
-              className="rounded-lg bg-white/8 px-2.5 py-1 text-[13px] text-white/70"
+              onClick={() => recentre(zoomBy(current, 1))}
+              className="rounded-lg bg-white/90 px-2.5 py-1 text-[14px] font-semibold text-brand-950 ring-1 ring-black/10"
               aria-label="Zoom in"
             >
               +
             </button>
             <button
-              onClick={() => {
-                setView(null)
-                setDrag({ x: 0, y: 0 })
-                setTilesFailed(false)
-              }}
-              className="rounded-lg bg-white/8 px-2.5 py-1 text-[11px] text-white/55"
+              onClick={() => recentre(null)}
+              className="rounded-lg bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-brand-950 ring-1 ring-black/10"
             >
               Fit
             </button>
           </div>
+        </div>
+
+        <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-white/8 px-3 py-2">
+          {LEGEND.map((l) => (
+            <span key={l.status} className="flex items-center gap-1.5 text-[10.5px] text-white/45">
+              <span
+                className="size-1.5 rounded-full"
+                style={{ backgroundColor: LEGEND_COLOUR[l.status] }}
+              />
+              {l.label}
+            </span>
+          ))}
         </div>
 
         {selected && (
@@ -299,7 +346,8 @@ export default function LeadMap({
         )}
         {hasBasemap() && tilesFailed && (
           <p className="border-t border-white/8 px-3 py-2 text-[10.5px] leading-relaxed text-amber-200/70">
-            The street map could not load, so this is positions only. The dots are still right.
+            The {onSatellite ? 'satellite' : 'street'} map could not load, so this is positions
+            only. The dots are still right.
           </p>
         )}
       </Card>
