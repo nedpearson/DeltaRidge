@@ -11,6 +11,8 @@
  * browser. Persistence lives in lead-store.ts.
  */
 
+import { newId } from '@/lib/db'
+
 export type LeadStatus =
   /** On the list, never knocked. */
   | 'new'
@@ -113,6 +115,128 @@ export interface ManagedLead {
   inspectionId?: string
   /** How many times someone has stood at this door. */
   knockCount: number
+  /**
+   * When this person said Delta Ridge could contact them on a channel, and
+   * how that was established. Absent means they never said so — which is not
+   * the same as no, and is also not permission.
+   */
+  consent?: Partial<Record<ContactChannel, ConsentRecord>>
+  /**
+   * When they asked to be left alone. Overrides every consent on the record,
+   * permanently, on every channel.
+   */
+  optedOutAt?: string
+}
+
+export type ContactChannel = 'call' | 'sms' | 'email'
+
+export const CHANNEL_LABEL: Record<ContactChannel, string> = {
+  call: 'Phone call',
+  sms: 'Text message',
+  email: 'Email',
+}
+
+export interface ConsentRecord {
+  at: string
+  /**
+   * Only one source exists today, and it is named rather than assumed. A
+   * verbal yes at a door is what this app can actually witness; a written
+   * opt-in collected through a form is a different, stronger thing, and when
+   * one exists it must be distinguishable from this.
+   */
+  source: 'verbal_at_door'
+}
+
+export type ContactBlock =
+  | { allowed: true }
+  | { allowed: false; reason: string }
+
+/**
+ * Whether this person may be contacted on this channel.
+ *
+ * The default is NO. Consent is a thing somebody said, not a thing inferred
+ * from having a phone number — and a number written on a door sheet is not
+ * permission to text it. This is the gate every send has to pass, including
+ * the one-at-a-time call and text buttons.
+ */
+export function mayContact(lead: ManagedLead, channel: ContactChannel): ContactBlock {
+  if (lead.optedOutAt !== undefined) {
+    return { allowed: false, reason: 'They asked not to be contacted.' }
+  }
+  if (lead.status === 'do_not_knock') {
+    return { allowed: false, reason: 'Marked do not knock.' }
+  }
+  if (channel !== 'email' && lead.contactPhone === undefined) {
+    return { allowed: false, reason: 'No phone number on this lead.' }
+  }
+  if (lead.consent?.[channel] === undefined) {
+    return {
+      allowed: false,
+      reason: `No recorded permission to ${channel === 'call' ? 'call' : channel === 'sms' ? 'text' : 'email'} them.`,
+    }
+  }
+  return { allowed: true }
+}
+
+/** Records permission, or withdraws it. Never mutates the lead it was given. */
+export function setConsent(
+  lead: ManagedLead,
+  channel: ContactChannel,
+  granted: boolean,
+  at: string,
+): ManagedLead {
+  const consent = { ...(lead.consent ?? {}) }
+  if (granted) consent[channel] = { at, source: 'verbal_at_door' }
+  else delete consent[channel]
+
+  const next: ManagedLead = { ...lead, updatedAt: at }
+  if (Object.keys(consent).length > 0) next.consent = consent
+  else delete next.consent
+  return next
+}
+
+/**
+ * Records that somebody asked to be left alone.
+ *
+ * Every consent on the record is cleared at the same time. Leaving them in
+ * place would mean an opt-out that could be undone by a later edit, which is
+ * the mechanism by which a suppression list quietly stops working.
+ */
+export function optOut(lead: ManagedLead, at: string): ManagedLead {
+  const next: ManagedLead = { ...lead, optedOutAt: at, updatedAt: at }
+  delete next.consent
+  return next
+}
+
+export interface ConsentTally {
+  readonly total: number
+  readonly call: number
+  readonly sms: number
+  readonly email: number
+  readonly optedOut: number
+  readonly reachableSomehow: number
+}
+
+/** What the pipeline actually has permission for, for the readiness panel. */
+export function consentTally(leads: readonly ManagedLead[]): ConsentTally {
+  let call = 0
+  let sms = 0
+  let email = 0
+  let optedOut = 0
+  let reachable = 0
+
+  for (const lead of leads) {
+    if (lead.optedOutAt !== undefined) optedOut += 1
+    const c = mayContact(lead, 'call').allowed
+    const s = mayContact(lead, 'sms').allowed
+    const e = mayContact(lead, 'email').allowed
+    if (c) call += 1
+    if (s) sms += 1
+    if (e) email += 1
+    if (c || s || e) reachable += 1
+  }
+
+  return { total: leads.length, call, sms, email, optedOut, reachableSomehow: reachable }
 }
 
 export interface ContactEvent {
@@ -211,8 +335,12 @@ export function applyOutcome(
     next.contactPhone = options.contactPhone
   }
 
+  // A UUID, not a composite of the lead id and the clock. Two things depend on
+  // it: the server stores it in a uuid column as the conflict target for an
+  // idempotent push, and two knocks at the same address are genuinely two
+  // events that must both survive.
   const event: ContactEvent = {
-    id: `${lead.id}:${at}:${outcome}`,
+    id: newId(),
     leadId: lead.id,
     at,
     kind: outcome === 'appointment_set' ? 'appointment_set' : 'door_knock',

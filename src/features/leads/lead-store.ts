@@ -1,5 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb'
-import { newId } from '@/lib/db'
+import { newId, queueSync } from '@/lib/db'
 import type { ContactEvent, ManagedLead } from './pipeline'
 import type { ScoredLead } from './scoring'
 
@@ -15,13 +15,38 @@ import type { ScoredLead } from './scoring'
 const DB_NAME = 'delta-ridge-crm'
 const LEADS = 'leads'
 const EVENTS = 'events'
+const ATTACHMENTS = 'attachments'
+
+/**
+ * A recording or a photo taken against a lead, not against an inspection.
+ *
+ * These are two different acts. An inspection photo documents a roof for a
+ * claim; a lead photo is the rep's own memory — the gate code, the dog, the
+ * business card, the streak on the ceiling the homeowner pointed at. Filing
+ * them in the same place would put unvetted driveway snapshots into the
+ * evidence package that goes to an adjuster.
+ */
+export interface LeadAttachment {
+  id: string
+  leadId: string
+  /** The contact event this was captured alongside. */
+  eventId: string
+  kind: 'voice' | 'photo'
+  blob: Blob
+  thumbnail?: Blob
+  durationSeconds?: number
+  width?: number
+  height?: number
+  byteSize: number
+  capturedAt: string
+}
 
 let dbPromise: Promise<IDBPDatabase> | null = null
 
 function getCrmDb(): Promise<IDBPDatabase> {
   if (!dbPromise) {
-    dbPromise = openDB(DB_NAME, 1, {
-      upgrade(db) {
+    dbPromise = openDB(DB_NAME, 2, {
+      upgrade(db, oldVersion) {
         if (!db.objectStoreNames.contains(LEADS)) {
           const leads = db.createObjectStore(LEADS, { keyPath: 'id' })
           // One managed lead per address, so a refreshed run can find it again.
@@ -32,10 +57,47 @@ function getCrmDb(): Promise<IDBPDatabase> {
           const events = db.createObjectStore(EVENTS, { keyPath: 'id' })
           events.createIndex('by-lead', 'leadId')
         }
+        // Guarded rather than keyed off oldVersion alone: a device that opened
+        // the database at v1 and a device installing fresh both have to end up
+        // with the same stores, and a missing store is a permanent crash.
+        if (oldVersion < 2 && !db.objectStoreNames.contains(ATTACHMENTS)) {
+          const attachments = db.createObjectStore(ATTACHMENTS, { keyPath: 'id' })
+          attachments.createIndex('by-lead', 'leadId')
+          attachments.createIndex('by-event', 'eventId')
+        }
       },
     })
   }
   return dbPromise
+}
+
+export async function saveAttachment(attachment: LeadAttachment): Promise<void> {
+  const db = await getCrmDb()
+  await db.put(ATTACHMENTS, attachment)
+  try {
+    await queueSync('leadAttachment', attachment.id)
+  } catch {
+    // Best-effort, like every other enqueue here. The capture is already safe.
+  }
+}
+
+export async function readAttachment(id: string): Promise<LeadAttachment | null> {
+  try {
+    const db = await getCrmDb()
+    return ((await db.get(ATTACHMENTS, id)) as LeadAttachment | undefined) ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function listAttachments(leadId: string): Promise<LeadAttachment[]> {
+  try {
+    const db = await getCrmDb()
+    const rows = (await db.getAllFromIndex(ATTACHMENTS, 'by-lead', leadId)) as LeadAttachment[]
+    return rows.sort((a, b) => a.capturedAt.localeCompare(b.capturedAt))
+  } catch {
+    return []
+  }
 }
 
 /**
@@ -109,16 +171,42 @@ export async function saveOutcome(lead: ManagedLead, event: ContactEvent): Promi
     tx.objectStore(EVENTS).put(event),
     tx.done,
   ])
+  // Queued only after the local write has committed. The rep's record is safe
+  // the moment it is on the device; the push is a later, separate concern that
+  // must never be able to fail the thing that already succeeded.
+  await queue(lead, event)
 }
 
 export async function saveLead(lead: ManagedLead): Promise<void> {
   const db = await getCrmDb()
   await db.put(LEADS, lead)
+  await queue(lead)
 }
 
 export async function addEvent(event: ContactEvent): Promise<void> {
   const db = await getCrmDb()
   await db.put(EVENTS, event)
+  await queue(null, event)
+}
+
+/** Queueing is best-effort: a failed enqueue must not lose the rep's work. */
+async function queue(lead: ManagedLead | null, event?: ContactEvent): Promise<void> {
+  try {
+    if (lead) await queueSync('lead', lead.id)
+    if (event) await queueSync('leadActivity', event.id)
+  } catch {
+    // The next write to this lead re-queues it, and the sync panel counts what
+    // is actually waiting rather than what was supposed to be.
+  }
+}
+
+export async function readEvent(id: string): Promise<ContactEvent | null> {
+  try {
+    const db = await getCrmDb()
+    return ((await db.get(EVENTS, id)) as ContactEvent | undefined) ?? null
+  } catch {
+    return null
+  }
 }
 
 export async function readHistory(leadId: string): Promise<ContactEvent[]> {

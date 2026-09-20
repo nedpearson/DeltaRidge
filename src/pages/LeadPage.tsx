@@ -1,19 +1,27 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Button, Card, Empty, Field, SectionTitle, TextArea, TextInput } from '@/components/ui'
+import LeadNotePanel from '@/components/LeadNotePanel'
+import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/components/ui'
 import {
   addEvent,
+  listAttachments,
   readHistory,
   readLead,
   saveLead,
   saveOutcome,
+  type LeadAttachment,
 } from '@/features/leads/lead-store'
 import {
   applyOutcome,
+  CHANNEL_LABEL,
   CONTACT_KIND_LABEL,
   dueLabel,
+  mayContact,
+  optOut,
   OUTCOME_LABEL,
+  setConsent,
   STATUS_LABEL,
+  type ContactChannel,
   type ContactEvent,
   type ContactKind,
   type DoorOutcome,
@@ -35,6 +43,7 @@ import { newId, saveInspection, type LocalInspection } from '@/lib/db'
  */
 
 const QUICK: DoorOutcome[] = ['no_answer', 'come_back', 'interested', 'appointment_set']
+const CHANNELS: ContactChannel[] = ['call', 'sms', 'email']
 
 function when(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -51,19 +60,64 @@ function toIso(local: string): string | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
 }
 
+/**
+ * Plays back what the rep captured, from the blob on this device.
+ *
+ * Object URLs are revoked when the entry unmounts. A lead with twenty photos
+ * on it otherwise holds every one of them in memory for as long as the page is
+ * open, which on a three-year-old Android is the difference between a working
+ * app and a tab the system kills.
+ */
+function Attachment({ item }: { item: LeadAttachment }) {
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    const blob = item.kind === 'photo' ? (item.thumbnail ?? item.blob) : item.blob
+    const made = URL.createObjectURL(blob)
+    setUrl(made)
+    return () => URL.revokeObjectURL(made)
+  }, [item])
+
+  if (!url) return null
+
+  if (item.kind === 'photo') {
+    return (
+      <img
+        src={url}
+        alt="Captured on this lead"
+        className="mt-1.5 h-28 w-full rounded-lg object-cover ring-1 ring-white/10"
+      />
+    )
+  }
+
+  return (
+    <div className="mt-1.5">
+      <audio controls src={url} className="h-9 w-full" />
+      <p className="mt-0.5 text-[10.5px] text-white/25">
+        {item.durationSeconds}s recording. Not transcribed — this is the audio itself.
+      </p>
+    </div>
+  )
+}
+
 export default function LeadPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [lead, setLead] = useState<ManagedLead | null>(null)
   const [history, setHistory] = useState<ContactEvent[]>([])
+  const [attachments, setAttachments] = useState<LeadAttachment[]>([])
   const [loading, setLoading] = useState(true)
-  const [note, setNote] = useState('')
   const [reschedule, setReschedule] = useState('')
 
   const load = useCallback(async (leadId: string) => {
-    const [found, events] = await Promise.all([readLead(leadId), readHistory(leadId)])
+    const [found, events, files] = await Promise.all([
+      readLead(leadId),
+      readHistory(leadId),
+      listAttachments(leadId),
+    ])
     setLead(found)
     setHistory(events)
+    setAttachments(files)
     setLoading(false)
   }, [])
 
@@ -91,25 +145,62 @@ export default function LeadPage() {
     async (kind: ContactKind) => {
       if (!lead) return
       const at = new Date().toISOString()
-      await addEvent({ id: `${lead.id}:${at}:${kind}`, leadId: lead.id, at, kind })
+      await addEvent({ id: newId(), leadId: lead.id, at, kind })
       await load(lead.id)
     },
     [lead, load],
   )
 
-  const addNote = useCallback(async () => {
-    if (!lead || note.trim() === '') return
+  /**
+   * Writes the note and hands back its id, so the panel can file whatever it
+   * recorded or photographed against the same entry.
+   */
+  const addNote = useCallback(
+    async (body: string): Promise<string> => {
+      if (!lead) throw new Error('no lead')
+      const at = new Date().toISOString()
+      const eventId = newId()
+      await addEvent({ id: eventId, leadId: lead.id, at, kind: 'note', note: body })
+      await load(lead.id)
+      return eventId
+    },
+    [lead, load],
+  )
+
+  const toggleConsent = useCallback(
+    async (channel: ContactChannel, granted: boolean) => {
+      if (!lead) return
+      const at = new Date().toISOString()
+      await saveLead(setConsent(lead, channel, granted, at))
+      // Filed as a note so permission has the same audit trail as everything
+      // else said at the door. A consent nobody can point to is not a consent.
+      await addEvent({
+        id: newId(),
+        leadId: lead.id,
+        at,
+        kind: 'note',
+        note: granted
+          ? `Said we may contact them by ${CHANNEL_LABEL[channel].toLowerCase()}.`
+          : `Permission to contact by ${CHANNEL_LABEL[channel].toLowerCase()} removed.`,
+      })
+      await load(lead.id)
+    },
+    [lead, load],
+  )
+
+  const stopContacting = useCallback(async () => {
+    if (!lead) return
     const at = new Date().toISOString()
+    await saveLead(optOut(lead, at))
     await addEvent({
-      id: `${lead.id}:${at}:note`,
+      id: newId(),
       leadId: lead.id,
       at,
       kind: 'note',
-      note: note.trim(),
+      note: 'Asked not to be contacted. All permissions cleared.',
     })
-    setNote('')
     await load(lead.id)
-  }, [lead, note, load])
+  }, [lead, load])
 
   const moveNextAction = useCallback(async () => {
     const at = toIso(reschedule)
@@ -154,12 +245,21 @@ export default function LeadPage() {
     return (
       <Empty
         title="No such lead"
-        body="It may have been recorded on another device. Leads live on the device that captured them until sync is switched on."
+        body="It may have been captured on another device and not pushed yet, or captured while signed out. A lead reaches the office on the next sync, not the moment it is written."
       />
     )
   }
 
   const due = dueLabel(lead, new Date().toISOString())
+  const callBlock = mayContact(lead, 'call')
+  const smsBlock = mayContact(lead, 'sms')
+  // Narrowed once, here, rather than inside the JSX: a discriminated union
+  // does not survive being re-tested in a ternary branch.
+  const blockReason = !callBlock.allowed
+    ? callBlock.reason
+    : !smsBlock.allowed
+      ? smsBlock.reason
+      : null
 
   return (
     <div>
@@ -190,30 +290,93 @@ export default function LeadPage() {
         </div>
       </div>
 
-      {lead.contactPhone && (
-        <>
-          <SectionTitle>REACH THEM</SectionTitle>
-          <Card>
-            <p className="text-[15px] font-semibold">{lead.contactPhone}</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <a href={`tel:${lead.contactPhone}`} className="contents">
-                <Button variant="secondary" onClick={() => void logAttempt('call_placed')}>
-                  Call
-                </Button>
-              </a>
-              <a href={`sms:${lead.contactPhone}`} className="contents">
-                <Button variant="secondary" onClick={() => void logAttempt('text_initiated')}>
-                  Text
-                </Button>
-              </a>
-            </div>
-            <p className="mt-2 text-[10.5px] leading-relaxed text-white/25">
-              Recorded as placed and initiated. The app hands the number to your phone and cannot
-              see whether it was answered or delivered, so it does not say that it was.
+      <SectionTitle>REACH THEM</SectionTitle>
+      <Card>
+        {lead.contactPhone ? (
+          <p className="text-[15px] font-semibold">{lead.contactPhone}</p>
+        ) : (
+          <p className="text-[13px] text-white/45">No phone number on this lead.</p>
+        )}
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {callBlock.allowed && lead.contactPhone ? (
+            <a href={`tel:${lead.contactPhone}`} className="contents">
+              <Button variant="secondary" onClick={() => void logAttempt('call_placed')}>
+                Call
+              </Button>
+            </a>
+          ) : (
+            <Button variant="secondary" disabled>
+              Call
+            </Button>
+          )}
+          {smsBlock.allowed && lead.contactPhone ? (
+            <a href={`sms:${lead.contactPhone}`} className="contents">
+              <Button variant="secondary" onClick={() => void logAttempt('text_initiated')}>
+                Text
+              </Button>
+            </a>
+          ) : (
+            <Button variant="secondary" disabled>
+              Text
+            </Button>
+          )}
+        </div>
+
+        {blockReason && (
+          <p className="mt-2 text-[12px] leading-relaxed text-amber-200/80">{blockReason}</p>
+        )}
+
+        <p className="mt-2 text-[10.5px] leading-relaxed text-white/25">
+          Recorded as placed and initiated. The app hands the number to your phone and cannot see
+          whether it was answered or delivered, so it does not say that it was.
+        </p>
+      </Card>
+
+      <SectionTitle>PERMISSION</SectionTitle>
+      <Card>
+        {lead.optedOutAt ? (
+          <p className="text-[12.5px] leading-relaxed text-amber-200/90">
+            They asked not to be contacted, on {when(lead.optedOutAt)}. Every permission on this
+            lead was cleared at the same time, and this cannot be undone from the field.
+          </p>
+        ) : (
+          <>
+            <p className="text-[11.5px] leading-relaxed text-white/45">
+              Tick only what they actually said you could do. Having their number is not permission
+              to use it.
             </p>
-          </Card>
-        </>
-      )}
+            <div className="mt-3 space-y-2">
+              {CHANNELS.map((channel) => {
+                const granted = lead.consent?.[channel] !== undefined
+                return (
+                  <button
+                    key={channel}
+                    onClick={() => void toggleConsent(channel, !granted)}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left ring-1 ${
+                      granted
+                        ? 'bg-emerald-500/12 ring-emerald-400/25'
+                        : 'bg-white/5 ring-white/8'
+                    }`}
+                  >
+                    <span className="text-[13px] text-white/80">{CHANNEL_LABEL[channel]}</span>
+                    <span
+                      className={`text-[11px] uppercase tracking-wider ${
+                        granted ? 'text-emerald-300' : 'text-white/30'
+                      }`}
+                    >
+                      {granted ? 'said yes' : 'not asked'}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <Button variant="danger" full className="mt-3" onClick={() => void stopContacting()}>
+              They asked us to stop
+            </Button>
+          </>
+        )}
+      </Card>
 
       <SectionTitle>WHAT HAPPENED</SectionTitle>
       <Card className="grid grid-cols-2 gap-2">
@@ -251,22 +414,7 @@ export default function LeadPage() {
       </Card>
 
       <SectionTitle>NOTES</SectionTitle>
-      <Card>
-        <TextArea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="What was said, in your words."
-        />
-        <Button
-          variant="secondary"
-          full
-          className="mt-3"
-          onClick={() => void addNote()}
-          disabled={note.trim() === ''}
-        >
-          Add the note
-        </Button>
-      </Card>
+      <LeadNotePanel leadId={lead.id} onSaved={addNote} />
 
       <SectionTitle hint={`${history.length} entries`}>HISTORY</SectionTitle>
       {history.length === 0 ? (
@@ -288,6 +436,11 @@ export default function LeadPage() {
                 {event.note && (
                   <p className="mt-1 text-[12.5px] leading-relaxed text-white/60">{event.note}</p>
                 )}
+                {attachments
+                  .filter((a) => a.eventId === event.id)
+                  .map((a) => (
+                    <Attachment key={a.id} item={a} />
+                  ))}
               </li>
             ))}
           </ol>

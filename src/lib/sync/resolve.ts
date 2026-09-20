@@ -70,37 +70,60 @@ async function ensureCustomer(i: LocalInspection, orgId: string): Promise<string
  * already on file", then look it up by the same normalised key the database
  * computed — see `src/lib/address.ts` for why that mirror exists.
  */
-async function ensureProperty(i: LocalInspection, orgId: string): Promise<string> {
-  const existing = await getRemoteId('property', i.id)
+export interface PropertySeed {
+  /** The local record this property is being resolved for. Cache key only. */
+  localId: string
+  addressLine1: string
+  city?: string | undefined
+  parish?: string | undefined
+  postalCode?: string | undefined
+  latitude?: number | undefined
+  longitude?: number | undefined
+  propertyType?: string | undefined
+  roofMaterial?: string | undefined
+  stories?: number | undefined
+}
+
+/**
+ * Shared by inspections and leads, because they are the same roof.
+ *
+ * A rep knocks a door, records the conversation, and later inspects it. Those
+ * are two local records of one property, and both resolve through here to the
+ * same remote row via the normalised address — which is the only reason the
+ * office does not end up with the lead history on one property and the photos
+ * on a duplicate of it.
+ */
+export async function ensurePropertyFor(seed: PropertySeed, orgId: string): Promise<string> {
+  const existing = await getRemoteId('property', seed.localId)
   if (existing) return existing
 
   const supabase = getSupabase()
   if (!supabase) throw new Error('not configured')
 
-  const address = i.addressLine1 ?? 'Unknown address'
+  const address = seed.addressLine1
   const { data, error } = await supabase
     .from('properties')
     .insert({
       organization_id: orgId,
       address_line1: address,
-      city: i.city ?? null,
-      parish: i.parish ?? null,
-      postal_code: i.postalCode ?? null,
-      property_type: i.propertyType,
-      stories: i.stories ?? null,
-      roof_material: i.roofMaterial,
-      location: pointOrNull(i.latitude, i.longitude),
+      city: seed.city ?? null,
+      parish: seed.parish ?? null,
+      postal_code: seed.postalCode ?? null,
+      property_type: seed.propertyType ?? 'residential',
+      stories: seed.stories ?? null,
+      roof_material: seed.roofMaterial ?? 'unknown',
+      location: pointOrNull(seed.latitude, seed.longitude),
     })
     .select('id')
     .single()
 
   if (!error && data) {
-    await setRemoteId('property', i.id, data.id as string)
+    await setRemoteId('property', seed.localId, data.id as string)
     return data.id as string
   }
 
   if (error?.code === UNIQUE_VIOLATION) {
-    const key = propertyMatchKey(address, i.postalCode ?? null)
+    const key = propertyMatchKey(address, seed.postalCode ?? null)
     const { data: found, error: findErr } = await supabase
       .from('properties')
       .select('id')
@@ -109,11 +132,29 @@ async function ensureProperty(i: LocalInspection, orgId: string): Promise<string
       .limit(1)
       .maybeSingle()
     if (findErr || !found) throw new Error(`property lookup: ${findErr?.message ?? 'not found'}`)
-    await setRemoteId('property', i.id, found.id as string)
+    await setRemoteId('property', seed.localId, found.id as string)
     return found.id as string
   }
 
   throw new Error(`property: ${error?.message ?? 'unknown'}`)
+}
+
+async function ensureProperty(i: LocalInspection, orgId: string): Promise<string> {
+  return ensurePropertyFor(
+    {
+      localId: i.id,
+      addressLine1: i.addressLine1 ?? 'Unknown address',
+      city: i.city,
+      parish: i.parish,
+      postalCode: i.postalCode,
+      latitude: i.latitude,
+      longitude: i.longitude,
+      propertyType: i.propertyType,
+      roofMaterial: i.roofMaterial,
+      stories: i.stories,
+    },
+    orgId,
+  )
 }
 
 /**

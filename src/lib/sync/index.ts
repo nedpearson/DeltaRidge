@@ -3,6 +3,7 @@ import { clearOutboxItem, listDueOutbox, listOutbox, listStalledOutbox, markOutb
 import { inspectionResolver } from './resolve'
 import { pushObservation, pushPhoto, pushVoiceNote } from './push'
 import { pushHandoff } from './handoff'
+import { pushLead, pushLeadActivity, pushLeadAttachment } from './leads'
 import type { OutboxEntity } from '../db'
 
 export interface SyncResult {
@@ -21,9 +22,15 @@ export interface SyncResult {
  */
 const ORDER: Record<OutboxEntity, number> = {
   inspection: 0,
+  lead: 0,
   photo: 1,
   observation: 1,
   voiceNote: 1,
+  // After its lead, so a knock never arrives before the door it was at.
+  leadActivity: 1,
+  // After the activity, so the recording can be filed against the knock it
+  // was made during rather than floating loose on the lead.
+  leadAttachment: 2,
   handoff: 2,
 }
 
@@ -54,6 +61,9 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
       else if (item.entity === 'observation') await pushObservation(item.entityId, orgId, userId, resolve)
       else if (item.entity === 'voiceNote') await pushVoiceNote(item.entityId, orgId, userId, resolve)
       else if (item.entity === 'handoff') await pushHandoff(item.entityId, orgId, userId, resolve)
+      else if (item.entity === 'lead') await pushLead(item.entityId, orgId, userId)
+      else if (item.entity === 'leadActivity') await pushLeadActivity(item.entityId, orgId, userId)
+      else if (item.entity === 'leadAttachment') await pushLeadAttachment(item.entityId, orgId, userId)
       await clearOutboxItem(item.id)
       result.pushed += 1
     } catch (err) {

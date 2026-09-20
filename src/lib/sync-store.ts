@@ -50,6 +50,10 @@ export type RemoteEntity =
   | 'customer'
   | 'property'
   | 'handoff'
+  | 'lead'
+  | 'leadActivity'
+  | 'leadAttachment'
+  | 'appointment'
 
 export async function getRemoteId(entity: RemoteEntity, localId: string): Promise<string | null> {
   const row = (await (await getMapDb()).get('remoteIds', `${entity}:${localId}`)) as RemoteIdRow | undefined

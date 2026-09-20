@@ -101,7 +101,18 @@ export interface LocalVoiceNote {
   syncState: SyncState
 }
 
-export type OutboxEntity = 'inspection' | 'photo' | 'observation' | 'voiceNote' | 'handoff'
+export type OutboxEntity =
+  | 'inspection'
+  | 'photo'
+  | 'observation'
+  | 'voiceNote'
+  | 'handoff'
+  /** A managed lead. Lives in the CRM database; queued through this outbox. */
+  | 'lead'
+  /** One knock, call, text or note against a lead. */
+  | 'leadActivity'
+  /** A voice note or photo captured while working a lead. */
+  | 'leadAttachment'
 
 export interface OutboxItem {
   id: string
@@ -198,6 +209,26 @@ async function enqueue(
     queuedAt: existing?.queuedAt ?? new Date().toISOString(),
     attempts: 0,
   })
+}
+
+/**
+ * Queues something that lives in another database.
+ *
+ * The outbox is deliberately the only queue in the app, even though leads live
+ * in their own store. A second queue would mean a second retry schedule, a
+ * second backoff, and a second place for a rep's work to go quiet — and the
+ * sync panel could no longer answer "is anything still waiting?" with one
+ * number.
+ */
+export async function queueSync(entity: OutboxEntity, entityId: string): Promise<void> {
+  await enqueue(await getDB(), entity, entityId)
+}
+
+/**
+ * Removes a queued item, for something deleted locally before it ever synced.
+ */
+export async function unqueueSync(entity: OutboxEntity, entityId: string): Promise<void> {
+  await (await getDB()).delete('outbox', `${entity}:${entityId}`)
 }
 
 /**

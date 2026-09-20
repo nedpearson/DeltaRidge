@@ -18,6 +18,9 @@ const LABEL: Record<OutboxItem['entity'], string> = {
   observation: 'Note',
   voiceNote: 'Voice note',
   handoff: 'Office package',
+  lead: 'Lead',
+  leadActivity: 'Lead contact',
+  leadAttachment: 'Lead recording',
 }
 
 function summarise(stalled: OutboxItem[]): string {

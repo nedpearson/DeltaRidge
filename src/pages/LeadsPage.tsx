@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DoorOutcomeSheet from '@/components/DoorOutcomeSheet'
+import LeadMap from '@/components/LeadMap'
+import MessagingReadiness from '@/components/MessagingReadiness'
 import { Button, Card, Empty, Field, SectionTitle, Select } from '@/components/ui'
 import type { StormCoverage } from '@/features/leads/coverage'
 import {
@@ -521,6 +523,8 @@ export default function LeadsPage() {
               ))}
             </div>
           )}
+
+          <MessagingReadiness leads={managed} />
         </>
       ) : (
         <>
@@ -586,6 +590,13 @@ export default function LeadsPage() {
               )}
 
               <CoveragePanel coverage={run.coverage} events={run.stormEvents} />
+
+              <LeadMap
+                doors={doors}
+                leads={managed}
+                storms={run.stormEvents}
+                onOpenLead={(leadId) => navigate(`/lead/${leadId}`)}
+              />
 
               <SectionTitle hint={`built ${relativeDay(run.ranAt)}`}>
                 {doors.length > 0 ? `${doors.length} DOORS` : 'NO DOORS'}
