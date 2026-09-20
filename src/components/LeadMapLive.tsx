@@ -185,6 +185,9 @@ export default function LeadMapLive({
 
       map.on('load', () => {
         paintLayers(map)
+        // Belt and braces: if anything sized the container after the map was
+        // constructed, GL is still holding the old dimensions until told.
+        map.resize()
         setReady(true)
       })
 
@@ -261,10 +264,26 @@ export default function LeadMapLive({
     <>
       <SectionTitle hint={`${markers.length} on the map`}>MAP</SectionTitle>
       <Card className="!p-0 overflow-hidden">
-        <div className="relative h-96 w-full">
-          <div ref={attachMap} className="absolute inset-0" />
+        <div className="relative h-96 w-full overflow-hidden">
+          {/*
+            Inline positioning, not a class, and this is not a style choice.
 
-          <div className="pointer-events-auto absolute left-2 top-2 flex overflow-hidden rounded-lg ring-1 ring-black/15">
+            Mapbox adds `mapboxgl-map` to whatever element it is given, and its
+            stylesheet says `.mapboxgl-map { position: relative }`. That is a
+            single-class selector, exactly like Tailwind's `.absolute`, so the
+            tie is broken by source order — and because this component is lazy
+            loaded, its stylesheet is injected AFTER the app's. Mapbox won,
+            `inset-0` stopped applying to a relatively positioned box, the
+            container collapsed to zero height, and the map rendered nothing
+            while every other sign of life (style loaded, glyphs fetched,
+            controls created) looked healthy.
+
+            An inline style cannot be overridden by any stylesheet, whatever
+            order it arrives in.
+          */}
+          <div ref={attachMap} style={{ position: 'absolute', inset: 0 }} />
+
+          <div className="pointer-events-auto absolute left-2 top-2 z-10 flex overflow-hidden rounded-lg ring-1 ring-black/15">
             {(Object.keys(MAP_STYLES) as MapStyleKey[]).map((key) => (
               <button
                 key={key}
@@ -280,7 +299,7 @@ export default function LeadMapLive({
 
           <button
             onClick={fit}
-            className="absolute right-2 top-2 rounded-lg bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-brand-950 ring-1 ring-black/15"
+            className="absolute right-2 top-2 z-10 rounded-lg bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-brand-950 ring-1 ring-black/15"
           >
             Fit
           </button>
