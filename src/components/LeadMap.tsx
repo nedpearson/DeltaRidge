@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card, SectionTitle } from '@/components/ui'
 import { basemapUrl, hasBasemap, MAP_STYLES, type MapStyleKey } from '@/features/leads/basemap'
 import {
@@ -83,30 +83,40 @@ export default function LeadMap({
   storms: readonly StormEvent[]
   onOpenLead: (leadId: string) => void
 }) {
-  const boxRef = useRef<HTMLDivElement | null>(null)
   const [size, setSize] = useState<Size>(FALLBACK_SIZE)
+  const observerRef = useRef<ResizeObserver | null>(null)
 
   /**
    * The rendered size drives both the image request and the projection, so it
    * has to be measured, not guessed — and re-measured on rotation or resize.
+   *
+   * A callback ref rather than useRef + useEffect, because this component
+   * returns early before the map exists while the door list is still loading.
+   * An effect with an empty dependency list runs once, during that early
+   * return, finds no element, and never runs again — which is exactly the bug
+   * that left every request stuck at the 320x260 fallback and the street names
+   * stretched across a desktop.
    */
-  useEffect(() => {
-    const box = boxRef.current
-    if (!box) return
+  const attachBox = useCallback((node: HTMLDivElement | null) => {
+    observerRef.current?.disconnect()
+    observerRef.current = null
+    if (!node) return
+
     const observer = new ResizeObserver(([entry]) => {
       if (!entry) return
       const { width, height } = entry.contentRect
-      if (width > 0 && height > 0) {
-        setSize((s) =>
-          Math.abs(s.width - width) < 1 && Math.abs(s.height - height) < 1
-            ? s
-            : { width: Math.round(width), height: Math.round(height) },
-        )
-      }
+      if (width <= 0 || height <= 0) return
+      setSize((s) =>
+        Math.abs(s.width - width) < 1 && Math.abs(s.height - height) < 1
+          ? s
+          : { width: Math.round(width), height: Math.round(height) },
+      )
     })
-    observer.observe(box)
-    return () => observer.disconnect()
+    observer.observe(node)
+    observerRef.current = observer
   }, [])
+
+  useEffect(() => () => observerRef.current?.disconnect(), [])
 
   const markers: Marker[] = useMemo(() => {
     // Leads first: a door that has become somebody must not be drawn twice,
@@ -200,7 +210,7 @@ export default function LeadMap({
       <SectionTitle hint={`${spanMiles(current, size)} mi across`}>MAP</SectionTitle>
       <Card className="!p-0 overflow-hidden">
         <div
-          ref={boxRef}
+          ref={attachBox}
           className="relative h-72 w-full touch-none overflow-hidden bg-[#e8e6e1]"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
