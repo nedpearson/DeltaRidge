@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, Empty, Field, SectionTitle, Select } from '@/components/ui'
+import type { StormCoverage } from '@/features/leads/coverage'
 import {
   DEFAULT_SETTINGS,
   readCachedRun,
@@ -9,7 +10,16 @@ import {
   type LeadRunSettings,
 } from '@/features/leads/engine'
 import type { ScoredLead } from '@/features/leads/scoring'
+import { WINDOW_OPTIONS, type StormWindowKey } from '@/features/leads/window'
+import type { StormEvent } from '@/integrations/storm'
 import { newId, saveInspection, type LocalInspection } from '@/lib/db'
+
+/**
+ * Custom ranges are deliberately absent until there is a date picker to set
+ * them with. An option that silently falls back to 24 months would be worse
+ * than not offering it.
+ */
+const SELECTABLE_WINDOWS = WINDOW_OPTIONS.filter((w) => w.key !== 'custom')
 
 /**
  * The door list.
@@ -96,6 +106,110 @@ function LeadCard({ lead, onInspect }: { lead: ScoredLead; onInspect: (lead: Sco
         </dl>
       )}
     </Card>
+  )
+}
+
+function shortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+/**
+ * What the storm data is, source by source.
+ *
+ * The page used to print one number. One number cannot answer "is this all the
+ * hail there was, or is the app not looking properly?", which is the only
+ * question worth asking when the list looks thin. So each source is reported
+ * separately and the one that is not running is named.
+ */
+function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: StormEvent[] }) {
+  const [open, setOpen] = useState(false)
+  const official = coverage.official
+
+  return (
+    <>
+      <SectionTitle hint={coverage.window.label}>STORM DATA</SectionTitle>
+      <Card className="!py-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-[13px] text-white/80">Official ground reports</p>
+          {official.kind === 'live' ? (
+            <p className="shrink-0 font-display text-[15px] text-emerald-400">{official.count}</p>
+          ) : (
+            <p className="shrink-0 text-[11px] uppercase tracking-wider text-amber-300">
+              {official.kind === 'failed' ? 'unavailable' : 'off'}
+            </p>
+          )}
+        </div>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-white/35">
+          NWS Local Storm Reports — someone on the ground reported hail and the NWS logged it.
+          {official.kind === 'live' && official.newestAt
+            ? ` Most recent: ${shortDate(official.newestAt)}.`
+            : ''}
+          {official.kind === 'failed' ? ` ${official.why}` : ''}
+        </p>
+
+        <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-white/8 pt-3">
+          <p className="text-[13px] text-white/80">Radar-estimated hail (MRMS/MESH)</p>
+          <p className="shrink-0 text-[11px] uppercase tracking-wider text-amber-300">
+            not configured
+          </p>
+        </div>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-white/35">
+          {coverage.radar.kind === 'not_configured'
+            ? coverage.radar.why
+            : 'Radar-estimated hail is running.'}
+        </p>
+
+        {coverage.byYear.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5 border-t border-white/8 pt-3">
+            {coverage.byYear.map((y) => (
+              <span
+                key={y.year}
+                className="rounded-full bg-white/6 px-2.5 py-1 text-[11px] text-white/60"
+              >
+                {y.year} · {y.count}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="mt-2 w-full !min-h-0 py-1 text-[11px] text-white/35"
+        >
+          {open ? 'Hide storms' : `View ${events.length} storm${events.length === 1 ? '' : 's'}`}
+        </button>
+        {open && (
+          <ul className="mt-1 space-y-1.5 border-t border-white/8 pt-2">
+            {events.length === 0 && (
+              <li className="text-[11.5px] leading-relaxed text-white/40">
+                Nothing qualified in this window. That is the feed answering, not the feed failing.
+              </li>
+            )}
+            {[...events]
+              .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
+              .map((e) => (
+                <li key={e.externalId} className="flex items-baseline justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-[12.5px] text-white/75">
+                      {[e.city, e.countyParish].filter(Boolean).join(', ') || 'Unnamed location'}
+                    </p>
+                    <p className="text-[10.5px] text-white/30">
+                      {shortDate(e.occurredAt)} · official report
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-display text-[13px] text-gold-400">
+                    {e.hailSizeInches !== undefined ? `${e.hailSizeInches}"` : '—'}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        )}
+      </Card>
+    </>
   )
 }
 
@@ -212,13 +326,14 @@ export default function LeadsPage() {
         </Field>
         <Field label="Storm window">
           <Select
-            value={String(settings.stormMonths)}
-            onChange={(e) => patch({ stormMonths: Number(e.target.value) })}
+            value={settings.windowKey}
+            onChange={(e) => patch({ windowKey: e.target.value as StormWindowKey })}
           >
-            <option value="6">Last 6 months</option>
-            <option value="12">Last 12 months</option>
-            <option value="24">Last 24 months</option>
-            <option value="36">Last 3 years</option>
+            {SELECTABLE_WINDOWS.map((w) => (
+              <option key={w.key} value={w.key}>
+                {w.key === 'this_year' ? `${new Date().getFullYear()} only` : w.label}
+              </option>
+            ))}
           </Select>
         </Field>
         <Field label="Roof at least">
@@ -246,6 +361,8 @@ export default function LeadsPage() {
             </Card>
           )}
 
+          <CoveragePanel coverage={run.coverage} events={run.stormEvents} />
+
           <SectionTitle hint={`built ${relativeDay(run.ranAt)}`}>
             {run.leads.length > 0 ? `${run.leads.length} DOORS` : 'NO DOORS'}
           </SectionTitle>
@@ -253,7 +370,7 @@ export default function LeadsPage() {
           <Card className="!py-2.5">
             <p className="text-[11.5px] leading-relaxed text-white/45">
               From {run.counts.candidatesConsidered.toLocaleString()} properties and{' '}
-              {run.counts.stormsConsidered} hail reports.{' '}
+              {run.counts.stormsConsidered} official hail reports in {run.window.label.toLowerCase()}.{' '}
               {run.counts.suppressedAlreadyReplaced > 0 && (
                 <span className="text-emerald-300/80">
                   {run.counts.suppressedAlreadyReplaced} already re-roofed since the storm — dropped.{' '}

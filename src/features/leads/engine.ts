@@ -5,12 +5,24 @@ import type { PermitRecord } from '@/integrations/permits/types'
 import { createStormProvider, type StormEvent } from '@/integrations/storm'
 import { boundFetch } from '@/lib/fetch'
 import {
+  buildCoverage,
+  emptyWindowExplanation,
+  RADAR_NOT_CONFIGURED,
+  type StormCoverage,
+} from './coverage'
+import {
   candidatesFromPermits,
   contractorActivity,
   scoreLeads,
   type ContractorActivity,
   type ScoredLead,
 } from './scoring'
+import {
+  resolveWindow,
+  type CustomRange,
+  type ResolvedWindow,
+  type StormWindowKey,
+} from './window'
 
 /**
  * Runs the lead engine and remembers the result.
@@ -26,7 +38,13 @@ import {
 export interface LeadRunSettings {
   /** [west, south, east, north] — defaults to the Delta Ridge service area. */
   bbox: [number, number, number, number]
-  /** How many months of storms to consider. */
+  /**
+   * Which storm window to use. A rolling month count could not express "this
+   * year", which is the question a rep actually asks in September.
+   */
+  windowKey: StormWindowKey
+  customRange?: CustomRange
+  /** Legacy rolling window, kept so a cached run from before still reads. */
   stormMonths: number
   minHailInches: number
   radiusMiles: number
@@ -50,6 +68,7 @@ export const SERVICE_AREA_BBOX: [number, number, number, number] = [-91.5, 30.1,
 
 export const DEFAULT_SETTINGS: LeadRunSettings = {
   bbox: SERVICE_AREA_BBOX,
+  windowKey: 'last_24_months',
   stormMonths: 24,
   minHailInches: 1,
   radiusMiles: 3,
@@ -61,6 +80,15 @@ export const DEFAULT_SETTINGS: LeadRunSettings = {
 export interface LeadRun {
   ranAt: string
   settings: LeadRunSettings
+  /** The dates this run actually asked for, so the screen never re-derives them. */
+  window: ResolvedWindow
+  /** Which hail sources ran, which did not, and what each one found. */
+  coverage: StormCoverage
+  /**
+   * The qualifying storms themselves. The page has to be able to show the
+   * events behind the count, otherwise "26 hail reports" is unfalsifiable.
+   */
+  stormEvents: StormEvent[]
   leads: ScoredLead[]
   competitors: ContractorActivity[]
   counts: {
@@ -103,10 +131,53 @@ function getLeadsDb(): Promise<IDBPDatabase> {
   return dbPromise
 }
 
+/**
+ * A run cached before storm windows existed has no window and no coverage.
+ * Throwing it away would take a rep's list off the screen while they are
+ * offline, so it is carried forward with its real dates reconstructed and its
+ * storm list marked as unavailable rather than as empty.
+ */
+function upgradeRun(run: LeadRun): LeadRun {
+  if (run.window && run.coverage) return run
+
+  const ranAt = new Date(run.ranAt)
+  const months = run.settings?.stormMonths ?? 24
+  const from = new Date(ranAt)
+  from.setMonth(from.getMonth() - months)
+  const window: ResolvedWindow = {
+    key: 'last_24_months',
+    from: from.toISOString(),
+    to: run.ranAt,
+    label: `Last ${months} months`,
+  }
+
+  return {
+    ...run,
+    settings: { ...run.settings, windowKey: run.settings?.windowKey ?? 'last_24_months' },
+    window,
+    stormEvents: run.stormEvents ?? [],
+    coverage: {
+      window,
+      official: {
+        kind: 'live',
+        newestAt: null,
+        count: run.counts?.stormsConsidered ?? 0,
+      },
+      radar: RADAR_NOT_CONFIGURED,
+      totalEvents: run.counts?.stormsConsidered ?? 0,
+      currentYearEvents: 0,
+      oldestAt: null,
+      newestAt: null,
+      byYear: [],
+    },
+  }
+}
+
 export async function readCachedRun(): Promise<LeadRun | null> {
   try {
     const db = await getLeadsDb()
-    return ((await db.get(STORE, LATEST)) as LeadRun | undefined) ?? null
+    const run = (await db.get(STORE, LATEST)) as LeadRun | undefined
+    return run ? upgradeRun(run) : null
   } catch {
     return null
   }
@@ -151,12 +222,6 @@ async function writeGeocodeCache(found: Map<string, GeocodeResult>): Promise<voi
   }
 }
 
-function isoMonthsAgo(months: number, now: Date): string {
-  const d = new Date(now)
-  d.setMonth(d.getMonth() - months)
-  return d.toISOString()
-}
-
 export interface RunDeps {
   fetchImpl?: typeof fetch
   now?: Date
@@ -173,8 +238,8 @@ export async function runLeadEngine(
   const storms = createStormProvider('noaa', fetchImpl)
   const permits = new EbrPermitProvider(fetchImpl)
 
-  const from = isoMonthsAgo(settings.stormMonths, now)
-  const to = now.toISOString()
+  const window = resolveWindow(settings.windowKey, now, settings.customRange)
+  const { from, to } = window
 
   // Fired together: they are independent, and a rep waiting in a driveway
   // should not pay for two round trips in series.
@@ -221,9 +286,12 @@ export async function runLeadEngine(
       'Re-roof permits could not be loaded, so this list has NOT been filtered for roofs that were already replaced.',
     )
   }
+  const coverage = buildCoverage(window, stormEvents, stormResult.status === 'rejected')
+
   if (stormEvents.length === 0 && stormResult.status === 'fulfilled') {
     notes.push(
-      `No hail of ${settings.minHailInches}" or larger was reported in the service area in the last ${settings.stormMonths} months.`,
+      `No hail of ${settings.minHailInches}" or larger was reported in the service area in ${window.label.toLowerCase()}. ` +
+        emptyWindowExplanation(coverage),
     )
   }
 
@@ -292,6 +360,9 @@ export async function runLeadEngine(
   const run: LeadRun = {
     ranAt: now.toISOString(),
     settings,
+    window,
+    coverage,
+    stormEvents,
     leads: leads.slice(0, settings.maxLeads),
     competitors: contractorActivity(reroofPermits),
     counts: {
