@@ -1,11 +1,17 @@
 /**
- * Putting the door list on a picture, without a map vendor.
+ * Web Mercator, at the tile size Mapbox styles use.
  *
- * There is no basemap here on purpose. Street tiles need a Mapbox token this
- * deployment does not have, they are a network round trip a rep in a truck may
- * not get, and the map library is larger than the rest of the application.
- * What a rep actually needs from a map at a door is which houses on this
- * street are done and which are not, and that is geometry, not cartography.
+ * This was equirectangular while there was no basemap, which was fine for a
+ * cloud of dots and wrong the moment a street map goes underneath them: the
+ * tiles are Mercator, and a projection that disagrees with them puts a door on
+ * the wrong side of a road at high zoom. So the overlay now uses exactly the
+ * maths the basemap does, expressed the same way the static image endpoint
+ * takes it — a centre, a zoom and a pixel size.
+ *
+ * Mapbox GL styles are served as 512-pixel tiles, and the static image API
+ * follows the same zoom convention, so TILE is 512 rather than the 256 that
+ * older slippy-map maths assumes. Getting that wrong is a factor-of-two error
+ * in scale that looks almost right, which is the worst kind.
  *
  * Everything here is pure so the projection can be tested without a DOM.
  */
@@ -25,6 +31,42 @@ export interface Bounds {
 export interface Size {
   readonly width: number
   readonly height: number
+}
+
+/** A centre and a zoom: what both the basemap and the overlay are drawn from. */
+export interface View {
+  readonly center: GeoPoint
+  readonly zoom: number
+}
+
+export const TILE = 512
+export const MIN_ZOOM = 1
+export const MAX_ZOOM = 20
+
+/** The latitude past which Mercator runs to infinity. */
+const MAX_LATITUDE = 85.05112878
+
+function clamp(value: number, low: number, high: number): number {
+  return Math.min(high, Math.max(low, value))
+}
+
+/** Longitude to a 0..1 position across the world. */
+export function mercatorX(longitude: number): number {
+  return (longitude + 180) / 360
+}
+
+/** Latitude to a 0..1 position down the world. */
+export function mercatorY(latitude: number): number {
+  const rad = (clamp(latitude, -MAX_LATITUDE, MAX_LATITUDE) * Math.PI) / 180
+  return 0.5 - Math.log(Math.tan(Math.PI / 4 + rad / 2)) / (2 * Math.PI)
+}
+
+export function mercatorYToLatitude(y: number): number {
+  return (180 / Math.PI) * Math.atan(Math.sinh(Math.PI * (1 - 2 * y)))
+}
+
+export function worldSize(zoom: number): number {
+  return TILE * 2 ** zoom
 }
 
 export function boundsOf(points: readonly GeoPoint[]): Bounds | null {
@@ -70,41 +112,70 @@ export function padBounds(bounds: Bounds, fraction = 0.08, minimumDegrees = 0.00
 }
 
 /**
- * Equirectangular, with longitude compressed by the cosine of the centre
- * latitude.
+ * The centre of a box in Mercator, not the average of its corners.
  *
- * At Baton Rouge a degree of longitude is about 86% of a degree of latitude.
- * Without that correction a subdivision comes out visibly stretched east-west
- * and a rep cannot match what is on screen to the street they are parked on.
- * A full Mercator projection buys nothing across three miles.
+ * Averaging the latitudes puts the centre slightly south of where the tiles
+ * put it, which shifts every dot by a few pixels against the streets.
  */
-export function project(point: GeoPoint, bounds: Bounds, size: Size): { x: number; y: number } {
-  const midLat = ((bounds.north + bounds.south) / 2) * (Math.PI / 180)
-  const squeeze = Math.cos(midLat)
-
-  const spanX = (bounds.east - bounds.west) * squeeze
-  const spanY = bounds.north - bounds.south
-  if (spanX <= 0 || spanY <= 0) return { x: size.width / 2, y: size.height / 2 }
-
-  // One scale for both axes, chosen so the wider span fits. Scaling each axis
-  // independently would fill the box and silently distort distances.
-  const scale = Math.min(size.width / spanX, size.height / spanY)
-  const drawnWidth = spanX * scale
-  const drawnHeight = spanY * scale
-  const offsetX = (size.width - drawnWidth) / 2
-  const offsetY = (size.height - drawnHeight) / 2
-
+export function centerOf(bounds: Bounds): GeoPoint {
   return {
-    x: offsetX + (point.longitude - bounds.west) * squeeze * scale,
-    // SVG y grows downward; north is up.
-    y: offsetY + (bounds.north - point.latitude) * scale,
+    longitude: (bounds.west + bounds.east) / 2,
+    latitude: mercatorYToLatitude((mercatorY(bounds.north) + mercatorY(bounds.south)) / 2),
   }
 }
 
-/** Roughly how far across the view is, for the scale bar. */
-export function spanMiles(bounds: Bounds): number {
-  const midLat = ((bounds.north + bounds.south) / 2) * (Math.PI / 180)
-  const milesPerDegreeLat = 69.0
-  const east = (bounds.east - bounds.west) * Math.cos(midLat) * milesPerDegreeLat
-  return Math.round(east * 10) / 10
+/** The largest zoom at which the whole box still fits in the box of pixels. */
+export function zoomToFit(bounds: Bounds, size: Size): number {
+  const spanX = Math.abs(mercatorX(bounds.east) - mercatorX(bounds.west))
+  const spanY = Math.abs(mercatorY(bounds.south) - mercatorY(bounds.north))
+
+  const zx = spanX > 0 ? Math.log2(size.width / (TILE * spanX)) : Number.POSITIVE_INFINITY
+  const zy = spanY > 0 ? Math.log2(size.height / (TILE * spanY)) : Number.POSITIVE_INFINITY
+  const zoom = Math.min(zx, zy)
+
+  // Both spans zero means one point: there is no "fit", so pick a street-level
+  // zoom rather than the infinity the maths hands back.
+  if (!Number.isFinite(zoom)) return 16
+  return clamp(zoom, MIN_ZOOM, MAX_ZOOM)
+}
+
+export function viewForBounds(bounds: Bounds, size: Size): View {
+  return { center: centerOf(bounds), zoom: zoomToFit(bounds, size) }
+}
+
+/** Where a point lands in the pixel box, given the view drawn underneath it. */
+export function project(point: GeoPoint, view: View, size: Size): { x: number; y: number } {
+  const ws = worldSize(view.zoom)
+  return {
+    x: (mercatorX(point.longitude) - mercatorX(view.center.longitude)) * ws + size.width / 2,
+    y: (mercatorY(point.latitude) - mercatorY(view.center.latitude)) * ws + size.height / 2,
+  }
+}
+
+/**
+ * Moves the centre by a pixel offset. This is what a drag actually does: the
+ * finger moves the map, so the centre moves the opposite way.
+ */
+export function offsetCenter(view: View, dx: number, dy: number): GeoPoint {
+  const ws = worldSize(view.zoom)
+  const x = mercatorX(view.center.longitude) + dx / ws
+  const y = clamp(mercatorY(view.center.latitude) + dy / ws, 0, 1)
+  return {
+    longitude: ((((x % 1) + 1) % 1) * 360) - 180,
+    latitude: mercatorYToLatitude(y),
+  }
+}
+
+export function zoomBy(view: View, factor: number): View {
+  return { center: view.center, zoom: clamp(view.zoom + factor, MIN_ZOOM, MAX_ZOOM) }
+}
+
+/** Roughly how far across the view is, for the scale readout. */
+export function spanMiles(view: View, size: Size): number {
+  // 24,901 miles around the equator, narrowing by the cosine of the latitude.
+  const equator = 24901
+  const metresPerWorld = worldSize(view.zoom)
+  const fractionOfWorld = size.width / metresPerWorld
+  const miles = fractionOfWorld * equator * Math.cos((view.center.latitude * Math.PI) / 180)
+  return miles >= 10 ? Math.round(miles) : Math.round(miles * 10) / 10
 }
