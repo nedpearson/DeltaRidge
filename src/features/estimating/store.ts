@@ -168,8 +168,47 @@ export function isUsable(sheet: CostSheet): boolean {
   })
 }
 
+/**
+ * A saved estimate version.
+ *
+ * The cost sheet and the margin policy are COPIED IN, not referenced. That is
+ * the whole point: a proposal written in March has to reproduce itself in
+ * September, and it cannot if it reprices against whatever the cost sheet
+ * happens to say today. Suppliers raise prices; a saved number must not move
+ * underneath a homeowner who was quoted it.
+ *
+ * Versions are append-only, mirroring `estimate_versions` in migration 0011.
+ * Revising an estimate adds a version; nothing is edited in place.
+ */
+export interface SavedVersion {
+  readonly versionNumber: number
+  readonly createdAt: string
+  readonly geometry: SavedGeometry
+  /** The costs AS PRICED. Never re-read from the live sheet. */
+  readonly costs: CostSheet
+  readonly margins: MarginSettings
+  readonly directCostCents: number
+  readonly overheadCents: number
+  readonly jobCostCents: number
+  readonly sellPriceCents: number
+  readonly gapCount: number
+}
+
+/** The measurement form, stored as entered so it can be reopened and edited. */
+export type SavedGeometry = Record<string, string>
+
+export interface SavedEstimate {
+  readonly id: string
+  readonly inspectionId: string | null
+  readonly label: string
+  readonly createdAt: string
+  readonly updatedAt: string
+  readonly versions: readonly SavedVersion[]
+}
+
 interface EstimatingDB extends DBSchema {
   settings: { key: string; value: { id: string; costs: CostSheet; margins: MarginSettings; updatedAt: string } }
+  estimates: { key: string; value: SavedEstimate; indexes: { 'by-inspection': string } }
 }
 
 let dbPromise: Promise<IDBPDatabase<EstimatingDB>> | null = null
@@ -185,10 +224,14 @@ let dbPromise: Promise<IDBPDatabase<EstimatingDB>> | null = null
  */
 function getDB(): Promise<IDBPDatabase<EstimatingDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<EstimatingDB>('delta-ridge-estimating', 2, {
+    dbPromise = openDB<EstimatingDB>('delta-ridge-estimating', 3, {
       upgrade(db) {
         if (!db.objectStoreNames.contains('settings')) {
           db.createObjectStore('settings', { keyPath: 'id' })
+        }
+        if (!db.objectStoreNames.contains('estimates')) {
+          const estimates = db.createObjectStore('estimates', { keyPath: 'id' })
+          estimates.createIndex('by-inspection', 'inspectionId')
         }
       },
     })
@@ -232,4 +275,110 @@ export async function writeSettings(
   const updatedAt = new Date().toISOString()
   await (await getDB()).put('settings', { id: SETTINGS_ID, costs, margins, updatedAt })
   return updatedAt
+}
+
+function newEstimateId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
+  return `est-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+export interface VersionInput {
+  readonly geometry: SavedGeometry
+  readonly costs: CostSheet
+  readonly margins: MarginSettings
+  readonly directCostCents: number
+  readonly overheadCents: number
+  readonly jobCostCents: number
+  readonly sellPriceCents: number
+  readonly gapCount: number
+}
+
+/**
+ * Appends a version, creating the estimate if this is the first one.
+ *
+ * Never edits an existing version. The saved numbers are what somebody was
+ * shown; a revision is a new version sitting beside the old one.
+ */
+export async function saveVersion(
+  estimateId: string | null,
+  inspectionId: string | null,
+  label: string,
+  input: VersionInput,
+): Promise<SavedEstimate> {
+  const db = await getDB()
+  const now = new Date().toISOString()
+  const existing = estimateId ? await db.get('estimates', estimateId) : undefined
+
+  const version: SavedVersion = {
+    versionNumber: (existing?.versions.length ?? 0) + 1,
+    createdAt: now,
+    ...input,
+  }
+
+  const estimate: SavedEstimate = existing
+    ? { ...existing, updatedAt: now, versions: [...existing.versions, version] }
+    : {
+        id: estimateId ?? newEstimateId(),
+        inspectionId,
+        label,
+        createdAt: now,
+        updatedAt: now,
+        versions: [version],
+      }
+
+  await db.put('estimates', estimate)
+  return estimate
+}
+
+export async function listEstimates(): Promise<readonly SavedEstimate[]> {
+  try {
+    const rows = await (await getDB()).getAll('estimates')
+    return [...rows].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  } catch {
+    dbPromise = null
+    return []
+  }
+}
+
+export async function estimatesForInspection(
+  inspectionId: string,
+): Promise<readonly SavedEstimate[]> {
+  try {
+    const rows = await (await getDB()).getAllFromIndex(
+      'estimates',
+      'by-inspection',
+      inspectionId,
+    )
+    return [...rows].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  } catch {
+    dbPromise = null
+    return []
+  }
+}
+
+export async function readEstimate(id: string): Promise<SavedEstimate | null> {
+  try {
+    return (await (await getDB()).get('estimates', id)) ?? null
+  } catch {
+    dbPromise = null
+    return null
+  }
+}
+
+/** Latest version, or null for an estimate with none (which should not exist). */
+export function latestVersion(estimate: SavedEstimate): SavedVersion | null {
+  return estimate.versions[estimate.versions.length - 1] ?? null
+}
+
+/**
+ * Whether the live cost sheet still matches what a version was priced against.
+ *
+ * Used to say "your costs have changed since this was priced" rather than
+ * silently repricing a saved number. Only the keys the version actually used
+ * are compared: a cost the roof never needed changing is not a reason to warn
+ * anybody.
+ */
+export function costsDrifted(version: SavedVersion, current: CostSheet): boolean {
+  const keys = Object.keys(version.costs) as CostKey[]
+  return keys.some((k) => version.costs[k] !== current[k])
 }

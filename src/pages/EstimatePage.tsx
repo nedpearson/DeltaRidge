@@ -5,11 +5,16 @@ import { buildEstimate } from '@/features/estimating/build'
 import { centsToDollars, type Cents } from '@/features/estimating/money'
 import {
   DEFAULT_MARGINS,
+  costsDrifted,
+  estimatesForInspection,
   isUsable,
+  latestVersion,
   marginPolicyFrom,
   readSettings,
+  saveVersion,
   type CostSheet,
   type MarginSettings,
+  type SavedEstimate,
 } from '@/features/estimating/store'
 import { factsFrom, seedFrom } from '@/features/estimating/from-inspection'
 import { suggestScope } from '@/features/estimating/scope'
@@ -76,6 +81,9 @@ export default function EstimatePage() {
   const [margins, setMargins] = useState<MarginSettings>(DEFAULT_MARGINS)
   const [loading, setLoading] = useState(true)
   const [inspection, setInspection] = useState<LocalInspection | null>(null)
+  const [estimate, setEstimate] = useState<SavedEstimate | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   const [photos, setPhotos] = useState<LocalPhoto[]>([])
   const [observations, setObservations] = useState<LocalObservation[]>([])
 
@@ -100,7 +108,19 @@ export default function EstimatePage() {
       setInspection(i ?? null)
       setPhotos(p)
       setObservations(o)
-      setForm((f) => ({ ...f, ...seedFrom(i ?? null) }))
+
+      // Reopen the last saved version if there is one, so a rep returning to
+      // a roof sees what they priced rather than a blank form. Otherwise seed
+      // what the inspection recorded.
+      const saved = await estimatesForInspection(id)
+      const previous = saved[0]
+      const version = previous ? latestVersion(previous) : null
+      if (previous && version) {
+        setEstimate(previous)
+        setForm((f) => ({ ...f, ...version.geometry }))
+      } else {
+        setForm((f) => ({ ...f, ...seedFrom(i ?? null) }))
+      }
     })().catch(() => undefined)
   }, [id])
 
@@ -159,10 +179,43 @@ export default function EstimatePage() {
     })
   }, [built, facts, form.areaSqFt, id, margins])
 
+  async function save() {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const next = await saveVersion(
+        estimate?.id ?? null,
+        id ?? null,
+        inspection?.addressLine1 ?? 'Untitled roof',
+        {
+          geometry: { ...form },
+          costs: { ...costs },
+          margins: { ...margins },
+          directCostCents: built.directCost,
+          overheadCents: built.overhead,
+          jobCostCents: built.jobCost,
+          sellPriceCents: built.recommended.price,
+          gapCount: built.gaps.length,
+        },
+      )
+      setEstimate(next)
+    } catch (err) {
+      setSaveError(
+        err instanceof Error
+          ? `Could not save on this device: ${err.message}`
+          : 'Could not save on this device.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (loading) return <p className="text-[13px] text-white/45">Loading…</p>
 
   const hasArea = num(form.areaSqFt) > 0
   const ready = isUsable(costs)
+  const saved = estimate ? latestVersion(estimate) : null
+  const drifted = saved !== null && costsDrifted(saved, costs)
 
   return (
     <div className="space-y-4 pb-4">
@@ -184,6 +237,27 @@ export default function EstimatePage() {
           <Link to="/costs" className="mt-2 inline-block text-[13px] font-semibold text-sky-300">
             Enter your costs →
           </Link>
+        </Card>
+      )}
+
+      {saved && (
+        <Card>
+          <p className="text-[13px] leading-relaxed text-white/70">
+            Version {saved.versionNumber} saved {new Date(saved.createdAt).toLocaleString()} at{' '}
+            <span className="font-semibold text-white">{money(saved.sellPriceCents as Cents)}</span>.
+          </p>
+          {drifted && (
+            <p className="mt-2 text-[12px] leading-relaxed text-amber-200">
+              Your cost sheet has changed since this was priced. The figures below are recalculated
+              at today&apos;s costs — the saved version keeps the price the homeowner was given.
+              Save a new version to record the change.
+            </p>
+          )}
+          {estimate && estimate.versions.length > 1 && (
+            <p className="mt-2 text-[12px] text-white/40">
+              {estimate.versions.length} versions kept. Nothing is overwritten.
+            </p>
+          )}
         </Card>
       )}
 
@@ -378,6 +452,18 @@ export default function EstimatePage() {
             Enter the roof area to price it.
           </p>
         </Card>
+      )}
+
+      {saveError && (
+        <p className="rounded-lg bg-amber-400/10 px-3 py-2 text-[13px] text-amber-200 ring-1 ring-amber-400/25">
+          {saveError}
+        </p>
+      )}
+
+      {hasArea && (
+        <Button full onClick={() => void save()} disabled={saving}>
+          {saving ? 'Saving…' : estimate ? 'Save a new version' : 'Save this estimate'}
+        </Button>
       )}
 
       <Button full onClick={() => setForm(EMPTY)}>Clear</Button>
