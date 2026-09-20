@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom'
+﻿import { Route, Routes } from 'react-router-dom'
 import AppShell from '@/components/AppShell'
 import UpdateBanner from '@/components/UpdateBanner'
 import HomePage from '@/pages/HomePage'
@@ -28,6 +28,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/leads" element={<LeadsPage />} />
           <Route path="/estimate" element={<EstimatePage />} />
+          <Route path="/estimate/:id" element={<EstimatePage />} />
           <Route path="/costs" element={<CostBookPage />} />
           <Route path="/inspections" element={<InspectionsPage />} />
           <Route path="/new" element={<NewInspectionPage />} />

@@ -1,15 +1,27 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { Button, Card, Field, SectionTitle, TextInput } from '@/components/ui'
 import { buildEstimate } from '@/features/estimating/build'
 import { centsToDollars, type Cents } from '@/features/estimating/money'
 import {
   DEFAULT_MARGINS,
   isUsable,
+  marginPolicyFrom,
   readSettings,
   type CostSheet,
   type MarginSettings,
 } from '@/features/estimating/store'
+import { factsFrom, seedFrom } from '@/features/estimating/from-inspection'
+import { suggestScope } from '@/features/estimating/scope'
+import { validateEstimate, type ValidationFlag } from '@/features/estimating/validate'
+import {
+  getInspection,
+  listObservations,
+  listPhotos,
+  type LocalInspection,
+  type LocalObservation,
+  type LocalPhoto,
+} from '@/lib/db'
 import type { RoofGeometry } from '@/features/estimating/geometry'
 
 function money(value: Cents): string {
@@ -58,10 +70,14 @@ function num(v: string): number {
  * because this screen is internal; nothing here is what a homeowner sees.
  */
 export default function EstimatePage() {
+  const { id } = useParams<{ id: string }>()
   const [form, setForm] = useState<Record<FieldKey, string>>(EMPTY)
   const [costs, setCosts] = useState<CostSheet>({})
   const [margins, setMargins] = useState<MarginSettings>(DEFAULT_MARGINS)
   const [loading, setLoading] = useState(true)
+  const [inspection, setInspection] = useState<LocalInspection | null>(null)
+  const [photos, setPhotos] = useState<LocalPhoto[]>([])
+  const [observations, setObservations] = useState<LocalObservation[]>([])
 
   useEffect(() => {
     void readSettings().then((s) => {
@@ -70,6 +86,24 @@ export default function EstimatePage() {
       setLoading(false)
     })
   }, [])
+
+  // Attaching the estimate to an inspection is the whole reason the findings
+  // and photos are here rather than being retyped from memory.
+  useEffect(() => {
+    if (!id) return
+    void (async () => {
+      const [i, p, o] = await Promise.all([
+        getInspection(id),
+        listPhotos(id),
+        listObservations(id),
+      ])
+      setInspection(i ?? null)
+      setPhotos(p)
+      setObservations(o)
+      const seed = seedFrom(i ?? null, p)
+      setForm((f) => ({ ...f, ...seed }))
+    })().catch(() => undefined)
+  }, [id])
 
   const set = (k: FieldKey) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -99,6 +133,33 @@ export default function EstimatePage() {
     [geometry, costs, margins],
   )
 
+  const facts = useMemo(
+    () => factsFrom(inspection, photos, observations, geometry),
+    [inspection, photos, observations, geometry],
+  )
+
+  const suggestions = useMemo(() => (id ? suggestScope(facts) : []), [id, facts])
+
+  const flags: readonly ValidationFlag[] = useMemo(() => {
+    if (num(form.areaSqFt) <= 0) return []
+    return validateEstimate({
+      version: {
+        id: 'draft', estimateId: id ?? 'draft', versionNumber: 1, mode: 'retail',
+        lines: built.lines,
+        provenance: {
+          priceBookVersion: 'device', pricedAsOf: new Date().toISOString().slice(0, 10),
+          wasteModelVersion: 'v1', marginPolicyVersion: 'v1',
+          geometrySource: 'manual', jurisdictionRuleVersion: null,
+        },
+        createdAt: new Date().toISOString(), createdBy: 'rep',
+      },
+      facts,
+      sellPrice: built.jobCost > 0 ? built.recommended.price : null,
+      jobCost: built.jobCost,
+      marginPolicy: marginPolicyFrom(margins),
+    })
+  }, [built, facts, form.areaSqFt, id, margins])
+
   if (loading) return <p className="text-[13px] text-white/45">Loading…</p>
 
   const hasArea = num(form.areaSqFt) > 0
@@ -109,7 +170,9 @@ export default function EstimatePage() {
       <div>
         <h1 className="font-display text-xl tracking-wide">Estimate</h1>
         <p className="mt-1 text-[13px] leading-relaxed text-white/45">
-          Every number is explainable and every line says why it is there.
+          {inspection?.addressLine1
+            ? inspection.addressLine1
+            : 'Every number is explainable and every line says why it is there.'}
         </p>
       </div>
 
@@ -123,6 +186,40 @@ export default function EstimatePage() {
             Enter your costs →
           </Link>
         </Card>
+      )}
+
+      {suggestions.length > 0 && (
+        <>
+          <SectionTitle hint={`${suggestions.length} from the inspection`}>
+            WHAT THE ROOF SAID
+          </SectionTitle>
+          <Card>
+            <p className="mb-3 text-[12px] leading-relaxed text-white/45">
+              Derived from what was actually recorded. These are suggestions, not scope — confirm
+              each one before it reaches a customer.
+            </p>
+            <div className="space-y-3">
+              {suggestions.map((s) => (
+                <div key={s.key} className="border-l-2 border-sky-400/30 pl-3">
+                  <p className="text-[13px] font-semibold text-white/85">
+                    {s.description}
+                    {s.quantity > 0 && (
+                      <span className="ml-2 font-normal text-white/45">
+                        {s.quantity.toFixed(s.unit === 'EA' ? 0 : 2)} {s.unit}
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-white/50">{s.rationale}</p>
+                  <p className="mt-0.5 text-[11px] uppercase tracking-wide text-white/30">
+                    {s.confidence} confidence
+                    {s.needsQuantity ? ' · needs a quantity from you' : ''}
+                    {s.evidence[0] ? ` · ${s.evidence[0].kind.replace(/_/g, ' ')}` : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </>
       )}
 
       <SectionTitle>MEASUREMENTS</SectionTitle>
@@ -195,6 +292,36 @@ export default function EstimatePage() {
                 Enter the missing costs →
               </Link>
             </Card>
+          )}
+
+          {flags.length > 0 && (
+            <>
+              <SectionTitle
+                hint={`${flags.filter((f) => f.severity === 'blocker').length} blocking`}
+              >
+                BEFORE THIS GOES OUT
+              </SectionTitle>
+              <Card>
+                <div className="space-y-2">
+                  {flags.map((flag, i) => (
+                    <div key={`${flag.code}-${i}`} className="flex gap-2 text-[13px] leading-relaxed">
+                      <span
+                        className={
+                          flag.severity === 'blocker'
+                            ? 'shrink-0 font-semibold text-rose-300'
+                            : flag.severity === 'warning'
+                              ? 'shrink-0 font-semibold text-amber-300'
+                              : 'shrink-0 font-semibold text-white/40'
+                        }
+                      >
+                        {flag.severity === 'blocker' ? 'STOP' : flag.severity === 'warning' ? 'CHECK' : 'NOTE'}
+                      </span>
+                      <span className="text-white/70">{flag.message}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </>
           )}
 
           <SectionTitle hint="internal — never shown to a homeowner">COST AND PRICE</SectionTitle>
