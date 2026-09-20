@@ -98,8 +98,13 @@ export function buildJobCost(
   const directCost = sumCents(
     lines.filter((l) => DIRECT_CATEGORIES.includes(l.category)).map((l) => l.amount),
   )
+  // The minimum exists so a small repair still carries its share of the truck.
+  // It must not apply when there is no job at all: an estimate with nothing
+  // priced would otherwise show $250 of overhead and a confident selling price
+  // built on top of it.
   const computed = applyBps(directCost, overheadPolicy.rate)
-  const overhead = cents(Math.max(computed, overheadPolicy.minimum))
+  const overhead =
+    directCost === 0 ? ZERO_CENTS : cents(Math.max(computed, overheadPolicy.minimum))
   return {
     lines,
     directCost,

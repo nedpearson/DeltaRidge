@@ -6,6 +6,7 @@ import { outboxCount } from '@/lib/db'
 const NAV = [
   { to: '/', label: 'Home', icon: 'home' },
   { to: '/leads', label: 'Leads', icon: 'target' },
+  { to: '/estimate', label: 'Price', icon: 'tag' },
   { to: '/inspections', label: 'Jobs', icon: 'clipboard' },
   { to: '/new', label: 'Inspect', icon: 'camera', primary: true },
 ] as const
@@ -15,6 +16,7 @@ function Icon({ name }: { name: string }) {
   if (name === 'home') return <svg {...common} aria-hidden="true"><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /></svg>
   if (name === 'clipboard') return <svg {...common} aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2" /><path d="M9 4V3h6v1" /><path d="M9 10h6M9 14h6M9 18h3" /></svg>
   if (name === 'target') return <svg {...common} aria-hidden="true"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.2" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2" /></svg>
+  if (name === 'tag') return <svg {...common} aria-hidden="true"><path d="M3 12.5V4a1 1 0 0 1 1-1h8.5L21 11.5 12.5 20z" /><circle cx="7.5" cy="7.5" r="1.4" /></svg>
   return <svg {...common} aria-hidden="true"><path d="M3 8h3.5L8 6h8l1.5 2H21v11H3z" /><circle cx="12" cy="13.5" r="3.5" /></svg>
 }
 

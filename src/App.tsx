@@ -6,6 +6,8 @@ import InspectionsPage from '@/pages/InspectionsPage'
 import NewInspectionPage from '@/pages/NewInspectionPage'
 import InspectionPage from '@/pages/InspectionPage'
 import LeadsPage from '@/pages/LeadsPage'
+import EstimatePage from '@/pages/EstimatePage'
+import CostBookPage from '@/pages/CostBookPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import { SessionProvider } from '@/features/auth/session'
 import { useSync } from '@/features/auth/useSync'
@@ -25,6 +27,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/leads" element={<LeadsPage />} />
+          <Route path="/estimate" element={<EstimatePage />} />
+          <Route path="/costs" element={<CostBookPage />} />
           <Route path="/inspections" element={<InspectionsPage />} />
           <Route path="/new" element={<NewInspectionPage />} />
           <Route path="/inspection/:id" element={<InspectionPage />} />
