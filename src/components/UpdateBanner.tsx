@@ -1,46 +1,89 @@
 import { useEffect, useState } from 'react'
-
-type UpdateFn = (reload?: boolean) => Promise<void> | void
+import {
+  applyUpdate,
+  shouldApplyNow,
+  subscribeToUpdates,
+  type UpdateState,
+} from '@/lib/sw-update'
 
 /**
- * Surfaces the waiting service worker.
+ * Applies a waiting service worker as soon as it is safe, and explains itself
+ * when it is not.
  *
- * `registerType: 'prompt'` is deliberate — reloading under a rep who is halfway
- * through an inspection would be hostile. But a prompt nobody renders is worse
- * than no prompt at all: the new worker installs, parks in `waiting`, and the
- * rep keeps running an old build forever with no way to know. This is the
- * listener that makes the choice real.
+ * The previous version only ever asked. That is why a deploy could sit unused
+ * for days: the worker installed, parked in `waiting`, and the banner was easy
+ * to scroll past - verified in the field, where the app was still serving the
+ * bundle from the deploy before last. Now the default is to update, and the
+ * prompt exists only for the case where updating would interrupt something.
+ *
+ * The short countdown is not decoration. A page that reloads the instant you
+ * open it feels broken; a few seconds with a visible reason and a way out does
+ * not.
  */
+const GRACE_SECONDS = 5
+
 export default function UpdateBanner() {
-  const [updateSW, setUpdateSW] = useState<UpdateFn | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [state, setState] = useState<UpdateState>({ available: false, holds: [] })
+  const [countdown, setCountdown] = useState<number | null>(null)
+  const [deferred, setDeferred] = useState(false)
+
+  useEffect(() => subscribeToUpdates(setState), [])
+
+  const autoApplies = shouldApplyNow(state) && !deferred
 
   useEffect(() => {
-    function onAvailable(event: Event) {
-      const detail = (event as CustomEvent<{ updateSW: UpdateFn }>).detail
-      if (detail?.updateSW) setUpdateSW(() => detail.updateSW)
+    if (!autoApplies) {
+      setCountdown(null)
+      return
     }
-    window.addEventListener('dr:update-available', onAvailable)
-    return () => window.removeEventListener('dr:update-available', onAvailable)
-  }, [])
+    setCountdown(GRACE_SECONDS)
+    const timer = window.setInterval(() => {
+      setCountdown((n) => {
+        if (n === null) return null
+        if (n <= 1) {
+          window.clearInterval(timer)
+          applyUpdate()
+          return 0
+        }
+        return n - 1
+      })
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [autoApplies])
 
-  if (!updateSW) return null
+  if (!state.available) return null
+
+  const held = state.holds.length > 0
+  const reason = state.holds[0]
 
   return (
     <div className="fixed inset-x-0 bottom-20 z-50 mx-auto w-[min(26rem,calc(100%-2rem))]">
       <div className="flex items-center gap-3 rounded-xl bg-[#1b2740] px-4 py-3 shadow-lg ring-1 ring-sky-400/25">
         <p className="flex-1 text-[13px] leading-snug text-white/75">
-          A new version is ready. Your saved work is untouched.
+          {held ? (
+            <>
+              A new version is ready. It will install by itself when you finish
+              {reason ? ` — ${reason}` : ''}. Your saved work is untouched.
+            </>
+          ) : deferred ? (
+            <>A new version is ready. Your saved work is untouched.</>
+          ) : (
+            <>Updating in {countdown ?? GRACE_SECONDS}s. Your saved work is untouched.</>
+          )}
         </p>
+        {!held && !deferred && (
+          <button
+            onClick={() => setDeferred(true)}
+            className="shrink-0 rounded-lg px-2 py-2 text-[13px] text-white/50"
+          >
+            Not now
+          </button>
+        )}
         <button
-          disabled={busy}
-          onClick={() => {
-            setBusy(true)
-            void updateSW(true)
-          }}
-          className="shrink-0 rounded-lg bg-sky-400/15 px-3 py-2 text-[13px] font-semibold text-sky-200 ring-1 ring-sky-400/30 disabled:opacity-50"
+          onClick={applyUpdate}
+          className="shrink-0 rounded-lg bg-sky-400/15 px-3 py-2 text-[13px] font-semibold text-sky-200 ring-1 ring-sky-400/30"
         >
-          {busy ? 'Updating…' : 'Update'}
+          {held || deferred ? 'Update now' : 'Update'}
         </button>
       </div>
     </div>

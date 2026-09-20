@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { registerSW } from 'virtual:pwa-register'
+import { setUpdateAvailable } from '@/lib/sw-update'
 import App from './App'
 import './index.css'
 
@@ -16,11 +17,32 @@ createRoot(rootEl).render(
   </StrictMode>,
 )
 
-// Offline is the point, not a nicety: register the service worker and let the
-// app decide when to prompt for an update rather than reloading under a rep
-// who is halfway through an inspection.
+/**
+ * Offline is the point, not a nicety. The worker is registered here and the
+ * app decides when to apply an update - see src/lib/sw-update.ts for the
+ * policy.
+ *
+ * The periodic check matters as much as the policy. A rep installs the PWA and
+ * then keeps it open for days; without an explicit `update()` the browser may
+ * not look for a new worker again for a very long time, so a deploy can go
+ * unseen no matter how good the banner is. Checking on an interval and
+ * whenever the app comes back to the foreground closes that.
+ */
+const UPDATE_CHECK_MS = 30 * 60 * 1000
+
 const updateSW = registerSW({
   onNeedRefresh() {
-    window.dispatchEvent(new CustomEvent('dr:update-available', { detail: { updateSW } }))
+    setUpdateAvailable(updateSW)
+  },
+  onRegisteredSW(_url, registration) {
+    if (!registration) return
+    const check = () => {
+      if (navigator.onLine) void registration.update().catch(() => undefined)
+    }
+    window.setInterval(check, UPDATE_CHECK_MS)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') check()
+    })
+    window.addEventListener('online', check)
   },
 })

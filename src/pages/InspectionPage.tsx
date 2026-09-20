@@ -5,6 +5,7 @@ import CapturePanel from '@/features/inspections/CapturePanel'
 import NotesPanel from '@/features/inspections/NotesPanel'
 import ReviewPanel from '@/features/inspections/ReviewPanel'
 import { requiredCategoriesFor, type PhotoCategory } from '@/features/inspections/photo-categories'
+import { holdUpdates } from '@/lib/sw-update'
 import {
   getInspection, listObservations, listPhotos, queueHandoff, saveInspection,
   type LocalInspection, type LocalObservation, type LocalPhoto,
@@ -28,6 +29,10 @@ export default function InspectionPage() {
   const [observations, setObservations] = useState<LocalObservation[]>([])
   const [focusCategory, setFocusCategory] = useState<PhotoCategory | undefined>(undefined)
   const [loading, setLoading] = useState(true)
+
+  // Never reload under a rep mid-inspection. The hold is released on unmount,
+  // so a waiting update applies by itself the moment they leave this screen.
+  useEffect(() => holdUpdates('this inspection is open'), [])
 
   const refresh = useCallback(async () => {
     if (!id) return
