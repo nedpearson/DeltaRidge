@@ -61,21 +61,25 @@ export function factsFrom(
  */
 export interface GeometrySeed {
   readonly stories?: string
-  readonly pipeBoots?: string
 }
 
-export function seedFrom(
-  inspection: LocalInspection | null,
-  photos: readonly LocalPhoto[],
-): GeometrySeed {
-  const seed: { stories?: string; pipeBoots?: string } = {}
+/**
+ * Only facts the inspection RECORDED, never anything derived from them.
+ *
+ * Storeys are seeded because the rep entered that number. A pipe boot count
+ * deliberately is NOT, even though the photos imply one, and the reason is
+ * worth keeping: the scope rules distinguish a count that came from a
+ * measurement (high confidence, priced) from one inferred from photographs
+ * (medium confidence, "confirm the count"). Writing the photo-derived number
+ * into the measurement field erases that distinction - the suggestion then
+ * reads "HIGH CONFIDENCE, MEASUREMENT" for a number nobody measured.
+ *
+ * Observed on screen before it was removed. The suggestion already handles
+ * this better than a seeded field can: it shows the count, says where it came
+ * from, and asks the rep to confirm it.
+ */
+export function seedFrom(inspection: LocalInspection | null): GeometrySeed {
+  const seed: { stories?: string } = {}
   if (inspection?.stories !== undefined) seed.stories = String(inspection.stories)
-
-  // A photograph proves a boot exists; it does not prove how many there are.
-  // Seeding the count from photos gives the rep a starting number they can see
-  // and correct, which beats an empty field they may not think to fill.
-  const bootPhotos = photos.filter((p) => p.category === 'pipe_boot').length
-  if (bootPhotos > 0) seed.pipeBoots = String(bootPhotos)
-
   return seed
 }

@@ -100,8 +100,7 @@ export default function EstimatePage() {
       setInspection(i ?? null)
       setPhotos(p)
       setObservations(o)
-      const seed = seedFrom(i ?? null, p)
-      setForm((f) => ({ ...f, ...seed }))
+      setForm((f) => ({ ...f, ...seedFrom(i ?? null) }))
     })().catch(() => undefined)
   }, [id])
 

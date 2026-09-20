@@ -87,22 +87,39 @@ describe('facts come from what was recorded', () => {
   })
 })
 
-describe('the measurement seed does not invent measurements', () => {
+describe('the seed carries recorded facts, never derived ones', () => {
   it('seeds nothing when the inspection knows nothing', () => {
-    expect(seedFrom(inspection(), [])).toEqual({})
+    expect(seedFrom(inspection())).toEqual({})
   })
 
   it('seeds storeys only when recorded', () => {
-    expect(seedFrom(inspection({ stories: 2 }), []).stories).toBe('2')
-    expect(seedFrom(inspection(), []).stories).toBeUndefined()
+    expect(seedFrom(inspection({ stories: 2 })).stories).toBe('2')
+    expect(seedFrom(inspection()).stories).toBeUndefined()
   })
 
-  it('seeds a boot count from photos as a starting number', () => {
-    const seed = seedFrom(inspection(), [photo(), photo({ id: 'p2' })])
-    expect(seed.pipeBoots).toBe('2')
+  /**
+   * Seeding a photo-derived boot count into the measurement field made the
+   * suggestion report "HIGH CONFIDENCE, MEASUREMENT" for a number nobody
+   * measured - seen on screen before it was removed. The suggestion carries
+   * the count and asks the rep to confirm it; the measurement field must stay
+   * empty until a human puts a measured number in it.
+   */
+  it('does not seed a boot count, so the suggestion keeps its provenance', () => {
+    expect(seedFrom(inspection())).not.toHaveProperty('pipeBoots')
+
+    const facts = factsFrom(inspection(), [photo(), photo({ id: 'p2' })], [], GEOMETRY)
+    const boots = suggestScope(facts).find((s) => s.key === 'pipe_boot_replacement')
+    expect(boots?.confidence).toBe('medium')
+    expect(boots?.needsQuantity).toBe(true)
+    expect(boots?.evidence.every((e) => e.kind === 'photo')).toBe(true)
   })
 
-  it('does not seed boots from unrelated photos', () => {
-    expect(seedFrom(inspection(), [photo({ category: 'gutter' })]).pipeBoots).toBeUndefined()
+  it('reports high confidence once a measured count is present', () => {
+    const measured = { ...GEOMETRY, penetrations: [{ kind: 'pipe_boot' as const, count: 3 }] }
+    const boots = suggestScope(
+      factsFrom(inspection(), [photo()], [], measured),
+    ).find((s) => s.key === 'pipe_boot_replacement')
+    expect(boots?.confidence).toBe('high')
+    expect(boots?.quantity).toBe(3)
   })
 })
