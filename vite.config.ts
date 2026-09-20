@@ -43,10 +43,32 @@ export default defineConfig({
         // offline-capable, rather than only from the second load onward.
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        /**
+         * The map library is NOT precached, on purpose.
+         *
+         * It is 1.9 MB on its own and precaching it would make installing the
+         * app a 2.6 MB download before a rep has opened anything — and it
+         * cannot draw a map offline anyway without tiles. It is cached at
+         * runtime the first time the map is opened instead, which is the
+         * moment it is worth paying for.
+         */
+        globIgnores: ['**/LeadMapLive-*.js', '**/LeadMapLive-*.css'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         // Field reality: map tiles and Supabase reads get network-first with a
         // cache fallback so a rep in a dead zone still sees last-known data.
         runtimeCaching: [
+          // The map library, kept out of the precache above. Cache-first is
+          // safe because the filename carries a content hash, so a new build
+          // is a new URL rather than a stale hit.
+          {
+            urlPattern: /\/assets\/LeadMapLive-[^/]+\.(js|css)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'map-library',
+              expiration: { maxEntries: 6, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           // Google Fonts: the stylesheet changes rarely, the font files never.
           // Without these two entries a reload with no signal renders the whole
           // app in system fonts - verified offline before adding them.
