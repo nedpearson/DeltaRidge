@@ -6,6 +6,7 @@ import InspectionsPage from '@/pages/InspectionsPage'
 import NewInspectionPage from '@/pages/NewInspectionPage'
 import InspectionPage from '@/pages/InspectionPage'
 import LeadsPage from '@/pages/LeadsPage'
+import LeadPage from '@/pages/LeadPage'
 import EstimatePage from '@/pages/EstimatePage'
 import CostBookPage from '@/pages/CostBookPage'
 import NotFoundPage from '@/pages/NotFoundPage'
@@ -27,6 +28,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/leads" element={<LeadsPage />} />
+          <Route path="/lead/:id" element={<LeadPage />} />
           <Route path="/estimate" element={<EstimatePage />} />
           <Route path="/estimate/:id" element={<EstimatePage />} />
           <Route path="/costs" element={<CostBookPage />} />
