@@ -224,3 +224,64 @@ describe('contractorActivity', () => {
     expect(contractorActivity([permit({ kind: 'new_build', contractorName: 'Builder' })])).toEqual([])
   })
 })
+
+describe('which storm a door is scored against', () => {
+  // The bug this locks down: selection was by distance alone, so a dense
+  // cluster of old, small reports captured every door and the list read as if
+  // nothing had happened since. Verified against the live feed: the nearest
+  // report to most Baton Rouge candidates was from March 2025.
+  const old = storm({
+    externalId: 'old-near',
+    occurredAt: '2025-03-31T00:00:00.000Z',
+    hailSizeInches: 1.0,
+    latitude: 30.3505,
+    longitude: -91.05,
+  })
+  const recent = storm({
+    externalId: 'recent-far',
+    occurredAt: '2026-08-21T00:00:00.000Z',
+    hailSizeInches: 1.75,
+    latitude: 30.36,
+    longitude: -91.05,
+  })
+
+  it('cites the bigger, fresher storm over the marginally nearer one', () => {
+    const { leads } = scoreLeads({
+      candidates: [candidate()],
+      storms: [old, recent],
+      reroofPermits: [],
+      minHailInches: 1,
+      radiusMiles: 3,
+      now: NOW,
+    })
+
+    expect(leads).toHaveLength(1)
+    expect(leads[0]?.storm.externalId).toBe('recent-far')
+  })
+
+  it('does not suppress a roof re-done before the most recent storm', () => {
+    // Re-roofed after a 2015 storm, hit again in 2026. Testing the re-roof
+    // against the CITED storm instead of the newest one dropped this door.
+    const { leads, suppressed } = scoreLeads({
+      candidates: [candidate()],
+      storms: [
+        storm({ externalId: 'ancient', occurredAt: '2015-04-01T00:00:00.000Z', latitude: 30.3505 }),
+        recent,
+      ],
+      reroofPermits: [
+        permit({
+          externalId: 'r1',
+          kind: 'reroof',
+          permitType: 'Re-Roof (R)',
+          issuedAt: '2015-06-01T00:00:00.000',
+        }),
+      ],
+      minHailInches: 1,
+      radiusMiles: 3,
+      now: NOW,
+    })
+
+    expect(suppressed.alreadyReplaced).toBe(0)
+    expect(leads).toHaveLength(1)
+  })
+})

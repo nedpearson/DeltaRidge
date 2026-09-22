@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DoorOutcomeSheet from '@/components/DoorOutcomeSheet'
 import LeadMap from '@/components/LeadMap'
@@ -50,6 +50,31 @@ const SELECTABLE_WINDOWS = WINDOW_OPTIONS.filter((w) => w.key !== 'custom')
  */
 
 type Tab = 'new' | 'follow_up' | 'need_visit' | 'appointments'
+
+/**
+ * How stale the cached list may be before the page rebuilds it on its own.
+ *
+ * The list used to sit at whatever it was when it was last built by hand, so a
+ * rep who opened the app in the morning was looking at last week's storms and
+ * had no way to know it. Both upstream feeds are live — the parish permit feed
+ * updates daily and NWS reports land within minutes of a storm — so the only
+ * thing that was stale was us.
+ */
+const MAX_CACHE_AGE_MS = 30 * 60 * 1000
+
+/** How often an open page re-checks whether its list has gone stale. */
+const POLL_MS = 5 * 60 * 1000
+
+/** "built 12 min ago" — days are too coarse once the list rebuilds itself. */
+function relativeTime(iso: string): string {
+  const seconds = Math.round((Date.now() - new Date(iso).getTime()) / 1000)
+  if (seconds < 90) return 'just now'
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return relativeDay(iso)
+}
 
 function relativeDay(iso: string): string {
   const days = Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000)
@@ -343,31 +368,80 @@ export default function LeadsPage() {
   const [knocking, setKnocking] = useState<ScoredLead | null>(null)
   const [showCompetitors, setShowCompetitors] = useState(false)
 
+  const busyRef = useRef(false)
+  const settingsRef = useRef(settings)
+  settingsRef.current = settings
+  const ranAtRef = useRef<string | null>(null)
+  ranAtRef.current = run?.ranAt ?? null
+
+  /**
+   * `auto` marks a rebuild the page decided on by itself. Those yield to a run
+   * already in flight and never raise an error banner — a rep who is reading
+   * the list must not have it replaced by "could not build the list" because a
+   * background refresh hit a dead spot. A tap always runs and always reports.
+   */
+  const refresh = useCallback(async (next: LeadRunSettings, auto = false) => {
+    if (auto && busyRef.current) return
+    busyRef.current = true
+    setBusy(true)
+    if (!auto) setError(null)
+    try {
+      setRun(await runLeadEngine(next))
+      setError(null)
+    } catch (err) {
+      if (!auto) {
+        setError(
+          err instanceof Error
+            ? `Could not build the list: ${err.message}. Anything already downloaded is still below.`
+            : 'Could not build the list. Anything already downloaded is still below.',
+        )
+      }
+    } finally {
+      busyRef.current = false
+      setBusy(false)
+    }
+  }, [])
+
   useEffect(() => {
     void readCachedRun().then((cached) => {
       if (cached) {
         setRun(cached)
         setSettings(cached.settings)
       }
+      // Open the app, get today's list. The cache is there so the page paints
+      // instantly and still works in a dead spot, not so it can be the answer.
+      const age = cached ? Date.now() - new Date(cached.ranAt).getTime() : Infinity
+      if (age > MAX_CACHE_AGE_MS && navigator.onLine) {
+        void refresh(cached?.settings ?? DEFAULT_SETTINGS, true)
+      }
     })
     void readLeads().then(setManaged)
-  }, [])
+  }, [refresh])
 
-  const refresh = useCallback(async (next: LeadRunSettings) => {
-    setBusy(true)
-    setError(null)
-    try {
-      setRun(await runLeadEngine(next))
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? `Could not build the list: ${err.message}. Anything already downloaded is still below.`
-          : 'Could not build the list. Anything already downloaded is still below.',
-      )
-    } finally {
-      setBusy(false)
+  /**
+   * Keep it current while the page stays open: on a timer, when the truck comes
+   * back into signal, and when the rep switches back to the app. All three are
+   * age-gated, so waking the phone twenty times an hour costs nothing.
+   */
+  useEffect(() => {
+    const rebuildIfStale = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return
+      const ranAt = ranAtRef.current
+      if (ranAt && Date.now() - new Date(ranAt).getTime() < MAX_CACHE_AGE_MS) return
+      void refresh(settingsRef.current, true)
     }
-  }, [])
+
+    const timer = window.setInterval(rebuildIfStale, POLL_MS)
+    document.addEventListener('visibilitychange', rebuildIfStale)
+    window.addEventListener('online', rebuildIfStale)
+    window.addEventListener('focus', rebuildIfStale)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', rebuildIfStale)
+      window.removeEventListener('online', rebuildIfStale)
+      window.removeEventListener('focus', rebuildIfStale)
+    }
+  }, [refresh])
 
   const now = new Date().toISOString()
   const suppressed = useMemo(() => suppressedKeys(managed), [managed])
@@ -598,7 +672,7 @@ export default function LeadsPage() {
                 onOpenLead={(leadId) => navigate(`/lead/${leadId}`)}
               />
 
-              <SectionTitle hint={`built ${relativeDay(run.ranAt)}`}>
+              <SectionTitle hint={busy ? 'updating…' : `built ${relativeTime(run.ranAt)}`}>
                 {doors.length > 0 ? `${doors.length} DOORS` : 'NO DOORS'}
               </SectionTitle>
 

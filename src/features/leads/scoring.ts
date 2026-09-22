@@ -170,11 +170,35 @@ export function scoreLeads(input: ScoreInput): ScoreResult {
   const suppressed = { alreadyReplaced: 0, noQualifyingHail: 0, roofTooNew: 0 }
 
   for (const candidate of input.candidates) {
-    let best: { storm: StormEvent; miles: number } | null = null
+    // The storm cited has to be the BEST one in range, not the nearest one.
+    // Picking by distance alone threw the better storm away before scoring:
+    // a dense cluster of 1.0" reports from eighteen months ago out-selected a
+    // 1.75" report from last month half a mile further out, so every door on
+    // the list cited the same old storm. Score each candidate storm on the
+    // three storm-dependent terms and keep the winner; ties break on distance.
+    let best: { storm: StormEvent; miles: number; stormScore: number } | null = null
+    /** Most recent qualifying storm in range — what suppression must test against. */
+    let newestStormAt: string | null = null
+
     for (const storm of hail) {
       const miles = distanceMiles(candidate.latitude, candidate.longitude, storm.latitude, storm.longitude)
       if (miles > radius) continue
-      if (!best || miles < best.miles) best = { storm, miles }
+
+      if (!newestStormAt || storm.occurredAt > newestStormAt) newestStormAt = storm.occurredAt
+
+      const days = (now.getTime() - new Date(storm.occurredAt).getTime()) / (24 * 3600 * 1000)
+      const stormScore =
+        weights.hailSize * hailSizeScore(storm.hailSizeInches ?? 0) +
+        weights.hailRecency * recencyScore(days) +
+        weights.proximity * proximityScore(miles, radius)
+
+      if (
+        !best ||
+        stormScore > best.stormScore ||
+        (stormScore === best.stormScore && miles < best.miles)
+      ) {
+        best = { storm, miles, stormScore }
+      }
     }
     if (!best) {
       suppressed.noQualifyingHail += 1
@@ -183,8 +207,10 @@ export function scoreLeads(input: ScoreInput): ScoreResult {
 
     // Suppression: a re-roof permit dated after the storm means this roof is
     // already done. This is the single highest-value filter in the engine.
+    // It tests the NEWEST storm in range, not the cited one — a roof replaced
+    // after an old storm and hit again last month is still a live door.
     const replacedAt = latestReroof.get(candidate.addressKey)
-    if (replacedAt && replacedAt >= best.storm.occurredAt) {
+    if (replacedAt && newestStormAt && replacedAt >= newestStormAt) {
       suppressed.alreadyReplaced += 1
       continue
     }
@@ -199,11 +225,9 @@ export function scoreLeads(input: ScoreInput): ScoreResult {
     const daysSinceStorm = (now.getTime() - new Date(best.storm.occurredAt).getTime()) / (24 * 3600 * 1000)
     const hailSizeInches = best.storm.hailSizeInches ?? 0
 
-    const score =
-      weights.hailSize * hailSizeScore(hailSizeInches) +
-      weights.hailRecency * recencyScore(daysSinceStorm) +
-      weights.proximity * proximityScore(best.miles, radius) +
-      weights.roofAge * roofAgeScore(roofAgeYears)
+    // Storm terms were already solved when this storm was selected; re-deriving
+    // them here is how the two could drift apart.
+    const score = best.stormScore + weights.roofAge * roofAgeScore(roofAgeYears)
 
     const reasons = [
       `${formatInches(hailSizeInches)} hail reported ${best.miles.toFixed(1)} mi away on ${formatDate(best.storm.occurredAt)}`,
