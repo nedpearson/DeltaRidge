@@ -12,8 +12,7 @@ import type {
   ManagedLead,
 } from '@/features/leads/pipeline'
 import { getSupabase } from '../supabase'
-import { listOutbox } from '../sync-store'
-import { setRemoteId } from '../sync-store'
+import { listOutbox, setRemoteId, setRemoteIdScope } from '../sync-store'
 
 /**
  * Reading the server back.
@@ -210,6 +209,7 @@ function toManagedLead(row: LeadRow, existing: ManagedLead | null): ManagedLead 
   if (existing?.subdivision) lead.subdivision = existing.subdivision
   if (existing?.inspectionId) lead.inspectionId = existing.inspectionId
   if (existing?.appointmentAt) lead.appointmentAt = existing.appointmentAt
+  if (existing?.appointmentClientId) lead.appointmentClientId = existing.appointmentClientId
   return lead
 }
 
@@ -227,6 +227,8 @@ export async function pullLeads(orgId: string | null, userId: string | null): Pr
   const supabase = getSupabase()
   if (!userId || !supabase) return { ...result, skipped: 'no-session' }
   if (!orgId) return { ...result, skipped: 'no-membership' }
+
+  setRemoteIdScope(orgId)
 
   const { data, error } = await supabase
     .from('lead_sync_rows')
@@ -271,8 +273,33 @@ export async function pullLeads(orgId: string | null, userId: string | null): Pr
     }
   }
 
-  result.activities = await pullActivities(orgId, accepted, result.errors)
+  const { written, knocksByLead } = await pullActivities(orgId, accepted, result.errors)
+  result.activities = written
+  await reconcileKnockCounts(knocksByLead)
   return result
+}
+
+/**
+ * Brings a pulled lead's knock count up to what the server can account for.
+ *
+ * A lead that arrives on a manager's device shows its history but carries
+ * whatever count the row happened to have — usually zero, since the count is a
+ * local tally the capturing phone kept. A door that three reps have stood at
+ * reading "0 knocks" is worse than no number at all.
+ *
+ * Only ever raised, never lowered. The device may hold knocks that have not
+ * reached the server yet, and those are real.
+ */
+async function reconcileKnockCounts(knocksByLead: Map<string, number>): Promise<void> {
+  for (const [leadId, counted] of knocksByLead) {
+    try {
+      const lead = await readLead(leadId)
+      if (!lead || lead.knockCount >= counted) continue
+      await saveLeadFromServer({ ...lead, knockCount: counted })
+    } catch {
+      // A count is a nicety. Losing one must not abandon the rest of the pull.
+    }
+  }
 }
 
 /**
@@ -286,9 +313,10 @@ async function pullActivities(
   orgId: string,
   leadClientIds: string[],
   errors: string[],
-): Promise<number> {
+): Promise<{ written: number; knocksByLead: Map<string, number> }> {
+  const knocksByLead = new Map<string, number>()
   const supabase = getSupabase()
-  if (!supabase || leadClientIds.length === 0) return 0
+  if (!supabase || leadClientIds.length === 0) return { written: 0, knocksByLead }
 
   let written = 0
   // Chunked because the id list goes into the URL. A rep's device can easily
@@ -324,10 +352,42 @@ async function pullActivities(
         await saveEventFromServer(event)
         await setRemoteId('leadActivity', row.client_id, row.remote_id)
         written += 1
+        if (event.kind === 'door_knock') {
+          knocksByLead.set(row.lead_client_id, (knocksByLead.get(row.lead_client_id) ?? 0) + 1)
+        }
       } catch {
         // One unreadable row must not abandon the rest of the day's history.
       }
     }
   }
-  return written
+  return { written, knocksByLead }
+}
+
+/**
+ * What the server actually holds for this organisation, counted by the server.
+ *
+ * The one number on the diagnostics screen that cannot be produced by a device
+ * talking to itself. Everything else there — queue length, last drain — is the
+ * app's own account of its own behaviour, and the whole reason this work exists
+ * is that the app's account was confidently wrong.
+ */
+export async function serverSnapshot(
+  orgId: string | null,
+): Promise<{ leads: number; activities: number } | null> {
+  const supabase = getSupabase()
+  if (!supabase || !orgId || !navigator.onLine) return null
+
+  const [leads, activities] = await Promise.all([
+    supabase
+      .from('lead_sync_rows')
+      .select('remote_id', { count: 'exact', head: true })
+      .eq('organization_id', orgId),
+    supabase
+      .from('activity_sync_rows')
+      .select('remote_id', { count: 'exact', head: true })
+      .eq('organization_id', orgId),
+  ])
+
+  if (leads.error || activities.error) return null
+  return { leads: leads.count ?? 0, activities: activities.count ?? 0 }
 }

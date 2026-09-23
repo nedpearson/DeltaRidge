@@ -6,6 +6,7 @@ import {
   listOutbox,
   listStalledOutbox,
   markOutboxError,
+  setRemoteIdScope,
   unblockAuthOutbox,
 } from '../sync-store'
 import { recordDrain } from './meta'
@@ -60,6 +61,10 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
   if (!navigator.onLine) return { ...result, skipped: 'offline', foreign: await countForeign(userId) }
   if (!userId || !getSupabase()) return { ...result, skipped: 'no-session' }
   if (!orgId) return { ...result, skipped: 'no-membership' }
+
+  // Every local-to-remote mapping read or written below belongs to this
+  // organisation's database and no other.
+  setRemoteIdScope(orgId)
 
   // There is a session again, so anything parked on a stale token goes back in
   // the queue immediately rather than waiting out a backoff it did not earn.

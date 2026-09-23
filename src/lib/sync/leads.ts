@@ -197,12 +197,23 @@ async function pushAppointment(
   const supabase = getSupabase()
   if (!supabase || !lead.appointmentAt) return
 
+  /**
+   * The knock at which this was agreed, not the lead.
+   *
+   * Keyed on the lead, a second appointment set months after the first was
+   * kept would UPSERT over it and the earlier visit would vanish from the
+   * record. Leads captured before this field existed fall back to the old key
+   * so their appointment keeps updating the row it already has rather than
+   * splitting into two.
+   */
+  const appointmentClientId = lead.appointmentClientId ?? lead.id
+
   const { data, error } = await supabase
     .from('appointments')
     .upsert(
       {
         organization_id: orgId,
-        client_id: lead.id,
+        client_id: appointmentClientId,
         property_id: propertyId,
         customer_id: customerId,
         assigned_to: userId,
@@ -216,7 +227,7 @@ async function pushAppointment(
     .single()
 
   if (error) throw new Error(`appointment: ${error.message}`)
-  await setRemoteId('appointment', lead.id, data.id as string)
+  await setRemoteId('appointment', appointmentClientId, data.id as string)
 }
 
 export async function pushLeadActivity(localId: string, orgId: string, userId: string): Promise<void> {

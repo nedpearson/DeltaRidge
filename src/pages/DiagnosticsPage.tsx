@@ -5,6 +5,7 @@ import { useSync } from '@/features/auth/useSync'
 import { deviceId } from '@/lib/device'
 import { listOutbox, retryStalledOutbox } from '@/lib/sync-store'
 import { readSyncMeta } from '@/lib/sync/meta'
+import { serverSnapshot } from '@/lib/sync/pull'
 import { outboxStatus, type OutboxItem, type OutboxStatus } from '@/lib/db'
 
 /**
@@ -63,16 +64,21 @@ export default function DiagnosticsPage() {
   const { running, syncNow, pullNow, lastPull } = useSync()
   const [items, setItems] = useState<OutboxItem[]>([])
   const [meta, setMeta] = useState(() => readSyncMeta())
+  const [server, setServer] = useState<{ leads: number; activities: number } | null>(null)
 
   const userId = session?.user.id ?? null
+  const orgId = membership?.organizationId ?? null
 
   const refresh = useCallback(() => {
     void listOutbox().then(setItems).catch(() => undefined)
     setMeta(readSyncMeta())
-  }, [])
+    void serverSnapshot(orgId).then(setServer).catch(() => undefined)
+  }, [orgId])
 
   useEffect(() => {
     refresh()
+    // Five seconds is fine for the local numbers; the two server counts ride
+    // along because they are HEAD requests that return a count and no rows.
     const timer = window.setInterval(refresh, 5000)
     return () => window.clearInterval(timer)
   }, [refresh])
@@ -113,6 +119,21 @@ export default function DiagnosticsPage() {
         <Row label="Last accepted by server" value={ago(meta.lastPushAt)} />
         <Row label="Last clean drain" value={ago(meta.lastDrainAt)} muted />
         <Row label="In the queue" value={String(items.length)} />
+      </Card>
+
+      <Card>
+        {/*
+          Counted by the server, not by this device. Every other number on this
+          screen is the app's account of its own behaviour, and the app's
+          account was confidently wrong for months.
+        */}
+        <Row label="Leads the server holds" value={server ? String(server.leads) : '—'} />
+        <Row label="Knocks the server holds" value={server ? String(server.activities) : '—'} muted />
+        {!server && (
+          <p className="mt-1 text-[12px] leading-relaxed text-white/35">
+            {orgId ? 'Could not reach the server just now.' : 'Sign in to see what the server holds.'}
+          </p>
+        )}
       </Card>
 
       <Card>

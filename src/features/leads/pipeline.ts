@@ -120,6 +120,18 @@ export interface ManagedLead {
   nextActionAt?: string
   /** An agreed time, which is a stronger claim than a follow-up. ISO. */
   appointmentAt?: string
+  /**
+   * Identity for the appointment row on the server: the id of the knock at
+   * which it was agreed.
+   *
+   * Previously the appointment was pushed with `client_id = lead.id`, which
+   * made "the appointment for this lead" a single row for all time. Moving a
+   * time updated it, which is right — but setting a SECOND appointment months
+   * later, after the first was kept, overwrote the record of the first. A
+   * homeowner's history of agreed visits is not something the CRM should be
+   * quietly collapsing.
+   */
+  appointmentClientId?: string
   /** Set once an inspection is started from this lead. */
   inspectionId?: string
   /** How many times someone has stood at this door. */
@@ -312,6 +324,10 @@ export function applyOutcome(
 ): { lead: ManagedLead; event: ContactEvent } {
   const rule = RULES[outcome]
 
+  // Generated up front because two things need it: the event itself, and the
+  // appointment that event may have agreed.
+  const eventId = newId()
+
   const nextActionAt =
     options.followUpAt ??
     (rule.followUpDays !== undefined ? addDays(at, rule.followUpDays) : undefined)
@@ -331,9 +347,14 @@ export function applyOutcome(
   if (outcome === 'appointment_set' && options.appointmentAt !== undefined) {
     next.appointmentAt = options.appointmentAt
     next.nextActionAt = options.appointmentAt
+    // A new agreement gets a new identity; moving an existing one does not,
+    // because the caller passes the same lead through without a fresh
+    // appointment_set outcome.
+    next.appointmentClientId = eventId
   }
   if (outcome === 'do_not_knock' || outcome === 'not_interested') {
     delete next.appointmentAt
+    delete next.appointmentClientId
   }
   if (options.inspectionId !== undefined) next.inspectionId = options.inspectionId
   // A name learned at the door is kept; a blank field never erases one.
@@ -349,7 +370,7 @@ export function applyOutcome(
   // idempotent push, and two knocks at the same address are genuinely two
   // events that must both survive.
   const event: ContactEvent = {
-    id: newId(),
+    id: eventId,
     leadId: lead.id,
     at,
     kind: outcome === 'appointment_set' ? 'appointment_set' : 'door_knock',

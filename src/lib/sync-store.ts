@@ -17,6 +17,8 @@ interface RemoteIdRow {
   entity: string
   localId: string
   remoteId: string
+  /** Null only on rows written before the map was scoped. */
+  orgId?: string | null
   syncedAt: string
 }
 
@@ -55,17 +57,52 @@ export type RemoteEntity =
   | 'leadAttachment'
   | 'appointment'
 
+/**
+ * Which organisation's server the map currently describes.
+ *
+ * A local id means nothing on its own — it is a claim that "this row of mine is
+ * that row of theirs", and *theirs* is one organisation's database. A phone
+ * used by two reps from different companies would otherwise resolve one org's
+ * local id to the other org's remote id and push a lead straight into the
+ * wrong company's CRM. Reps within the SAME organisation are meant to share
+ * these mappings, which is why the scope is the org and not the user.
+ *
+ * Set once per drain and per pull rather than threaded through twenty call
+ * sites, on the same reasoning as the outbox owner hook: a caller that forgot
+ * the parameter would silently write an unscoped mapping.
+ */
+let remoteIdScope: string | null = null
+
+export function setRemoteIdScope(orgId: string | null): void {
+  remoteIdScope = orgId
+}
+
+function scopedKey(entity: RemoteEntity, localId: string): string {
+  return `${remoteIdScope ?? 'unscoped'}:${entity}:${localId}`
+}
+
 export async function getRemoteId(entity: RemoteEntity, localId: string): Promise<string | null> {
-  const row = (await (await getMapDb()).get('remoteIds', `${entity}:${localId}`)) as RemoteIdRow | undefined
-  return row?.remoteId ?? null
+  const db = await getMapDb()
+  const row = (await db.get('remoteIds', scopedKey(entity, localId))) as RemoteIdRow | undefined
+  if (row) return row.remoteId
+
+  // Mappings written before scoping existed. There was only ever one
+  // organisation on a device at that point, so adopting them into the current
+  // scope is safe — and dropping them instead would make every lead on the
+  // phone insert a second time.
+  const legacy = (await db.get('remoteIds', `${entity}:${localId}`)) as RemoteIdRow | undefined
+  if (!legacy) return null
+  await setRemoteId(entity, localId, legacy.remoteId)
+  return legacy.remoteId
 }
 
 export async function setRemoteId(entity: RemoteEntity, localId: string, remoteId: string): Promise<void> {
   await (await getMapDb()).put('remoteIds', {
-    id: `${entity}:${localId}`,
+    id: scopedKey(entity, localId),
     entity,
     localId,
     remoteId,
+    orgId: remoteIdScope,
     syncedAt: new Date().toISOString(),
   })
 }
