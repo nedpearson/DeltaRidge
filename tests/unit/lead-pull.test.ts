@@ -179,3 +179,47 @@ describe('pushLead status ownership', () => {
     expect(pushed.leads?.opportunity_score).toBe(60)
   })
 })
+
+/**
+ * Two gaps the live round-trip rehearsal found, both silent.
+ *
+ * `lead_sync_rows` and `activity_sync_rows` were written before `subdivision`
+ * and the GPS columns existed, so a device that PULLED a lead rather than
+ * generating it got a door with no neighbourhood and a knock with no evidence.
+ * Neither failed; both just quietly lost information that the server had.
+ */
+describe('asVerificationRecord', () => {
+  it('carries a verdict the server recorded', async () => {
+    const { asVerificationRecord } = await import('@/lib/sync/pull')
+    expect(
+      asVerificationRecord({ gps_verification: 'verified', gps_distance_m: 11, gps_accuracy_m: 9 }),
+    ).toEqual({ verification: 'verified', distanceMeters: 11, accuracyMeters: 9 })
+  })
+
+  it('keeps a verdict that has no distance attached to it', async () => {
+    const { asVerificationRecord } = await import('@/lib/sync/pull')
+    expect(
+      asVerificationRecord({
+        gps_verification: 'gps_unavailable',
+        gps_distance_m: null,
+        gps_accuracy_m: null,
+      }),
+    ).toEqual({ verification: 'gps_unavailable' })
+  })
+
+  it('drops a class this build does not recognise rather than displaying it', async () => {
+    // A word from a later migration shown to a manager as though it meant
+    // something is worse than showing nothing.
+    const { asVerificationRecord } = await import('@/lib/sync/pull')
+    expect(
+      asVerificationRecord({ gps_verification: 'maybe', gps_distance_m: 1, gps_accuracy_m: 1 }),
+    ).toBeNull()
+  })
+
+  it('treats a missing verdict as no evidence rather than a bad one', async () => {
+    const { asVerificationRecord } = await import('@/lib/sync/pull')
+    expect(
+      asVerificationRecord({ gps_verification: null, gps_distance_m: null, gps_accuracy_m: null }),
+    ).toBeNull()
+  })
+})

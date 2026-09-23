@@ -8,6 +8,7 @@ import type {
   ContactEvent,
   ContactKind,
   DoorOutcome,
+  KnockVerificationRecord,
   LeadStatus,
   ManagedLead,
 } from '@/features/leads/pipeline'
@@ -113,6 +114,28 @@ export function asDoorOutcome(value: string | null): DoorOutcome | null {
   return value && DOOR_OUTCOMES.has(value) ? (value as DoorOutcome) : null
 }
 
+/**
+ * The stored GPS verdict, if the server has one and this build recognises it.
+ *
+ * An unrecognised class is dropped rather than carried through: a word this
+ * version does not understand would be shown to a manager as though it meant
+ * something.
+ */
+const VERIFICATION_CLASSES = new Set(['verified', 'probable', 'unverified', 'gps_unavailable'])
+
+export function asVerificationRecord(row: {
+  gps_verification: string | null
+  gps_distance_m: number | null
+  gps_accuracy_m: number | null
+}): KnockVerificationRecord | null {
+  if (!row.gps_verification || !VERIFICATION_CLASSES.has(row.gps_verification)) return null
+  return {
+    verification: row.gps_verification as KnockVerificationRecord['verification'],
+    ...(typeof row.gps_distance_m === 'number' ? { distanceMeters: row.gps_distance_m } : {}),
+    ...(typeof row.gps_accuracy_m === 'number' ? { accuracyMeters: row.gps_accuracy_m } : {}),
+  }
+}
+
 export function localContactKind(activityType: string): ContactKind {
   switch (activityType) {
     case 'door_knock':
@@ -144,6 +167,7 @@ interface LeadRow {
   address_line1: string
   city: string | null
   postal_code: string | null
+  subdivision: string | null
   latitude: number | null
   longitude: number | null
   contact_name: string | null
@@ -158,6 +182,16 @@ interface ActivityRow {
   outcome: string | null
   body: string | null
   occurred_at: string
+  /**
+   * The GPS verdict as it was judged at the time of the knock.
+   *
+   * Carried rather than recomputed. A parcel centroid can be corrected later
+   * and a phone's accuracy cannot be recovered at all, so re-deriving this on
+   * the receiving device would quietly change the record of what was known.
+   */
+  gps_verification: string | null
+  gps_distance_m: number | null
+  gps_accuracy_m: number | null
 }
 
 /**
@@ -198,6 +232,11 @@ function toManagedLead(row: LeadRow, existing: ManagedLead | null): ManagedLead 
   }
   if (row.city) lead.city = row.city
   if (row.postal_code) lead.postalCode = row.postal_code
+  // Prefer the server's neighbourhood over this device's. A device that pulled
+  // this lead rather than generating it has no other source for it, and without
+  // one the door is invisible to territory coverage.
+  if (row.subdivision) lead.subdivision = row.subdivision
+  else if (existing?.subdivision) lead.subdivision = existing.subdivision
   if (row.contact_name) lead.contactName = row.contact_name
   if (row.contact_phone) lead.contactPhone = row.contact_phone
   if (row.next_action_at) lead.nextActionAt = row.next_action_at
@@ -206,7 +245,6 @@ function toManagedLead(row: LeadRow, existing: ManagedLead | null): ManagedLead 
   // the device holds is kept regardless of what the server row says.
   if (existing?.consent) lead.consent = existing.consent
   if (existing?.optedOutAt) lead.optedOutAt = existing.optedOutAt
-  if (existing?.subdivision) lead.subdivision = existing.subdivision
   if (existing?.inspectionId) lead.inspectionId = existing.inspectionId
   if (existing?.appointmentAt) lead.appointmentAt = existing.appointmentAt
   if (existing?.appointmentClientId) lead.appointmentClientId = existing.appointmentClientId
@@ -347,6 +385,8 @@ async function pullActivities(
       }
       const outcome = asDoorOutcome(row.outcome)
       if (outcome) event.outcome = outcome
+      const gps = asVerificationRecord(row)
+      if (gps) event.gps = gps
       if (row.body) event.note = row.body
       try {
         await saveEventFromServer(event)
