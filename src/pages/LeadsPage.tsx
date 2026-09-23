@@ -192,6 +192,39 @@ function DoorCard({
 }
 
 /**
+ * How far apart these doors actually are.
+ *
+ * Worth saying out loud, because the honest answer is "not very". The
+ * candidate filter has already required an old roof, under a storm, with no
+ * re-roof permit since — so by the time a door reaches this list, three of the
+ * six scoring terms are close to constant across the whole list. On a real run
+ * the scores landed in a thirteen-point band.
+ *
+ * A rep reading a column of near-identical numbers will either assume the
+ * ranking is broken or assume it means more than it does. Naming the band and
+ * what actually separates the ends is cheaper than pretending to a precision
+ * the data does not support.
+ */
+function ScoreSpread({ doors }: { doors: readonly ScoredLead[] }) {
+  if (doors.length < 2) return null
+  const scores = doors.map((d) => d.score)
+  const low = Math.min(...scores)
+  const high = Math.max(...scores)
+  if (high - low > 30) return null
+
+  return (
+    <Card className="!py-2.5">
+      <p className="text-[11.5px] leading-relaxed text-white/45">
+        Priority runs {low}–{high} across this list. Every door here already has an old roof under
+        a storm with no re-roof permit since, so what separates the top from the bottom is mostly{' '}
+        <span className="text-white/70">job size and how close the hail fell</span> — not whether
+        the door is worth knocking. They all are.
+      </p>
+    </Card>
+  )
+}
+
+/**
  * The score, itemised.
  *
  * Shown as signed points rather than raw measurements, because "1.75 inches"
@@ -717,11 +750,20 @@ export default function LeadsPage() {
                 {doors.length > 0 ? `${doors.length} DOORS` : 'NO DOORS'}
               </SectionTitle>
 
+              <ScoreSpread doors={doors} />
+
               <Card className="!py-2.5">
                 <p className="text-[11.5px] leading-relaxed text-white/45">
                   From {run.counts.candidatesConsidered.toLocaleString()} properties and{' '}
                   {run.counts.stormsConsidered} official hail reports in{' '}
                   {run.window.label.toLowerCase()}.{' '}
+                  {run.counts.parcelsMatched > 0 && (
+                    <>
+                      {run.counts.ownerOccupied.toLocaleString()} of{' '}
+                      {run.counts.parcelsMatched.toLocaleString()} matched parcels are owner
+                      occupied.{' '}
+                    </>
+                  )}
                   {run.counts.suppressedAlreadyReplaced > 0 && (
                     <span className="text-emerald-300/80">
                       {run.counts.suppressedAlreadyReplaced} already re-roofed since the storm —

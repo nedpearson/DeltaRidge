@@ -28,6 +28,10 @@ export interface ScoringWeights {
   hailRecency: number
   proximity: number
   roofAge: number
+  /** Size of the job, from the assessed value on the parcel. */
+  jobValue: number
+  /** Whether the person who can sign is the person who answers the door. */
+  ownerOccupied: number
 }
 
 /**
@@ -35,10 +39,12 @@ export interface ScoringWeights {
  * mistakes the output for a prediction.
  */
 export const DEFAULT_WEIGHTS: ScoringWeights = {
-  hailSize: 0.35,
-  hailRecency: 0.2,
+  hailSize: 0.25,
+  hailRecency: 0.15,
   proximity: 0.15,
-  roofAge: 0.3,
+  roofAge: 0.15,
+  jobValue: 0.2,
+  ownerOccupied: 0.1,
 }
 
 export interface LeadCandidate {
@@ -162,6 +168,32 @@ function roofAgeScore(years: number): number {
   return Math.min(1, (years - 8) / 17)
 }
 
+/**
+ * Assessed value, on a log scale between two anchors.
+ *
+ * This term exists because of what a real run looks like. Measured on the live
+ * list of 150 doors: roof age spanned 11.7 to 14.5 years, 138 of 150 cited the
+ * same storm, and the scores landed in a band of 33 to 44 out of 100. Three of
+ * the four original terms were near-constant BY CONSTRUCTION — the candidate
+ * filter already requires an old roof under a storm with no re-roof since — so
+ * the ranking was, in effect, distance to one hail report wearing four hats.
+ *
+ * Assessed value is the one thing that genuinely varies: $12,100 to $584,248
+ * across the same 150 doors, a 48x spread the score was ignoring entirely.
+ *
+ * Louisiana assesses residential property at 10% of fair market value, so the
+ * anchors below are roughly a $150,000 house scoring zero and a $600,000 house
+ * saturating. Log rather than linear, because the difference between a $150k
+ * and a $300k roof matters far more to a day's work than the difference
+ * between $3m and $6m.
+ */
+function jobValueScore(assessedValue: number): number {
+  const FLOOR = 15_000
+  const CEILING = 60_000
+  if (assessedValue <= FLOOR) return 0
+  return Math.min(1, Math.log(assessedValue / FLOOR) / Math.log(CEILING / FLOOR))
+}
+
 function formatInches(inches: number): string {
   return `${inches.toFixed(inches % 1 === 0 ? 0 : 2).replace(/0$/, '')}"`
 }
@@ -193,6 +225,63 @@ export interface ScoreResult {
     noQualifyingHail: number
     roofTooNew: number
   }
+}
+
+/**
+ * A weighted term, before it becomes a displayed point value.
+ *
+ * `value` is always 0..1. `weight` is what the term is worth. Keeping the two
+ * apart is what makes the renormalisation below possible: a term whose input we
+ * do not have is dropped entirely rather than scored as zero.
+ */
+interface Term {
+  label: string
+  weight: number
+  value: number
+  detail: string
+}
+
+/**
+ * The three storm-dependent terms, built once and used twice.
+ *
+ * Storm selection and the final score have to agree, and the way they stop
+ * agreeing is by each computing the same three numbers in its own place. So
+ * this returns the terms, selection sums them, and the score reuses the
+ * winner's. There is no second copy of the arithmetic to drift.
+ */
+function stormTerms(
+  storm: StormEvent,
+  miles: number,
+  radius: number,
+  now: Date,
+  weights: ScoringWeights,
+): Term[] {
+  const days = (now.getTime() - new Date(storm.occurredAt).getTime()) / (24 * 3600 * 1000)
+  const inches = storm.hailSizeInches ?? 0
+  return [
+    {
+      label: 'Hail size',
+      weight: weights.hailSize,
+      value: hailSizeScore(inches),
+      detail: `${formatInches(inches)} reported`,
+    },
+    {
+      label: 'Storm recency',
+      weight: weights.hailRecency,
+      value: recencyScore(days),
+      detail: `${Math.round(days)} days ago`,
+    },
+    {
+      label: 'Close to the report',
+      weight: weights.proximity,
+      value: proximityScore(miles, radius),
+      detail: `${miles.toFixed(1)} mi away`,
+    },
+  ]
+}
+
+function weightedSum(terms: readonly Term[]): number {
+  return terms.reduce((total, t) => total + t.weight * t.value, 0)
 }
 
 /**
@@ -228,7 +317,12 @@ export function scoreLeads(input: ScoreInput): ScoreResult {
     // 1.75" report from last month half a mile further out, so every door on
     // the list cited the same old storm. Score each candidate storm on the
     // three storm-dependent terms and keep the winner; ties break on distance.
-    let best: { storm: StormEvent; miles: number; stormScore: number } | null = null
+    let best: {
+      storm: StormEvent
+      miles: number
+      stormScore: number
+      terms: Term[]
+    } | null = null
     /** Most recent qualifying storm in range — what suppression must test against. */
     let newestStormAt: string | null = null
 
@@ -238,18 +332,15 @@ export function scoreLeads(input: ScoreInput): ScoreResult {
 
       if (!newestStormAt || storm.occurredAt > newestStormAt) newestStormAt = storm.occurredAt
 
-      const days = (now.getTime() - new Date(storm.occurredAt).getTime()) / (24 * 3600 * 1000)
-      const stormScore =
-        weights.hailSize * hailSizeScore(storm.hailSizeInches ?? 0) +
-        weights.hailRecency * recencyScore(days) +
-        weights.proximity * proximityScore(miles, radius)
+      const terms = stormTerms(storm, miles, radius, now, weights)
+      const stormScore = weightedSum(terms)
 
       if (
         !best ||
         stormScore > best.stormScore ||
         (stormScore === best.stormScore && miles < best.miles)
       ) {
-        best = { storm, miles, stormScore }
+        best = { storm, miles, stormScore, terms }
       }
     }
     if (!best) {
@@ -277,36 +368,61 @@ export function scoreLeads(input: ScoreInput): ScoreResult {
     const daysSinceStorm = (now.getTime() - new Date(best.storm.occurredAt).getTime()) / (24 * 3600 * 1000)
     const hailSizeInches = best.storm.hailSizeInches ?? 0
 
-    // Storm terms were already solved when this storm was selected; re-deriving
-    // them here is how the two could drift apart.
-    const score = best.stormScore + weights.roofAge * roofAgeScore(roofAgeYears)
-
-    // Itemised from the same numbers the score is made of, then rounded once so
-    // the parts and the total cannot disagree on screen.
-    const rawFactors: ScoreFactor[] = [
-      {
-        label: 'Hail size',
-        points: weights.hailSize * hailSizeScore(hailSizeInches) * 100,
-        detail: `${formatInches(hailSizeInches)} reported`,
-      },
-      {
-        label: 'Storm recency',
-        points: weights.hailRecency * recencyScore(daysSinceStorm) * 100,
-        detail: `${Math.round(daysSinceStorm)} days ago`,
-      },
-      {
-        label: 'Close to the report',
-        points: weights.proximity * proximityScore(best.miles, radius) * 100,
-        detail: `${best.miles.toFixed(1)} mi away`,
-      },
+    // Every term, including the three the storm selection already solved.
+    // They are reused rather than recomputed, so the cited storm and the score
+    // cannot disagree.
+    const terms: Term[] = [
+      ...best.terms,
       {
         label: 'Roof age',
-        points: weights.roofAge * roofAgeScore(roofAgeYears) * 100,
+        weight: weights.roofAge,
+        value: roofAgeScore(roofAgeYears),
         detail: replacedAt
           ? `about ${Math.round(roofAgeYears)} years since the last re-roof permit`
           : `about ${Math.round(roofAgeYears)} years on the original roof`,
       },
     ]
+
+    // The two terms the parcel roll made possible — and the reason they are
+    // conditional rather than defaulted. A door with no parcel record has an
+    // UNKNOWN job size, not a small one, and an unknown owner, not an absent
+    // one. Scoring an unknown as zero would rank every address the assessor
+    // happens not to list below every address it does, which is a ranking of
+    // our data coverage rather than of the opportunity. So a term whose input
+    // is missing is dropped and the remaining weights are renormalised below.
+    const assessed = candidate.parcel?.assessedValue
+    if (assessed !== undefined) {
+      terms.push({
+        label: 'Job size',
+        weight: weights.jobValue,
+        value: jobValueScore(assessed),
+        detail: `assessed at $${assessed.toLocaleString()}`,
+      })
+    }
+    if (candidate.parcel && candidate.parcel.occupancy !== 'unknown') {
+      const occupied = candidate.parcel.occupancy === 'owner_occupied'
+      terms.push({
+        label: 'Owner occupied',
+        weight: weights.ownerOccupied,
+        value: occupied ? 1 : 0,
+        detail: occupied
+          ? 'the person who can sign lives here'
+          : 'tax bill goes elsewhere — may be a rental',
+      })
+    }
+
+    // Renormalised by the weights that actually applied, so the score is always
+    // out of the same 100 whether or not the parcel roll had this address.
+    const appliedWeight = terms.reduce((total, t) => total + t.weight, 0)
+    const score = appliedWeight > 0 ? weightedSum(terms) / appliedWeight : 0
+
+    // Itemised from the same numbers the score is made of, then rounded once so
+    // the parts and the total cannot disagree on screen.
+    const rawFactors: ScoreFactor[] = terms.map((t) => ({
+      label: t.label,
+      points: (t.weight * t.value * 100) / appliedWeight,
+      detail: t.detail,
+    }))
     const breakdown = roundToTotal(rawFactors, Math.round(score * 100))
 
     const reasons = [

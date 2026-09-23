@@ -395,3 +395,111 @@ describe('roundToTotal', () => {
     expect(rounded.reduce((t, f) => t + f.points, 0)).toBe(32)
   })
 })
+
+describe('the two terms the parcel roll made possible', () => {
+  function withParcel(over: Record<string, unknown>) {
+    return candidate({
+      parcel: {
+        externalId: 'ebr:1',
+        provider: 'ebr',
+        parcelNumber: '1',
+        address: '19718 SOUTHERN HILLS AVE',
+        addressKey: '19718 southern hills ave',
+        parish: 'East Baton Rouge',
+        ownerName: 'SMITH, JOHN',
+        ownerKind: 'person',
+        ownerConfidence: 'high',
+        occupancy: 'owner_occupied',
+        occupancyBasis: 'homestead_exemption',
+        retrievedAt: '2026-09-23T00:00:00.000Z',
+        ...over,
+      },
+    } as Parameters<typeof candidate>[0])
+  }
+
+  function scoreOf(c: LeadCandidate): number {
+    const { leads } = scoreLeads({
+      candidates: [c],
+      storms: [storm()],
+      reroofPermits: [],
+      minHailInches: 1,
+      radiusMiles: 3,
+      now: NOW,
+    })
+    return leads[0]?.score ?? -1
+  }
+
+  it('ranks the bigger job above the smaller one', () => {
+    // The reason this term exists: across a real 150-door list the scores sat
+    // in a band of 33 to 44, because roof age, hail size and recency are all
+    // near-constant by construction — the candidate filter already required an
+    // old roof under a storm. Assessed value spanned $12,100 to $584,248 and
+    // the score was ignoring it.
+    expect(scoreOf(withParcel({ assessedValue: 120_000 }))).toBeGreaterThan(
+      scoreOf(withParcel({ assessedValue: 14_000 })),
+    )
+  })
+
+  it('ranks an owner-occupied door above a likely rental', () => {
+    expect(
+      scoreOf(withParcel({ occupancy: 'owner_occupied', occupancyBasis: 'homestead_exemption' })),
+    ).toBeGreaterThan(
+      scoreOf(withParcel({ occupancy: 'likely_absentee', occupancyBasis: 'mailing_differs' })),
+    )
+  })
+
+  it('does not punish a door the assessor simply does not list', () => {
+    // An unknown job size is not a small one. Scoring it as zero would rank
+    // every address the parish happens not to carry below every address it
+    // does — a ranking of our data coverage, not of the opportunity.
+    const unknown = scoreOf(candidate())
+    const worst = scoreOf(withParcel({ assessedValue: 10_000, occupancy: 'likely_absentee', occupancyBasis: 'mailing_differs' }))
+    expect(unknown).toBeGreaterThan(worst)
+  })
+
+  it('keeps the score out of the same 100 either way', () => {
+    // Renormalisation means a door with no parcel is scored on the terms that
+    // applied, not diluted by the ones that could not.
+    const { leads } = scoreLeads({
+      candidates: [candidate(), withParcel({ assessedValue: 27_870 })],
+      storms: [storm()],
+      reroofPermits: [],
+      minHailInches: 1,
+      radiusMiles: 3,
+      now: NOW,
+    })
+    for (const lead of leads) {
+      expect(lead.score).toBeGreaterThanOrEqual(0)
+      expect(lead.score).toBeLessThanOrEqual(100)
+      expect(lead.breakdown.reduce((t, f) => t + f.points, 0)).toBe(lead.score)
+    }
+  })
+
+  it('leaves a term it could not measure off the breakdown entirely', () => {
+    const { leads } = scoreLeads({
+      candidates: [candidate()],
+      storms: [storm()],
+      reroofPermits: [],
+      minHailInches: 1,
+      radiusMiles: 3,
+      now: NOW,
+    })
+    const labels = (leads[0]?.breakdown ?? []).map((f) => f.label)
+    expect(labels).not.toContain('Job size')
+    expect(labels).not.toContain('Owner occupied')
+    expect(labels).toContain('Hail size')
+  })
+
+  it('names the job size in dollars a rep can repeat', () => {
+    const { leads } = scoreLeads({
+      candidates: [withParcel({ assessedValue: 133_270 })],
+      storms: [storm()],
+      reroofPermits: [],
+      minHailInches: 1,
+      radiusMiles: 3,
+      now: NOW,
+    })
+    const factor = leads[0]?.breakdown.find((f) => f.label === 'Job size')
+    expect(factor?.detail).toBe('assessed at $133,270')
+  })
+})
