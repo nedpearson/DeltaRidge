@@ -25,10 +25,18 @@ import {
   type DoorOutcome,
   type ManagedLead,
 } from '@/features/leads/pipeline'
+import {
+  groupIntoRoutes,
+  orderForWalking,
+  splitRoutes,
+  walkingMiles,
+  type Route,
+} from '@/features/leads/routes'
 import type { ScoredLead } from '@/features/leads/scoring'
 import { WINDOW_OPTIONS, type StormWindowKey } from '@/features/leads/window'
 import type { StormEvent } from '@/integrations/storm'
 import { newId, saveInspection, type LocalInspection } from '@/lib/db'
+import { currentPosition } from '@/lib/image'
 
 /**
  * Custom ranges are deliberately absent until there is a date picker to set
@@ -187,6 +195,82 @@ function DoorCard({
         {open ? 'Hide how this ranked' : 'How this ranked'}
       </button>
       {open && <ScoreBreakdown lead={lead} />}
+    </Card>
+  )
+}
+
+/**
+ * A neighbourhood worth driving to.
+ *
+ * Deliberately leads with the best door in the route rather than the count.
+ * A rep does not drive across town for "forty doors"; he drives for the one
+ * that is worth the trip, and the other thirty-nine are why he stays once he
+ * is parked.
+ */
+function RouteCard({ route, onPick }: { route: Route; onPick: () => void }) {
+  return (
+    <button
+      onClick={onPick}
+      className="w-full rounded-2xl bg-white/[0.04] p-4 text-left ring-1 ring-white/8"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-[14.5px] font-semibold">{route.name}</p>
+          <p className="mt-0.5 text-[12px] text-white/40">
+            {route.doors.length} door{route.doors.length === 1 ? '' : 's'}
+            {route.milesAway !== undefined && ` · ${route.milesAway} mi away`}
+            {route.spreadMiles > 0 && ` · about ${route.spreadMiles} mi across`}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className={`font-display text-xl leading-none ${tone(route.topScore)}`}>
+            {route.topScore}
+          </p>
+          <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/30">best door</p>
+        </div>
+      </div>
+    </button>
+  )
+}
+
+/**
+ * The header once a route is picked.
+ *
+ * The walking distance is stated plainly, and so is what the ordering is: a
+ * greedy nearest-neighbour path between points, which is not an optimal route
+ * and knows nothing about one-way streets or which side of the road a house is
+ * on. A rep who is told "optimised" and then sent across a canal stops trusting
+ * the app; a rep who is told "shortest walk between the dots" knows what he has.
+ */
+function RouteHeader({
+  route,
+  ordered,
+  onBack,
+}: {
+  route: Route
+  ordered: readonly ScoredLead[]
+  onBack: () => void
+}) {
+  const miles = walkingMiles(ordered)
+  return (
+    <Card className="!py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-[14.5px] font-semibold">{route.name}</p>
+          <p className="mt-0.5 text-[11.5px] text-white/40">
+            {ordered.length} door{ordered.length === 1 ? '' : 's'} in walking order
+            {miles > 0 && ` · about ${miles} mi on foot`}
+          </p>
+        </div>
+        <Button variant="secondary" className="shrink-0 !min-h-0 !px-3 !py-1.5" onClick={onBack}>
+          All routes
+        </Button>
+      </div>
+      <p className="mt-2 text-[10.5px] leading-relaxed text-white/25">
+        Ordered by the shortest walk between the dots, starting{' '}
+        {route.milesAway !== undefined ? 'from where you are' : 'at the best door'}. It does not
+        know about one-way streets, cul-de-sacs or which side of the road a house is on.
+      </p>
     </Card>
   )
 }
@@ -441,6 +525,9 @@ export default function LeadsPage() {
   const [error, setError] = useState<string | null>(null)
   const [knocking, setKnocking] = useState<ScoredLead | null>(null)
   const [showCompetitors, setShowCompetitors] = useState(false)
+  const [routeName, setRouteName] = useState<string | null>(null)
+  const [ownerOccupiedOnly, setOwnerOccupiedOnly] = useState(false)
+  const [here, setHere] = useState<{ latitude: number; longitude: number } | null>(null)
 
   const busyRef = useRef(false)
   const settingsRef = useRef(settings)
@@ -490,6 +577,14 @@ export default function LeadsPage() {
       }
     })
     void readLeads().then(setManaged)
+
+    // Asked for once, never waited on. The list is complete without it; a
+    // position only changes where the walk starts and how far the routes are
+    // reported to be. `currentPosition` always settles, including when the
+    // permission prompt is never answered — see src/lib/image.ts.
+    void currentPosition().then((pos) => {
+      if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+    })
   }, [refresh])
 
   /**
@@ -530,6 +625,33 @@ export default function LeadsPage() {
       return existing === undefined || existing.status === 'new'
     })
   }, [run, suppressed, managedByAddress])
+
+  /** What the rep can filter down to, before routes are built. */
+  const filteredDoors = useMemo(
+    () => (ownerOccupiedOnly ? doors.filter((d) => d.parcel?.occupancy === 'owner_occupied') : doors),
+    [doors, ownerOccupiedOnly],
+  )
+
+  const routes = useMemo(
+    () => groupIntoRoutes(filteredDoors, here ?? undefined),
+    [filteredDoors, here],
+  )
+
+  const { worthADrive, singleStops } = useMemo(() => splitRoutes(routes), [routes])
+
+  const activeRoute = useMemo(
+    () => routes.find((r) => r.name === routeName) ?? null,
+    [routes, routeName],
+  )
+
+  /**
+   * The doors actually on screen. Inside a route they are in walking order, not
+   * score order — the whole point of picking a route is to stop zigzagging.
+   */
+  const visibleDoors = useMemo(
+    () => (activeRoute ? orderForWalking(activeRoute.doors, here ?? undefined) : filteredDoors),
+    [activeRoute, filteredDoors, here],
+  )
 
   const counts = useMemo(() => chipCounts(managed, doors.length), [managed, doors.length])
 
@@ -739,8 +861,11 @@ export default function LeadsPage() {
 
               <CoveragePanel coverage={run.coverage} events={run.stormEvents} />
 
+              {/* Follows the selection. Showing all 150 dots while the rep is
+                  working one neighbourhood makes the map answer a question he
+                  is not asking. */}
               <LeadMap
-                doors={doors}
+                doors={visibleDoors}
                 leads={managed}
                 storms={run.stormEvents}
                 onOpenLead={(leadId) => navigate(`/lead/${leadId}`)}
@@ -750,7 +875,7 @@ export default function LeadsPage() {
                 {doors.length > 0 ? `${doors.length} DOORS` : 'NO DOORS'}
               </SectionTitle>
 
-              <ScoreSpread doors={doors} />
+              <ScoreSpread doors={visibleDoors} />
 
               <Card className="!py-2.5">
                 <p className="text-[11.5px] leading-relaxed text-white/45">
@@ -778,6 +903,31 @@ export default function LeadsPage() {
                 </p>
               </Card>
 
+              {/* One filter, not a panel of them. Owner-occupied is the only
+                  one that changes who can sign, and a row of toggles on a phone
+                  costs more scrolling than it saves. */}
+              {/* Shown only when it would actually take something off the
+                  list. A toggle that changes nothing is a control a rep learns
+                  to ignore, and the score already favours owner-occupied, so
+                  on most runs every door here is one. */}
+              {doors.some((d) => d.parcel?.occupancy !== 'owner_occupied') && (
+                <button
+                  onClick={() => {
+                    setOwnerOccupiedOnly((v) => !v)
+                    setRouteName(null)
+                  }}
+                  className={`mt-2 w-full rounded-full px-4 py-2 text-[12.5px] ${
+                    ownerOccupiedOnly
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : 'bg-white/6 text-white/55'
+                  }`}
+                >
+                  {ownerOccupiedOnly
+                    ? `Owner-occupied only · ${filteredDoors.length} of ${doors.length}`
+                    : 'Show owner-occupied only'}
+                </button>
+              )}
+
               {doors.length === 0 ? (
                 <div className="mt-3">
                   <Empty
@@ -785,9 +935,21 @@ export default function LeadsPage() {
                     body="No property matched every filter. Widen the radius, lower the minimum hail size, or extend the storm window — the counts above show which filter is doing the cutting."
                   />
                 </div>
-              ) : (
+              ) : filteredDoors.length === 0 ? (
+                <div className="mt-3">
+                  <Empty
+                    title="No owner-occupied doors on this list"
+                    body="Every door here is either a likely rental or an address the parish parcel roll does not carry. Turn the filter off to see them."
+                  />
+                </div>
+              ) : activeRoute ? (
                 <div className="mt-2 space-y-2">
-                  {doors.map((lead) => (
+                  <RouteHeader
+                    route={activeRoute}
+                    ordered={visibleDoors}
+                    onBack={() => setRouteName(null)}
+                  />
+                  {visibleDoors.map((lead) => (
                     <DoorCard
                       key={lead.addressKey}
                       lead={lead}
@@ -795,6 +957,33 @@ export default function LeadsPage() {
                       onKnock={setKnocking}
                     />
                   ))}
+                </div>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  {/* Routes first, doors second. A hundred and fifty cards is a
+                      scroll, not a plan; a handful of neighbourhoods is a
+                      morning. */}
+                  {worthADrive.map((route) => (
+                    <RouteCard
+                      key={route.name}
+                      route={route}
+                      onPick={() => setRouteName(route.name)}
+                    />
+                  ))}
+                  {singleStops.length > 0 && (
+                    <>
+                      <SectionTitle hint={`${singleStops.reduce((t, r) => t + r.doors.length, 0)} doors`}>
+                        ON THE WAY
+                      </SectionTitle>
+                      {singleStops.map((route) => (
+                        <RouteCard
+                          key={route.name}
+                          route={route}
+                          onPick={() => setRouteName(route.name)}
+                        />
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
 
