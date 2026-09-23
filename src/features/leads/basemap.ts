@@ -104,3 +104,32 @@ export function basemapUrl(view: View, size: Size, style: MapStyleKey = 'streets
  * above. This string is the text equivalent for anywhere the image is absent.
  */
 export const BASEMAP_ATTRIBUTION = '© Mapbox © OpenStreetMap'
+
+/**
+ * A satellite tile centred on one house.
+ *
+ * Deliberately a plain image URL the rep's own browser fetches, and nothing
+ * more. Mapbox's product terms (§2.8.1, October 2025) allow caching Licensed
+ * Map Content **on the end user's device for up to thirty days, populated
+ * directly from the Mapping API** — which is exactly what an `<img>` in a PWA
+ * does. The same clause forbids proxying it: fetching these server-side,
+ * storing them in Supabase and serving them to reps would breach it, and so
+ * would pasting one into a PDF proposal or emailing it to a homeowner
+ * ("distribute ... by using a screenshot or other static image"). §2.8.2 also
+ * forbids using the imagery to improve other imagery.
+ *
+ * So: show it in the app, let the device cache it, and never move it anywhere.
+ *
+ * Zoom 18 frames a suburban lot and its immediate neighbours — close enough to
+ * count roof planes and see the driveway, wide enough to recognise the street.
+ */
+export const PROPERTY_ZOOM = 18
+
+export function propertyImageUrl(
+  latitude: number,
+  longitude: number,
+  size: Size,
+  zoom: number = PROPERTY_ZOOM,
+): string | null {
+  return basemapUrl({ center: { latitude, longitude }, zoom }, size, 'satellite')
+}

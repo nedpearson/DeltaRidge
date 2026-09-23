@@ -2,7 +2,14 @@ import { EbrParcelProvider } from './ebr'
 import type { ParcelProvider, ParcelProviderId } from './types'
 
 export * from './types'
-export { EbrParcelProvider, classifyOwner, decideOccupancy, POISONED_FIELDS } from './ebr'
+export {
+  ADDRESS_BATCH_SIZE,
+  chunkAddresses,
+  classifyOwner,
+  decideOccupancy,
+  EbrParcelProvider,
+  POISONED_FIELDS,
+} from './ebr'
 
 /**
  * Which parish assessor to ask.
@@ -33,6 +40,10 @@ class UnsupportedParcelProvider implements ParcelProvider {
 
   async search() {
     return []
+  }
+
+  async lookupByAddresses() {
+    return new Map<string, never>() as never
   }
 }
 

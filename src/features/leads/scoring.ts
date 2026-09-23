@@ -1,4 +1,6 @@
 import type { PermitRecord } from '@/integrations/permits/types'
+import { streetLineOf } from '@/integrations/geocode/ebr'
+import type { ParcelRecord } from '@/integrations/parcel'
 import type { StormEvent } from '@/integrations/storm/types'
 
 /**
@@ -49,10 +51,37 @@ export interface LeadCandidate {
   city?: string
   postalCode?: string
   subdivision?: string
+  /**
+   * The assessor's record for this address, when the parcel roll had it.
+   *
+   * Optional on purpose: about one candidate address in seven is genuinely not
+   * on the roll, and a door with no owner is still a door worth knocking. The
+   * card shows the address alone rather than dropping the lead.
+   */
+  parcel?: ParcelRecord
+}
+
+/**
+ * One line of "why this ranked", in the points a rep sees.
+ *
+ * Kept as a first-class part of the lead rather than derived in the component,
+ * because the number on the card and the numbers in the explanation have to be
+ * the same arithmetic. Deriving the explanation separately is how a card ends
+ * up showing 84 above a breakdown that adds to 79.
+ */
+export interface ScoreFactor {
+  /** What a rep would call it. */
+  label: string
+  /** Whole points contributed, out of 100. Signed. */
+  points: number
+  /** The measurement behind it, stated plainly. */
+  detail: string
 }
 
 export interface ScoredLead extends LeadCandidate {
   score: number
+  /** The score, itemised. Sums to `score`. */
+  breakdown: readonly ScoreFactor[]
   /** Inputs kept on the lead so the score can be audited or refitted later. */
   components: {
     hailSizeInches: number
@@ -63,6 +92,29 @@ export interface ScoredLead extends LeadCandidate {
   storm: StormEvent
   /** Plain-English, rep-facing. The UI shows these verbatim. */
   reasons: string[]
+}
+
+/**
+ * Rounds the parts so they add up to the whole.
+ *
+ * Rounding each factor independently loses or gains a point or two, and a rep
+ * who adds the column and gets 83 under a headline of 84 stops trusting the
+ * number — reasonably. The largest remainders absorb the difference.
+ */
+export function roundToTotal(factors: readonly ScoreFactor[], total: number): ScoreFactor[] {
+  const floors = factors.map((f) => ({ ...f, points: Math.floor(f.points) }))
+  let deficit = total - floors.reduce((sum, f) => sum + f.points, 0)
+  const order = factors
+    .map((f, i) => ({ i, remainder: f.points - Math.floor(f.points) }))
+    .sort((a, b) => b.remainder - a.remainder)
+  for (const { i } of order) {
+    if (deficit <= 0) break
+    const target = floors[i]
+    if (!target) continue
+    target.points += 1
+    deficit -= 1
+  }
+  return floors
 }
 
 const EARTH_RADIUS_MILES = 3958.8
@@ -229,6 +281,34 @@ export function scoreLeads(input: ScoreInput): ScoreResult {
     // them here is how the two could drift apart.
     const score = best.stormScore + weights.roofAge * roofAgeScore(roofAgeYears)
 
+    // Itemised from the same numbers the score is made of, then rounded once so
+    // the parts and the total cannot disagree on screen.
+    const rawFactors: ScoreFactor[] = [
+      {
+        label: 'Hail size',
+        points: weights.hailSize * hailSizeScore(hailSizeInches) * 100,
+        detail: `${formatInches(hailSizeInches)} reported`,
+      },
+      {
+        label: 'Storm recency',
+        points: weights.hailRecency * recencyScore(daysSinceStorm) * 100,
+        detail: `${Math.round(daysSinceStorm)} days ago`,
+      },
+      {
+        label: 'Close to the report',
+        points: weights.proximity * proximityScore(best.miles, radius) * 100,
+        detail: `${best.miles.toFixed(1)} mi away`,
+      },
+      {
+        label: 'Roof age',
+        points: weights.roofAge * roofAgeScore(roofAgeYears) * 100,
+        detail: replacedAt
+          ? `about ${Math.round(roofAgeYears)} years since the last re-roof permit`
+          : `about ${Math.round(roofAgeYears)} years on the original roof`,
+      },
+    ]
+    const breakdown = roundToTotal(rawFactors, Math.round(score * 100))
+
     const reasons = [
       `${formatInches(hailSizeInches)} hail reported ${best.miles.toFixed(1)} mi away on ${formatDate(best.storm.occurredAt)}`,
       replacedAt
@@ -238,6 +318,7 @@ export function scoreLeads(input: ScoreInput): ScoreResult {
     ]
 
     leads.push({
+      breakdown,
       ...candidate,
       score: Math.round(score * 100),
       components: {
@@ -260,7 +341,10 @@ export function scoreLeads(input: ScoreInput): ScoreResult {
  * address. Two permits on one lot (a build, then an addition) describe one
  * roof, and the later one is the better age estimate.
  */
-export function candidatesFromPermits(permits: PermitRecord[]): LeadCandidate[] {
+export function candidatesFromPermits(
+  permits: PermitRecord[],
+  parcels: ReadonlyMap<string, ParcelRecord> = new Map(),
+): LeadCandidate[] {
   const byAddress = new Map<string, PermitRecord>()
   for (const p of permits) {
     if (p.kind !== 'new_build') continue
@@ -268,16 +352,28 @@ export function candidatesFromPermits(permits: PermitRecord[]): LeadCandidate[] 
     const seen = byAddress.get(p.addressKey)
     if (!seen || p.issuedAt > seen.issuedAt) byAddress.set(p.addressKey, p)
   }
-  return [...byAddress.entries()].map(([addressKey, permit]) => ({
-    addressKey,
-    address: permit.address,
-    latitude: permit.latitude as number,
-    longitude: permit.longitude as number,
-    roofPermit: permit,
-    ...(permit.city ? { city: permit.city } : {}),
-    ...(permit.postalCode ? { postalCode: permit.postalCode } : {}),
-    ...(permit.subdivision ? { subdivision: permit.subdivision } : {}),
-  }))
+  return [...byAddress.entries()].map(([addressKey, permit]) => {
+    const parcel = parcels.get(streetLineOf(permit.address).toUpperCase())
+    return {
+      addressKey,
+      address: permit.address,
+      // The parcel centroid wins where there is one. It is the polygon the
+      // parish drew around the house; the permit coordinate is a point the
+      // parish placed, and for anything pre-2016 it came from a geocoder
+      // interpolating along a street.
+      latitude: parcel?.latitude ?? (permit.latitude as number),
+      longitude: parcel?.longitude ?? (permit.longitude as number),
+      roofPermit: permit,
+      ...(permit.city ? { city: permit.city } : {}),
+      ...(permit.postalCode ? { postalCode: permit.postalCode } : {}),
+      ...(parcel?.subdivision
+        ? { subdivision: parcel.subdivision }
+        : permit.subdivision
+          ? { subdivision: permit.subdivision }
+          : {}),
+      ...(parcel ? { parcel } : {}),
+    }
+  })
 }
 
 export interface ContractorActivity {

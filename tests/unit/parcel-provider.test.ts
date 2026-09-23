@@ -17,13 +17,20 @@ function arcgisResponse(attributes: Record<string, unknown>, rings?: number[][][
   } as unknown as Response
 }
 
-function captureUrl(res: Response): { fetchImpl: typeof fetch; urls: string[] } {
-  const urls: string[] = []
-  const fetchImpl = (async (input: RequestInfo | URL) => {
-    urls.push(String(input))
+/**
+ * Captures the POSTed form body, because that is where the query now lives.
+ *
+ * The parish answers a GET whose `where` clause runs to a few kilobytes with a
+ * bare 404, so batched lookups POST. These assertions read the body rather than
+ * the URL for that reason.
+ */
+function captureUrl(res: Response): { fetchImpl: typeof fetch; sent: URLSearchParams[] } {
+  const sent: URLSearchParams[] = []
+  const fetchImpl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    sent.push(new URLSearchParams(String(init?.body ?? '')))
     return res
   }) as unknown as typeof fetch
-  return { fetchImpl, urls }
+  return { fetchImpl, sent }
 }
 
 const SANTA_MARIA = {
@@ -51,10 +58,10 @@ describe('the SALE_YEAR trap', () => {
   // This test is the guard rail; it asserts the request, because the response
   // is what the bug refuses to tell us.
   it('never asks the parish for a field that silently empties the result', async () => {
-    const { fetchImpl, urls } = captureUrl(arcgisResponse(SANTA_MARIA))
+    const { fetchImpl, sent } = captureUrl(arcgisResponse(SANTA_MARIA))
     await new EbrParcelProvider(fetchImpl).search({ addressLike: 'SANTA MARIA' })
 
-    const outFields = new URL(urls[0] ?? '').searchParams.get('outFields') ?? ''
+    const outFields = sent[0]?.get('outFields') ?? ''
     expect(outFields).not.toBe('*')
     for (const field of POISONED_FIELDS) {
       expect(outFields.split(',')).not.toContain(field)
@@ -159,8 +166,69 @@ describe('EbrParcelProvider.search', () => {
   })
 
   it('escapes a quote in an address instead of breaking the query', async () => {
-    const { fetchImpl, urls } = captureUrl(arcgisResponse(SANTA_MARIA))
+    const { fetchImpl, sent } = captureUrl(arcgisResponse(SANTA_MARIA))
     await new EbrParcelProvider(fetchImpl).search({ addressLike: "O'NEAL" })
-    expect(new URL(urls[0] ?? '').searchParams.get('where')).toContain("O''NEAL")
+    expect(sent[0]?.get('where')).toContain("O''NEAL")
+  })
+})
+
+describe('lookupByAddresses', () => {
+  // The call that lets the engine stop geocoding. It must POST, batch, and
+  // survive one address carrying two parcels.
+  function multi(rows: Record<string, unknown>[]) {
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ features: rows.map((attributes) => ({ attributes })) }),
+    } as unknown as Response
+  }
+
+  it('POSTs, because a batched where clause 404s as a GET', async () => {
+    // Verified live on 2026-09-23: a hundred addresses build a clause of a few
+    // kilobytes and the parish answers a GET with a bare 404 — not a 414, not
+    // an ArcGIS error — which reads like a wrong endpoint.
+    const calls: RequestInit[] = []
+    const fetchImpl = (async (_i: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(init ?? {})
+      return multi([SANTA_MARIA])
+    }) as unknown as typeof fetch
+
+    await new EbrParcelProvider(fetchImpl).lookupByAddresses(['18834 SANTA MARIA PKWY'])
+    expect(calls[0]?.method).toBe('POST')
+    expect(String(calls[0]?.body)).toContain('PHYSICAL_ADDRESS+IN')
+  })
+
+  it('splits the addresses into batches', async () => {
+    let requests = 0
+    const fetchImpl = (async () => {
+      requests += 1
+      return multi([SANTA_MARIA])
+    }) as unknown as typeof fetch
+
+    const addresses = Array.from({ length: 250 }, (_, i) => `${i} SOME ST`)
+    await new EbrParcelProvider(fetchImpl).lookupByAddresses(addresses, { batchSize: 100 })
+    expect(requests).toBe(3)
+  })
+
+  it('keeps the first parcel when one address carries two', async () => {
+    // 2136 LOBDELL BLVD really does return two parcels. Last-wins would make
+    // the owner shown on a door depend on response order.
+    const fetchImpl = (async () =>
+      multi([
+        { ...SANTA_MARIA, OWNER: 'FIRST OWNER' },
+        { ...SANTA_MARIA, OWNER: 'SECOND OWNER' },
+      ])) as unknown as typeof fetch
+
+    const found = await new EbrParcelProvider(fetchImpl).lookupByAddresses([
+      '18834 SANTA MARIA PKWY',
+    ])
+    expect(found.get('18834 SANTA MARIA PKWY')?.ownerName).toBe('FIRST OWNER')
+  })
+
+  it('asks for nothing when given nothing', async () => {
+    const fetchImpl = (async () => {
+      throw new Error('should not be called')
+    }) as unknown as typeof fetch
+    expect((await new EbrParcelProvider(fetchImpl).lookupByAddresses([])).size).toBe(0)
   })
 })

@@ -75,6 +75,23 @@ const OUT_FIELDS = [
 /** Named so a future edit cannot quietly re-add it. */
 export const POISONED_FIELDS = ['SALE_YEAR'] as const
 
+/**
+ * Addresses per batched lookup.
+ *
+ * A hundred keeps each POST body around three kilobytes and one failure cheap
+ * to retry. Four hundred candidate addresses cost four requests.
+ */
+export const ADDRESS_BATCH_SIZE = 100
+
+/** Batches in flight at once. Enough to be quick, few enough to be polite. */
+export const LOOKUP_CONCURRENCY = 4
+
+export function chunkAddresses(items: readonly string[], size = ADDRESS_BATCH_SIZE): string[][] {
+  const out: string[][] = []
+  for (let i = 0; i < items.length; i += size) out.push([...items.slice(i, i + size)])
+  return out
+}
+
 const attributesSchema = z.object({
   ASSESSMENT_NUM: z.string().nullable().optional(),
   PRONO: z.number().nullable().optional(),
@@ -235,30 +252,121 @@ export class EbrParcelProvider implements ParcelProvider {
     }
   }
 
-  async search(query: ParcelQuery): Promise<ParcelRecord[]> {
-    const url = new URL(ENDPOINT)
-    url.searchParams.set('where', buildWhere(query))
-    url.searchParams.set('outFields', OUT_FIELDS.join(','))
-    url.searchParams.set('returnGeometry', query.includeGeometry ? 'true' : 'false')
-    if (query.includeGeometry) url.searchParams.set('outSR', '4326')
-    if (query.bbox) {
-      const [west, south, east, north] = query.bbox
-      url.searchParams.set('geometry', `${west},${south},${east},${north}`)
-      url.searchParams.set('geometryType', 'esriGeometryEnvelope')
-      url.searchParams.set('inSR', '4326')
-      url.searchParams.set('spatialRel', 'esriSpatialRelIntersects')
-    }
-    if (query.limit !== undefined) {
-      url.searchParams.set('resultRecordCount', String(query.limit))
-    }
-    url.searchParams.set('f', 'json')
-
-    const res = await this.fetchImpl(url, { method: 'GET' })
+  /**
+   * One POST, always.
+   *
+   * A GET carries the whole `where` clause in the URL, and a batch of a hundred
+   * addresses builds a clause of two to three kilobytes. The parish answers
+   * that with a bare **404** — not a 414, not an ArcGIS error object, just a
+   * missing page, which reads like a wrong endpoint rather than a long URL.
+   * Verified on 2026-09-23: the same clause POSTed as form data succeeds, and
+   * the response still echoes the caller's Origin, so the browser is happy.
+   */
+  private async query(params: Record<string, string>): Promise<unknown> {
+    const body = new URLSearchParams({ f: 'json', ...params })
+    const res = await this.fetchImpl(ENDPOINT, {
+      method: 'POST',
+      // A simple content type on purpose: no CORS preflight to negotiate.
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
     if (!res.ok) {
       throw new Error(`Parish parcel request failed with ${res.status}`)
     }
+    return res.json()
+  }
 
-    const body = responseSchema.parse(await res.json())
+  async search(query: ParcelQuery): Promise<ParcelRecord[]> {
+    const params: Record<string, string> = {
+      where: buildWhere(query),
+      outFields: OUT_FIELDS.join(','),
+      returnGeometry: query.includeGeometry ? 'true' : 'false',
+    }
+    if (query.includeGeometry) params.outSR = '4326'
+    if (query.bbox) {
+      const [west, south, east, north] = query.bbox
+      params.geometry = `${west},${south},${east},${north}`
+      params.geometryType = 'esriGeometryEnvelope'
+      params.inSR = '4326'
+      params.spatialRel = 'esriSpatialRelIntersects'
+    }
+    if (query.limit !== undefined) params.resultRecordCount = String(query.limit)
+
+    return this.toRecords(await this.query(params))
+  }
+
+  /**
+   * Owner and coordinates for a known list of street addresses.
+   *
+   * This is the call that changes the shape of the lead engine. The parish
+   * permit feed only began carrying lat/long around 2016, so finding roofs old
+   * enough to sell meant geocoding thousands of addresses one capped batch at a
+   * time. The parcel roll answers the same question — where is this house —
+   * and hands over the owner, the homestead exemption and the assessed value in
+   * the same response.
+   *
+   * Measured on 400 real pre-2014 residential build-permit addresses:
+   * **86% matched, in 4 requests**, all 344 matches carrying parcel geometry
+   * and 81% carrying a homestead exemption. The geocoder stays for the other
+   * 14%, which are genuinely absent from the roll — addresses the parish does
+   * not have rather than addresses we failed to spell.
+   *
+   * Addresses must already be street lines. Pass a permit's full address with
+   * its city/state/ZIP tail and nothing will match; `streetLineOf` exists for
+   * exactly that.
+   */
+  async lookupByAddresses(
+    streetLines: readonly string[],
+    options: { batchSize?: number; concurrency?: number } = {},
+  ): Promise<Map<string, ParcelRecord>> {
+    const wanted = [...new Set(streetLines.map((a) => a.trim().toUpperCase()).filter(Boolean))]
+    const out = new Map<string, ParcelRecord>()
+    if (wanted.length === 0) return out
+
+    const batches = chunkAddresses(wanted, options.batchSize ?? ADDRESS_BATCH_SIZE)
+    const concurrency = options.concurrency ?? LOOKUP_CONCURRENCY
+
+    // Batches run a few at a time. Twenty of them in series took 31 seconds
+    // against the live service, which is a rep staring at a spinner in a
+    // driveway; four at a time is a quarter of that and still polite to a
+    // parish server. Results are merged in batch order afterwards so
+    // first-wins stays deterministic however the requests interleave.
+    const results: ParcelRecord[][] = new Array(batches.length).fill(null)
+    let next = 0
+    async function worker(self: EbrParcelProvider) {
+      for (;;) {
+        const index = next
+        next += 1
+        const batch = batches[index]
+        if (!batch) return
+        const where = `PHYSICAL_ADDRESS IN (${batch.map(sqlQuote).join(',')})`
+        results[index] = self.toRecords(
+          await self.query({
+            where,
+            outFields: OUT_FIELDS.join(','),
+            returnGeometry: 'true',
+            outSR: '4326',
+          }),
+        )
+      }
+    }
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, batches.length) }, () => worker(this)),
+    )
+
+    for (const records of results) {
+      for (const record of records ?? []) {
+        // One address can carry several parcels — 2136 LOBDELL BLVD returns
+        // two. First wins rather than last, so a re-run is stable.
+        const key = record.address.trim().toUpperCase()
+        if (!out.has(key)) out.set(key, record)
+      }
+    }
+    return out
+  }
+
+  private toRecords(raw: unknown): ParcelRecord[] {
+    const body = responseSchema.parse(raw)
     if (body.error) {
       throw new Error(`Parish parcel service error: ${body.error.message ?? 'unspecified'}`)
     }

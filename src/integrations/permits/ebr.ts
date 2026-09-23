@@ -72,7 +72,18 @@ export function buildWhere(query: PermitQuery): string {
   const types: string[] = []
   if (query.kinds.includes('reroof')) types.push(...REROOF_TYPES)
   if (query.kinds.includes('new_build')) types.push(...NEW_BUILD_TYPES)
-  if (types.length > 0) clauses.push(`permittype in (${quote(types)})`)
+  // 'other' means every type: the property screen wants the whole permit
+  // history for one address, not just the roofing rows.
+  if (types.length > 0 && !query.kinds.includes('other')) {
+    clauses.push(`permittype in (${quote(types)})`)
+  }
+
+  if (query.addressLike) {
+    // Uppercased on both sides: the feed is inconsistent about case within a
+    // single street, so a case-sensitive match drops half a block.
+    const needle = query.addressLike.toUpperCase().replace(/'/g, "''")
+    clauses.push(`upper(address) like '%${needle}%'`)
+  }
 
   if (query.issuedFrom) clauses.push(`issueddate >= '${query.issuedFrom}'`)
   if (query.issuedTo) clauses.push(`issueddate <= '${query.issuedTo}'`)

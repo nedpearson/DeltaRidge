@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import DoorOutcomeSheet from '@/components/DoorOutcomeSheet'
 import LeadMap from '@/components/LeadMap'
 import MessagingReadiness from '@/components/MessagingReadiness'
+import { OwnerLine } from '@/components/OwnerLine'
+import PropertyThumbnail from '@/components/PropertyThumbnail'
 import { Button, Card, Empty, Field, SectionTitle, Select } from '@/components/ui'
 import type { StormCoverage } from '@/features/leads/coverage'
 import {
@@ -113,10 +115,18 @@ function DoorCard({
   managed: ManagedLead | undefined
   onKnock: (lead: ScoredLead) => void
 }) {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const parcel = lead.parcel
 
   return (
     <Card>
+      <PropertyThumbnail
+        latitude={lead.latitude}
+        longitude={lead.longitude}
+        alt={`Aerial view of ${lead.address}`}
+      />
+
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-[15px] font-semibold">{lead.address}</p>
@@ -129,6 +139,8 @@ function DoorCard({
           <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/30">priority</p>
         </div>
       </div>
+
+      <OwnerLine parcel={parcel} />
 
       {managed && (
         <p className="mt-2 inline-block rounded-full bg-white/8 px-2.5 py-1 text-[11px] text-white/60">
@@ -145,7 +157,13 @@ function DoorCard({
         ))}
       </ul>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      {/* Knocking is the only thing this app asks a rep to do at a door, and it
+          is the widest target on the card for that reason. Navigate and the
+          full profile sit under it rather than competing with it. */}
+      <Button variant="gold" full className="mt-3" onClick={() => onKnock(lead)}>
+        Knocked it
+      </Button>
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <a
           href={mapsHref(lead.latitude, lead.longitude)}
           target="_blank"
@@ -154,8 +172,11 @@ function DoorCard({
         >
           <Button variant="secondary">Navigate</Button>
         </a>
-        <Button variant="gold" onClick={() => onKnock(lead)}>
-          Knocked it
+        <Button
+          variant="secondary"
+          onClick={() => navigate(`/property/${encodeURIComponent(lead.addressKey)}`)}
+        >
+          Property
         </Button>
       </div>
 
@@ -165,24 +186,44 @@ function DoorCard({
       >
         {open ? 'Hide how this ranked' : 'How this ranked'}
       </button>
-      {open && (
-        <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-white/8 pt-2 text-[11.5px]">
-          <dt className="text-white/35">Hail size</dt>
-          <dd className="text-right text-white/70">{lead.components.hailSizeInches}"</dd>
-          <dt className="text-white/35">Distance to report</dt>
-          <dd className="text-right text-white/70">{lead.components.distanceMiles} mi</dd>
-          <dt className="text-white/35">Days since storm</dt>
-          <dd className="text-right text-white/70">{lead.components.daysSinceStorm}</dd>
-          <dt className="text-white/35">Roof age</dt>
-          <dd className="text-right text-white/70">{lead.components.roofAgeYears} yrs</dd>
-          <dd className="col-span-2 mt-1 text-[10.5px] leading-relaxed text-white/25">
-            Priority is a weighted sum of these four, with hand-set weights. It ranks
-            documentation-worthy opportunity, not the chance of a sale — there is no closed-won
-            history in this system yet to learn one from.
-          </dd>
-        </dl>
-      )}
+      {open && <ScoreBreakdown lead={lead} />}
     </Card>
+  )
+}
+
+/**
+ * The score, itemised.
+ *
+ * Shown as signed points rather than raw measurements, because "1.75 inches"
+ * does not tell a rep why this door beat the one below it and "+28" does. The
+ * numbers come off the lead itself so the column always adds to the headline —
+ * deriving them here is how a card ends up showing 84 above a column of 79.
+ */
+function ScoreBreakdown({ lead }: { lead: ScoredLead }) {
+  return (
+    <div className="mt-1 border-t border-white/8 pt-2">
+      <ul className="space-y-1">
+        {lead.breakdown.map((factor) => (
+          <li key={factor.label} className="flex items-baseline gap-2 text-[12px]">
+            <span className="w-9 shrink-0 text-right font-display text-gold-400">
+              +{factor.points}
+            </span>
+            <span className="min-w-0 flex-1 text-white/70">
+              {factor.label}
+              <span className="text-white/35"> — {factor.detail}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-1.5 flex items-baseline gap-2 border-t border-white/8 pt-1.5 text-[12px]">
+        <span className="w-9 shrink-0 text-right font-display text-white/90">{lead.score}</span>
+        <span className="text-white/50">Priority</span>
+      </div>
+      <p className="mt-1.5 text-[10.5px] leading-relaxed text-white/25">
+        Weights are hand-set, not learned. This ranks documentation-worthy opportunity, not the
+        chance of a sale — there is no closed-won history in this system yet to learn one from.
+      </p>
+    </div>
   )
 }
 

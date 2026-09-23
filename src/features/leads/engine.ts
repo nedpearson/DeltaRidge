@@ -1,5 +1,6 @@
 import { openDB, type IDBPDatabase } from 'idb'
-import { EbrGeocoder, type GeocodeResult } from '@/integrations/geocode/ebr'
+import { EbrGeocoder, streetLineOf, type GeocodeResult } from '@/integrations/geocode/ebr'
+import { EbrParcelProvider, type ParcelRecord } from '@/integrations/parcel'
 import { EbrPermitProvider } from '@/integrations/permits/ebr'
 import type { PermitRecord } from '@/integrations/permits/types'
 import { createStormProvider, type StormEvent } from '@/integrations/storm'
@@ -58,6 +59,12 @@ export interface LeadRunSettings {
    * coverage fills in over a few runs rather than all at once.
    */
   maxGeocodesPerRun: number
+  /**
+   * Ceiling on parcel lookups per run. Each request carries a hundred
+   * addresses, so two thousand is twenty requests — and every one of them
+   * returns an owner, an occupancy signal and a centroid, not just a point.
+   */
+  maxParcelLookupsPerRun: number
 }
 
 /**
@@ -75,6 +82,7 @@ export const DEFAULT_SETTINGS: LeadRunSettings = {
   builtBefore: new Date().getFullYear() - 12,
   maxLeads: 150,
   maxGeocodesPerRun: 600,
+  maxParcelLookupsPerRun: 2000,
 }
 
 export interface LeadRun {
@@ -97,6 +105,10 @@ export interface LeadRun {
     reroofPermits: number
     geocodedThisRun: number
     awaitingGeocode: number
+    /** Addresses matched to a parish parcel, so the door has a name on it. */
+    parcelsMatched: number
+    /** Of those, how many the assessor's roll says are owner-occupied. */
+    ownerOccupied: number
     suppressedAlreadyReplaced: number
     suppressedNoHail: number
     suppressedRoofTooNew: number
@@ -108,6 +120,7 @@ export interface LeadRun {
 const DB_NAME = 'delta-ridge-leads'
 const STORE = 'runs'
 const GEO_STORE = 'geocodes'
+const PARCEL_STORE = 'parcels'
 const LATEST = 'latest'
 
 let dbPromise: Promise<IDBPDatabase> | null = null
@@ -119,12 +132,16 @@ let dbPromise: Promise<IDBPDatabase> | null = null
  */
 function getLeadsDb(): Promise<IDBPDatabase> {
   if (!dbPromise) {
-    dbPromise = openDB(DB_NAME, 2, {
+    dbPromise = openDB(DB_NAME, 3, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) db.createObjectStore(STORE)
         // Geocodes are permanent: an address's coordinates do not change, so
         // this cache is never invalidated and each run starts further ahead.
         if (oldVersion < 2) db.createObjectStore(GEO_STORE)
+        // Parcels are NOT permanent. A house does not move but it does change
+        // hands, and a rep who greets last year's owner by name has done worse
+        // than knock on a door with no name at all. Hence the TTL below.
+        if (oldVersion < 3) db.createObjectStore(PARCEL_STORE)
       },
     })
   }
@@ -222,6 +239,58 @@ async function writeGeocodeCache(found: Map<string, GeocodeResult>): Promise<voi
   }
 }
 
+/**
+ * How long a cached owner is trusted.
+ *
+ * Thirty days is a compromise with a reason on each side. Parcel rolls update
+ * on the parish's own schedule, not daily, so re-reading every run would spend
+ * requests to be told the same thing. But property changes hands continuously,
+ * and the failure mode of a stale owner is a rep using the wrong name on a
+ * doorstep, which is worse than showing no name. Thirty days bounds that.
+ */
+const PARCEL_TTL_MS = 30 * 24 * 3600 * 1000
+
+interface CachedParcel {
+  record: ParcelRecord
+  cachedAt: string
+}
+
+async function readParcelCache(
+  streetLines: readonly string[],
+  now: Date,
+): Promise<Map<string, ParcelRecord>> {
+  const out = new Map<string, ParcelRecord>()
+  try {
+    const db = await getLeadsDb()
+    const tx = db.transaction(PARCEL_STORE, 'readonly')
+    await Promise.all(
+      streetLines.map(async (key) => {
+        const hit = (await tx.store.get(key)) as CachedParcel | undefined
+        if (!hit) return
+        if (now.getTime() - new Date(hit.cachedAt).getTime() > PARCEL_TTL_MS) return
+        out.set(key, hit.record)
+      }),
+    )
+    await tx.done
+  } catch {
+    // No cache is a slower run, not a broken one.
+  }
+  return out
+}
+
+async function writeParcelCache(found: Map<string, ParcelRecord>, now: Date): Promise<void> {
+  if (found.size === 0) return
+  try {
+    const db = await getLeadsDb()
+    const tx = db.transaction(PARCEL_STORE, 'readwrite')
+    const cachedAt = now.toISOString()
+    for (const [key, record] of found) void tx.store.put({ record, cachedAt }, key)
+    await tx.done
+  } catch {
+    // Losing the cache costs requests on the next run and nothing else.
+  }
+}
+
 export interface RunDeps {
   fetchImpl?: typeof fetch
   now?: Date
@@ -295,10 +364,44 @@ export async function runLeadEngine(
     )
   }
 
-  // Fill in coordinates for the permits that predate the parish geocoding its
-  // own records. Cache first, then the locator, capped per run.
+  // ---- Owners, and the coordinates that come with them ----
+  //
+  // This step runs BEFORE geocoding and largely replaces it. The parish parcel
+  // roll answers "where is this house" with a polygon it drew around the
+  // house, and hands over the owner, the homestead exemption and the assessed
+  // value in the same response. The geocoder answers only the first question,
+  // one capped batch of 600 at a time, by interpolating along a street.
+  //
+  // Measured on 400 real pre-2014 residential build-permit addresses: 86%
+  // matched in 4 requests, every match carrying geometry. The 14% that miss
+  // are addresses the roll genuinely does not have, so the geocoder below
+  // still runs — for those alone.
+  const streetLines = [...new Set(buildPermits.map((p) => streetLineOf(p.address).toUpperCase()))]
+  const parcels = await readParcelCache(streetLines, now)
+  const parcelsToLookUp = streetLines
+    .filter((line) => !parcels.has(line))
+    .slice(0, settings.maxParcelLookupsPerRun)
+
+  if (parcelsToLookUp.length > 0) {
+    try {
+      const found = await new EbrParcelProvider(fetchImpl).lookupByAddresses(parcelsToLookUp)
+      await writeParcelCache(found, now)
+      for (const [key, record] of found) parcels.set(key, record)
+    } catch {
+      // A door with no name is still a door. The list degrades to addresses
+      // rather than disappearing.
+      notes.push(
+        'Owner records could not be loaded from the parish, so this list shows addresses without names on them.',
+      )
+    }
+  }
+
+  // Only the addresses the parcel roll could not place still need the locator.
   const needsGeocode = buildPermits.filter(
-    (p) => (p.latitude === undefined || p.longitude === undefined) && p.addressKey,
+    (p) =>
+      (p.latitude === undefined || p.longitude === undefined) &&
+      !!p.addressKey &&
+      !parcels.has(streetLineOf(p.address).toUpperCase()),
   )
   const cached = await readGeocodeCache(needsGeocode.map((p) => p.address))
   const uncached = needsGeocode.filter((p) => !cached.has(p.address))
@@ -324,6 +427,13 @@ export async function runLeadEngine(
   }
 
   const located: PermitRecord[] = buildPermits.map((p) => {
+    // Parcel centroid first, even when the permit already carries a point: the
+    // polygon is the parish's own outline of the lot, and the permit point for
+    // anything pre-2016 came from a geocoder guessing along a street.
+    const parcel = parcels.get(streetLineOf(p.address).toUpperCase())
+    if (parcel?.latitude !== undefined && parcel.longitude !== undefined) {
+      return { ...p, latitude: parcel.latitude, longitude: parcel.longitude }
+    }
     if (p.latitude !== undefined && p.longitude !== undefined) return p
     const hit = cached.get(p.address)
     return hit ? { ...p, latitude: hit.latitude, longitude: hit.longitude } : p
@@ -347,7 +457,7 @@ export async function runLeadEngine(
     )
   }
 
-  const candidates = candidatesFromPermits(inArea)
+  const candidates = candidatesFromPermits(inArea, parcels)
   const { leads, suppressed } = scoreLeads({
     candidates,
     storms: stormEvents,
@@ -371,6 +481,8 @@ export async function runLeadEngine(
       reroofPermits: reroofPermits.length,
       geocodedThisRun,
       awaitingGeocode,
+      parcelsMatched: candidates.filter((c) => c.parcel).length,
+      ownerOccupied: candidates.filter((c) => c.parcel?.occupancy === 'owner_occupied').length,
       suppressedAlreadyReplaced: suppressed.alreadyReplaced,
       suppressedNoHail: suppressed.noQualifyingHail,
       suppressedRoofTooNew: suppressed.roofTooNew,

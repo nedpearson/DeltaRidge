@@ -3,6 +3,7 @@ import {
   candidatesFromPermits,
   contractorActivity,
   distanceMiles,
+  roundToTotal,
   scoreLeads,
   type LeadCandidate,
 } from '@/features/leads/scoring'
@@ -283,5 +284,114 @@ describe('which storm a door is scored against', () => {
 
     expect(suppressed.alreadyReplaced).toBe(0)
     expect(leads).toHaveLength(1)
+  })
+})
+
+describe('candidatesFromPermits with parcel records', () => {
+  const located = permit({
+    address: '18834 SANTA MARIA PKWY BATON ROUGE LA 70809',
+    addressKey: '18834 santa maria pkwy baton rouge la 70809',
+    latitude: 30.3,
+    longitude: -91.1,
+  })
+
+  const parcelRecord = {
+    externalId: 'ebr:009-8202-4',
+    provider: 'ebr' as const,
+    parcelNumber: '009-8202-4',
+    address: '18834 SANTA MARIA PKWY',
+    addressKey: '18834 santa maria pkwy',
+    parish: 'East Baton Rouge',
+    ownerName: 'MANCUSO, WILLIAM DAVID',
+    ownerKind: 'person' as const,
+    ownerConfidence: 'high' as const,
+    occupancy: 'owner_occupied' as const,
+    occupancyBasis: 'homestead_exemption' as const,
+    subdivision: 'SANTA MARIA',
+    latitude: 30.343521,
+    longitude: -91.005993,
+    retrievedAt: '2026-09-23T00:00:00.000Z',
+  }
+
+  // The permit address carries a city/state/ZIP tail the parcel roll does not.
+  // Matching on the raw string finds nothing at all.
+  const byStreetLine = new Map([['18834 SANTA MARIA PKWY', parcelRecord]])
+
+  it('prefers the parcel centroid over the permit coordinate', () => {
+    // The permit point for anything pre-2016 came from a geocoder interpolating
+    // along a street. The parcel centroid is the polygon the parish drew around
+    // the house.
+    const [candidate] = candidatesFromPermits([located], byStreetLine)
+    expect(candidate?.latitude).toBeCloseTo(30.343521, 5)
+    expect(candidate?.longitude).toBeCloseTo(-91.005993, 5)
+    expect(candidate?.parcel?.ownerName).toBe('MANCUSO, WILLIAM DAVID')
+  })
+
+  it('keeps the door when the parcel roll has no such address', () => {
+    // About one candidate in seven is genuinely absent from the roll. A door
+    // with no name on it is still a door worth knocking.
+    const [candidate] = candidatesFromPermits([located], new Map())
+    expect(candidate).toBeDefined()
+    expect(candidate?.parcel).toBeUndefined()
+    expect(candidate?.latitude).toBe(30.3)
+  })
+
+  it('takes the subdivision from the assessor over the permit', () => {
+    const [candidate] = candidatesFromPermits(
+      [{ ...located, subdivision: 'STALE FROM PERMIT' }],
+      byStreetLine,
+    )
+    expect(candidate?.subdivision).toBe('SANTA MARIA')
+  })
+})
+
+describe('why this ranked', () => {
+  it('itemises the score into parts that add up to it', () => {
+    // A rep who adds the column and gets 83 under a headline of 84 stops
+    // trusting the number, reasonably. The parts must sum to the whole.
+    const { leads } = scoreLeads({
+      candidates: [candidate()],
+      storms: [storm()],
+      reroofPermits: [],
+      minHailInches: 1,
+      radiusMiles: 3,
+      now: NOW,
+    })
+
+    const lead = leads[0]
+    expect(lead).toBeDefined()
+    const sum = (lead?.breakdown ?? []).reduce((t, f) => t + f.points, 0)
+    expect(sum).toBe(lead?.score)
+  })
+
+  it('names each factor in words a rep can repeat', () => {
+    const { leads } = scoreLeads({
+      candidates: [candidate()],
+      storms: [storm()],
+      reroofPermits: [],
+      minHailInches: 1,
+      radiusMiles: 3,
+      now: NOW,
+    })
+    const labels = (leads[0]?.breakdown ?? []).map((f) => f.label)
+    expect(labels).toEqual(['Hail size', 'Storm recency', 'Close to the report', 'Roof age'])
+    for (const factor of leads[0]?.breakdown ?? []) {
+      expect(factor.detail.length).toBeGreaterThan(3)
+    }
+  })
+})
+
+describe('roundToTotal', () => {
+  it('gives the spare points to the largest remainders', () => {
+    const rounded = roundToTotal(
+      [
+        { label: 'a', points: 10.6, detail: '' },
+        { label: 'b', points: 10.6, detail: '' },
+        { label: 'c', points: 10.1, detail: '' },
+      ],
+      32,
+    )
+    expect(rounded.map((f) => f.points)).toEqual([11, 11, 10])
+    expect(rounded.reduce((t, f) => t + f.points, 0)).toBe(32)
   })
 })

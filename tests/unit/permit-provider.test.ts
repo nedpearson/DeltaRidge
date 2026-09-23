@@ -125,3 +125,29 @@ describe('streetLineOf — the city-in-street-name trap', () => {
     expect(streetLineOf('19718 SOUTHERN HILLS AVE')).toBe('19718 SOUTHERN HILLS AVE')
   })
 })
+
+describe('filtering permits to one address', () => {
+  // The property screen wants the whole permit history for one house. A pool
+  // permit dates the back yard and a generator permit says somebody spends
+  // money here; both are worth a rep knowing at the door.
+  it('matches on the street line, case-insensitively, as a substring', () => {
+    const where = buildWhere({ kinds: ['reroof'], addressLike: '18834 Santa Maria Pkwy' })
+    // Uppercased on both sides: the feed is inconsistent about case within a
+    // single street, so a case-sensitive match drops half a block.
+    expect(where).toContain("upper(address) like '%18834 SANTA MARIA PKWY%'")
+  })
+
+  it('drops the permit-type filter entirely when asked for everything', () => {
+    const where = buildWhere({ kinds: ['reroof', 'new_build', 'other'], addressLike: 'X ST' })
+    expect(where).not.toContain('permittype in')
+    expect(where).toContain('upper(address) like')
+  })
+
+  it('still filters by type when only roofing kinds are asked for', () => {
+    expect(buildWhere({ kinds: ['reroof'] })).toContain('permittype in')
+  })
+
+  it('escapes a quote in an address instead of breaking the query', () => {
+    expect(buildWhere({ kinds: ['other'], addressLike: "O'NEAL LN" })).toContain("O''NEAL LN")
+  })
+})

@@ -53,6 +53,14 @@ export interface PermitQuery {
   kinds: PermitKind[]
   issuedFrom?: string
   issuedTo?: string
+  /**
+   * Street line to match, case-insensitively, as a substring.
+   *
+   * Substring rather than equality because the feed appends a city/state/ZIP
+   * tail inconsistently — "3243 TIMBER GROVE DR  BATON ROUGE LA 70816" and
+   * "3243 TIMBER GROVE DR" are both in there for the same house.
+   */
+  addressLike?: string
   /** Hard ceiling on rows pulled, so a phone on a hotspot cannot be swamped. */
   limit?: number
 }

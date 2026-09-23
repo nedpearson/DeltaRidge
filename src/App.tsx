@@ -6,6 +6,7 @@ import InspectionsPage from '@/pages/InspectionsPage'
 import NewInspectionPage from '@/pages/NewInspectionPage'
 import InspectionPage from '@/pages/InspectionPage'
 import LeadsPage from '@/pages/LeadsPage'
+import PropertyPage from '@/pages/PropertyPage'
 import LeadPage from '@/pages/LeadPage'
 import EstimatePage from '@/pages/EstimatePage'
 import CostBookPage from '@/pages/CostBookPage'
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/leads" element={<LeadsPage />} />
           <Route path="/lead/:id" element={<LeadPage />} />
+          <Route path="/property/:addressKey" element={<PropertyPage />} />
           <Route path="/estimate" element={<EstimatePage />} />
           <Route path="/estimate/:id" element={<EstimatePage />} />
           <Route path="/costs" element={<CostBookPage />} />

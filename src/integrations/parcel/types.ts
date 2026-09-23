@@ -132,4 +132,9 @@ export interface ParcelProvider {
   readonly mayPersist: boolean
   availability(): Promise<ProviderAvailability>
   search(query: ParcelQuery): Promise<ParcelRecord[]>
+  /**
+   * Owner and coordinates for a known list of street addresses, batched.
+   * Keyed by the uppercased street line the provider matched on.
+   */
+  lookupByAddresses(streetLines: readonly string[]): Promise<Map<string, ParcelRecord>>
 }
