@@ -147,8 +147,18 @@ export async function listDueOutbox(
   )
 }
 
-/** Work on this device that belongs to a different sign-in. Never pushed. */
+/**
+ * Work on this device that belongs to a different sign-in. Never pushed.
+ *
+ * Empty when nobody is signed in, and that is the load-bearing part. Ownership
+ * is decided against the current user, so with no current user EVERY item fails
+ * the check — which had the signed-out home screen announcing "1 item on this
+ * phone belongs to another sign-in" about the rep's own unsent work. Alarming,
+ * and false: without a signed-in user there is nobody for the work to belong to
+ * instead. Signed out, queued work is simply waiting, and the panel says so.
+ */
 export async function listForeignOutbox(currentUserId: string | null): Promise<OutboxItem[]> {
+  if (!currentUserId) return []
   return (await listOutbox()).filter((item) => !ownsOutboxItem(item, currentUserId))
 }
 

@@ -130,3 +130,25 @@ describe('isDue with an auth block', () => {
     expect(isDue({ blockedReason: 'auth', givenUp: true }, now)).toBe(false)
   })
 })
+
+/**
+ * The bug this covers reached production and was visible on the home screen.
+ *
+ * Ownership is decided against the current user, so with nobody signed in every
+ * item fails the check — and the sync panel announced "1 item on this phone
+ * belongs to another sign-in" about the rep's own unsent work. Alarming, and
+ * false: with no current user there is nobody for the work to belong to
+ * instead.
+ */
+describe('foreign work while signed out', () => {
+  it('claims nothing belongs to somebody else when nobody is signed in', async () => {
+    const { listForeignOutbox } = await import('@/lib/sync-store')
+    expect(await listForeignOutbox(null)).toEqual([])
+  })
+
+  it('still refuses to push anything while signed out', async () => {
+    // The reporting changed; the permission did not.
+    expect(ownsOutboxItem(item({ userId: ANNA }), null)).toBe(false)
+    expect(ownsOutboxItem(item({ userId: null }), null)).toBe(false)
+  })
+})

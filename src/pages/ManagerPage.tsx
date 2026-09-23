@@ -3,6 +3,7 @@ import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import { useSession } from '@/features/auth/session'
 import { readCachedRun } from '@/features/leads/engine'
 import type { ScoredLead } from '@/features/leads/scoring'
+import { assignDoorTo } from '@/features/manager/assign'
 import {
   EMPTY_SNAPSHOT,
   outcomesFrom,
@@ -220,6 +221,20 @@ export default function ManagerPage() {
             setBusy(null)
             await load()
           }}
+          onAssign={async (door, repId, reason) => {
+            if (!orgId || !session) return 'Not signed in to an organization.'
+            setBusy(`${door.addressKey}:${repId}`)
+            const result = await assignDoorTo({
+              door,
+              orgId,
+              assignTo: repId,
+              assignedBy: session.user.id,
+              reason,
+            })
+            setBusy(null)
+            if (result.ok) await load()
+            return result.error
+          }}
         />
       )}
 
@@ -422,6 +437,7 @@ function AssignTab({
   canManage,
   busy,
   onUnassign,
+  onAssign,
 }: {
   doors: ScoredLead[]
   assignments: ManagerSnapshot['assignments']
@@ -430,8 +446,10 @@ function AssignTab({
   canManage: boolean
   busy: string | null
   onUnassign: (id: string) => Promise<void>
+  onAssign: (door: ScoredLead, repId: string, reason: string) => Promise<string | null>
 }) {
   const [picked, setPicked] = useState<string | null>(null)
+  const [failed, setFailed] = useState<string | null>(null)
   const openAssignments = assignments.filter((a) => !a.unassignedAt)
 
   const candidates = useMemo(() => {
@@ -535,12 +553,41 @@ function AssignTab({
                               </li>
                             ))}
                           </ul>
+                          {canManage && (
+                            <Button
+                              variant="secondary"
+                              full
+                              className="mt-2"
+                              disabled={busy === `${door.addressKey}:${s.repId}`}
+                              onClick={() => {
+                                setFailed(null)
+                                void onAssign(
+                                  door,
+                                  s.repId,
+                                  // The reason is recorded with the assignment
+                                  // and shown in the audit log, so the decision
+                                  // carries its own justification.
+                                  s.factors
+                                    .filter((f) => f.weight !== 0)
+                                    .map((f) => f.label)
+                                    .join(' · '),
+                                ).then((err) => setFailed(err))
+                              }}
+                            >
+                              {busy === `${door.addressKey}:${s.repId}`
+                                ? 'Sending and assigning…'
+                                : `Give it to ${nameOf(s.repId).split(' ')[0]}`}
+                            </Button>
+                          )}
                         </div>
                       ))
                     )}
+                    {failed && (
+                      <p className="text-[11.5px] leading-relaxed text-amber-200/80">{failed}</p>
+                    )}
                     <p className="text-[11px] leading-relaxed text-white/30">
-                      Assigning needs the door to exist on the server first. Knock it, or sync, and it
-                      becomes assignable.
+                      Assigning sends this door to the server first, as a target rather than a knock.
+                      Nothing about it implies anyone has been there.
                     </p>
                   </div>
                 )}

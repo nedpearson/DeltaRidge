@@ -102,7 +102,8 @@ export default function SyncPanel() {
       {foreign > 0 && (
         <Card className="mt-2">
           <p className="text-[13.5px] font-semibold text-white/80">
-            {foreign} item{foreign === 1 ? '' : 's'} on this phone belong to another sign-in.
+            {foreign} item{foreign === 1 ? '' : 's'} on this phone{' '}
+            {foreign === 1 ? 'belongs' : 'belong'} to another sign-in.
           </p>
           <p className="mt-1 text-[12px] leading-relaxed text-white/45">
             They are safe and they are not being sent under your account. Whoever captured them can sign in on this
