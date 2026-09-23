@@ -82,6 +82,11 @@ export interface PropertySeed {
   propertyType?: string | undefined
   roofMaterial?: string | undefined
   stories?: number | undefined
+  /**
+   * The neighbourhood the parish parcel record names. Pushed because territory
+   * coverage is unanswerable without it and the server has no other source.
+   */
+  subdivision?: string | undefined
 }
 
 /**
@@ -109,6 +114,7 @@ export async function ensurePropertyFor(seed: PropertySeed, orgId: string): Prom
       city: seed.city ?? null,
       parish: seed.parish ?? null,
       postal_code: seed.postalCode ?? null,
+      subdivision: seed.subdivision ?? null,
       property_type: seed.propertyType ?? 'residential',
       stories: seed.stories ?? null,
       roof_material: seed.roofMaterial ?? 'unknown',

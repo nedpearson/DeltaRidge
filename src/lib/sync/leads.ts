@@ -80,6 +80,7 @@ function propertySeed(lead: ManagedLead) {
     latitude: lead.latitude,
     longitude: lead.longitude,
     propertyType: 'residential',
+    subdivision: lead.subdivision,
   }
 }
 

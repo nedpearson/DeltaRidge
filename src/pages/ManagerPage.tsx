@@ -1,0 +1,669 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Button, Card, Empty, SectionTitle } from '@/components/ui'
+import { useSession } from '@/features/auth/session'
+import { readCachedRun } from '@/features/leads/engine'
+import type { ScoredLead } from '@/features/leads/scoring'
+import {
+  EMPTY_SNAPSHOT,
+  outcomesFrom,
+  readManagerSnapshot,
+  unassignLead,
+  type ManagerSnapshot,
+} from '@/features/manager/read'
+import {
+  activeRoutes,
+  efficiencyFor,
+  fixFreshness,
+  orgBaseline,
+  rollUpActivity,
+  suggestAssignees,
+  territoryCoverage,
+  COMFORTABLE_OPEN_ASSIGNMENTS,
+  type RepContext,
+} from '@/features/manager/metrics'
+
+/**
+ * What a manager sees, and the reasoning behind every number on it.
+ *
+ * Three commitments run through this screen.
+ *
+ * Nothing here decides anything. It ranks, it explains, and a person acts. No
+ * figure on this page is an instruction, and the copy says so where somebody
+ * might reasonably assume otherwise.
+ *
+ * Nothing here is a black box. Every score shows its parts. A rep should be able
+ * to read the same breakdown their manager did and argue with it.
+ *
+ * Empty is drawn as empty. A team with no data and a server that could not be
+ * reached look identical if you collapse them into a zero, and one of those is a
+ * rep who did no work while the other is a bug. They are separate states here.
+ */
+
+type Tab = 'team' | 'field' | 'leads' | 'territory' | 'log'
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'team', label: 'Team' },
+  { id: 'field', label: 'Field' },
+  { id: 'leads', label: 'Assign' },
+  { id: 'territory', label: 'Territory' },
+  { id: 'log', label: 'Log' },
+]
+
+function ago(iso: string | null): string {
+  if (!iso) return 'never'
+  const mins = Math.floor((Date.now() - Date.parse(iso)) / 60_000)
+  if (!Number.isFinite(mins)) return 'never'
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins} min ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours} hr ago`
+  return `${Math.floor(hours / 24)} days ago`
+}
+
+function pct(n: number): string {
+  return `${Math.round(n * 100)}%`
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <div>
+      <p className="text-[19px] font-semibold leading-tight">{value}</p>
+      <p className="text-[10.5px] uppercase tracking-wide text-white/35">{label}</p>
+    </div>
+  )
+}
+
+/** The one thing every tab needs and none of them should invent. */
+function Nothing({ title, body }: { title: string; body: string }) {
+  return <Empty title={title} body={body} />
+}
+
+export default function ManagerPage() {
+  const { session, membership } = useSession()
+  const [tab, setTab] = useState<Tab>('team')
+  const [snapshot, setSnapshot] = useState<ManagerSnapshot>(EMPTY_SNAPSHOT)
+  const [doors, setDoors] = useState<ScoredLead[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState<string | null>(null)
+
+  const orgId = membership?.organizationId ?? null
+  const canManage = membership?.role === 'admin' || membership?.role === 'manager'
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const [snap, run] = await Promise.all([readManagerSnapshot(orgId), readCachedRun()])
+    setSnapshot(snap)
+    setDoors(run?.leads ?? [])
+    setLoading(false)
+  }, [orgId])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const names = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const m of snapshot.team) map.set(m.userId, m.fullName ?? 'Unnamed rep')
+    return map
+  }, [snapshot.team])
+
+  const nameOf = useCallback(
+    (id: string | null) => (id ? (names.get(id) ?? 'Someone no longer on the team') : 'Unattributed'),
+    [names],
+  )
+
+  const outcomes = useMemo(() => outcomesFrom(snapshot.assignments), [snapshot.assignments])
+  const baseline = useMemo(() => orgBaseline(outcomes), [outcomes])
+  const repActivity = useMemo(() => rollUpActivity(snapshot.activity), [snapshot.activity])
+  const coverage = useMemo(
+    () => territoryCoverage(doors, snapshot.activity),
+    [doors, snapshot.activity],
+  )
+  const live = useMemo(() => activeRoutes(snapshot.routes), [snapshot.routes])
+
+  const openByRep = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const a of snapshot.assignments) {
+      if (a.unassignedAt) continue
+      map.set(a.assignedTo, (map.get(a.assignedTo) ?? 0) + 1)
+    }
+    return map
+  }, [snapshot.assignments])
+
+  const repContexts = useMemo<RepContext[]>(() => {
+    const worked = new Map<string, Set<string>>()
+    for (const row of snapshot.activity) {
+      if (!row.userId || !row.subdivision) continue
+      const set = worked.get(row.userId) ?? new Set<string>()
+      set.add(row.subdivision)
+      worked.set(row.userId, set)
+    }
+    return snapshot.team
+      .filter((m) => m.isActive && m.role !== 'office')
+      .map((m) => ({
+        repId: m.userId,
+        openAssignments: openByRep.get(m.userId) ?? 0,
+        workedSubdivisions: worked.get(m.userId) ?? new Set<string>(),
+        efficiency: efficiencyFor(m.userId, outcomes, baseline).index,
+      }))
+  }, [snapshot.team, snapshot.activity, openByRep, outcomes, baseline])
+
+  if (!session) {
+    return <Nothing title="Sign in" body="These screens read from the server, so they need an account." />
+  }
+
+  return (
+    <div className="space-y-4">
+      <SectionTitle {...(loading ? { hint: 'loading…' } : {})}>MANAGER</SectionTitle>
+
+      {snapshot.error && (
+        <Card className="!bg-amber-500/8 ring-amber-500/20">
+          <p className="text-[13.5px] font-semibold text-amber-200">These numbers could not be loaded.</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-amber-100/70">{snapshot.error}</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-amber-100/50">
+            Nothing below is showing zero because the team did nothing — it is showing nothing because the
+            read failed.
+          </p>
+          <Button variant="secondary" full className="mt-3" onClick={() => void load()}>
+            Try again
+          </Button>
+        </Card>
+      )}
+
+      {!canManage && (
+        <Card>
+          <p className="text-[12px] leading-relaxed text-white/45">
+            You are signed in as a {membership?.role ?? 'member'}, so the server returns your own rows only.
+            That is enforced where the data lives, not by hiding anything here.
+          </p>
+        </Card>
+      )}
+
+      <div className="flex gap-1.5 overflow-x-auto">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
+              tab === t.id ? 'bg-gold-400 text-black' : 'bg-white/6 text-white/60'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'team' && (
+        <TeamTab
+          repActivity={repActivity}
+          outcomes={outcomes}
+          baseline={baseline}
+          nameOf={nameOf}
+          openByRep={openByRep}
+          loading={loading}
+        />
+      )}
+
+      {tab === 'field' && <FieldTab routes={live} nameOf={nameOf} loading={loading} />}
+
+      {tab === 'leads' && (
+        <AssignTab
+          doors={doors}
+          assignments={snapshot.assignments}
+          reps={repContexts}
+          nameOf={nameOf}
+          canManage={canManage}
+          busy={busy}
+          onUnassign={async (id) => {
+            setBusy(id)
+            await unassignLead(id)
+            setBusy(null)
+            await load()
+          }}
+        />
+      )}
+
+      {tab === 'territory' && <TerritoryTab coverage={coverage} hasDoors={doors.length > 0} />}
+
+      {tab === 'log' && <LogTab rows={snapshot.audit} nameOf={nameOf} loading={loading} />}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+
+function TeamTab({
+  repActivity,
+  outcomes,
+  baseline,
+  nameOf,
+  openByRep,
+  loading,
+}: {
+  repActivity: ReturnType<typeof rollUpActivity>
+  outcomes: ReturnType<typeof outcomesFrom>
+  baseline: ReturnType<typeof orgBaseline>
+  nameOf: (id: string | null) => string
+  openByRep: Map<string, number>
+  loading: boolean
+}) {
+  const [open, setOpen] = useState<string | null>(null)
+
+  if (loading) return <Card><p className="text-[13px] text-white/45">Reading the server…</p></Card>
+  if (repActivity.length === 0) {
+    return (
+      <Nothing
+        title="No recorded work yet"
+        body="Nobody has knocked a door that reached the server in this window. This is an empty record, not a measured zero."
+      />
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {repActivity.map((rep) => {
+        const eff = efficiencyFor(rep.repId, outcomes, baseline)
+        const expanded = open === rep.repId
+        return (
+          <Card key={rep.repId}>
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="truncate text-[14px] font-semibold">{nameOf(rep.repId)}</p>
+              <span className="shrink-0 text-[11.5px] text-white/35">
+                {openByRep.get(rep.repId) ?? 0} open
+              </span>
+            </div>
+
+            <div className="mt-3 grid grid-cols-4 gap-2">
+              <Stat value={String(rep.knocks)} label="knocks" />
+              <Stat value={String(rep.doors)} label="doors" />
+              <Stat value={String(rep.conversations)} label="spoke" />
+              <Stat value={String(rep.appointments)} label="appts" />
+            </div>
+
+            <div className="mt-3 border-t border-white/8 pt-3">
+              <p className="text-[11px] uppercase tracking-wide text-white/35">GPS evidence</p>
+              <p className="mt-1 text-[12.5px] text-white/70">
+                {rep.verified} confirmed · {rep.probable} consistent · {rep.unverified} off-property ·{' '}
+                {rep.noFix} no fix
+              </p>
+              {rep.offPropertyShare === null ? (
+                <p className="mt-1 text-[11.5px] leading-relaxed text-white/35">
+                  Too few usable fixes to draw any conclusion from.
+                </p>
+              ) : (
+                <p className="mt-1 text-[11.5px] leading-relaxed text-white/35">
+                  {pct(rep.offPropertyShare)} of knocks with a usable fix were away from the property.
+                  Phones and parcel maps are both wrong sometimes.
+                </p>
+              )}
+            </div>
+
+            <div className="mt-3 border-t border-white/8 pt-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-[11px] uppercase tracking-wide text-white/35">Against the doors given</p>
+                <p className="text-[15px] font-semibold">
+                  {eff.index === null ? '—' : eff.index.toFixed(2)}
+                </p>
+              </div>
+              {eff.unavailable ? (
+                <p className="mt-1 text-[11.5px] leading-relaxed text-white/40">{eff.unavailable}</p>
+              ) : (
+                <p className="mt-1 text-[11.5px] leading-relaxed text-white/40">
+                  {eff.won} closed against {eff.expected?.toFixed(1)} the team&apos;s own rate predicts for
+                  doors of the same score. 1.00 is exactly par. This is decision support, not a rating.
+                </p>
+              )}
+              {eff.contributions.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setOpen(expanded ? null : rep.repId)}
+                    className="mt-2 text-[11.5px] text-white/45 underline"
+                  >
+                    {expanded ? 'Hide the arithmetic' : 'Show the arithmetic'}
+                  </button>
+                  {expanded && (
+                    <ul className="mt-2 space-y-1.5">
+                      {eff.contributions.map((c) => (
+                        <li key={c.label} className="text-[11.5px] leading-relaxed text-white/50">
+                          <span className="font-semibold text-white/70">Score {c.label}</span> ·{' '}
+                          {c.decided} decided ·{' '}
+                          {c.teamRate === null
+                            ? 'team has no rate here yet, so this band is left out of both sides'
+                            : `team converts ${pct(c.teamRate)} → ${c.expected?.toFixed(1)} expected, ${c.actual} actual`}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+
+function FieldTab({
+  routes,
+  nameOf,
+  loading,
+}: {
+  routes: ReturnType<typeof activeRoutes>
+  nameOf: (id: string | null) => string
+  loading: boolean
+}) {
+  if (loading) return <Card><p className="text-[13px] text-white/45">Reading the server…</p></Card>
+
+  return (
+    <div className="space-y-2">
+      <Card>
+        <p className="text-[12px] leading-relaxed text-white/45">
+          Only routes a rep has started and not yet stopped appear here. Nobody&apos;s location is recorded
+          or shown outside one, including their own.
+        </p>
+      </Card>
+
+      {routes.length === 0 ? (
+        <Nothing title="Nobody is on a route" body="This is what an ordinary evening looks like." />
+      ) : (
+        routes.map((route) => {
+          const fresh = fixFreshness(route.lastFixAt)
+          return (
+            <Card key={route.id}>
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="truncate text-[14px] font-semibold">{nameOf(route.userId)}</p>
+                <span className="shrink-0 text-[11.5px] text-white/35">
+                  started {ago(route.startedAt)}
+                </span>
+              </div>
+              {route.label && <p className="mt-0.5 text-[12px] text-white/45">{route.label}</p>}
+
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <Stat value={String(route.pointCount)} label="fixes" />
+                <Stat value={ago(route.lastFixAt)} label="last fix" />
+                <Stat
+                  value={route.accuracyM === null ? '—' : `±${Math.round(route.accuracyM)}m`}
+                  label="accuracy"
+                />
+              </div>
+
+              {/*
+                The freshness wording is the honest part. A ten minute old fix
+                drawn as a dot is a claim about where somebody is now that the
+                data does not support.
+              */}
+              <p className="mt-2 text-[11.5px] leading-relaxed text-white/40">
+                {fresh === 'live' && 'Reporting normally.'}
+                {fresh === 'recent' &&
+                  'Last fix is a few minutes old — they may have moved since.'}
+                {fresh === 'stale' &&
+                  'No fix for a while. That is not evidence they stopped working: buildings, pockets and dead batteries all look like this.'}
+                {fresh === 'none' &&
+                  'No fix recorded on this route yet. The knocks are still being saved.'}
+              </p>
+            </Card>
+          )
+        })
+      )}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+
+function AssignTab({
+  doors,
+  assignments,
+  reps,
+  nameOf,
+  canManage,
+  busy,
+  onUnassign,
+}: {
+  doors: ScoredLead[]
+  assignments: ManagerSnapshot['assignments']
+  reps: RepContext[]
+  nameOf: (id: string | null) => string
+  canManage: boolean
+  busy: string | null
+  onUnassign: (id: string) => Promise<void>
+}) {
+  const [picked, setPicked] = useState<string | null>(null)
+  const openAssignments = assignments.filter((a) => !a.unassignedAt)
+
+  const candidates = useMemo(() => {
+    const taken = new Set(openAssignments.map((a) => a.leadClientId))
+    return doors.filter((d) => !taken.has(d.addressKey)).slice(0, 25)
+  }, [doors, openAssignments])
+
+  return (
+    <div className="space-y-3">
+      <Card>
+        <p className="text-[12px] leading-relaxed text-white/45">
+          Suggestions rank reps and show every term that went into the ranking. Nothing is assigned
+          automatically, and a rep with no index yet is neither rewarded nor penalised for it.
+        </p>
+      </Card>
+
+      <SectionTitle>CURRENTLY ASSIGNED</SectionTitle>
+      {openAssignments.length === 0 ? (
+        <Nothing title="Nothing assigned" body="No door on the server has a rep against it yet." />
+      ) : (
+        <div className="space-y-2">
+          {openAssignments.map((a) => (
+            <Card key={a.id}>
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="truncate text-[13.5px] font-semibold">{a.address}</p>
+                <span className="shrink-0 text-[12px] text-white/40">{a.scoreAtAssignment}</span>
+              </div>
+              <p className="mt-0.5 text-[12px] text-white/45">
+                {nameOf(a.assignedTo)} · {ago(a.assignedAt)} · {a.leadStatus.replace(/_/g, ' ')}
+              </p>
+              {a.reason && <p className="mt-1 text-[11.5px] text-white/35">{a.reason}</p>}
+              {canManage && (
+                <Button
+                  variant="secondary"
+                  full
+                  className="mt-3"
+                  disabled={busy === a.id}
+                  onClick={() => void onUnassign(a.id)}
+                >
+                  {busy === a.id ? 'Releasing…' : 'Release this door'}
+                </Button>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <SectionTitle hint={`${candidates.length} shown`}>UNASSIGNED DOORS</SectionTitle>
+      {candidates.length === 0 ? (
+        <Nothing
+          title="No doors to hand out"
+          body="Either the door list has not been built on this device, or everything on it is already assigned."
+        />
+      ) : (
+        <div className="space-y-2">
+          {candidates.map((door) => {
+            const expanded = picked === door.addressKey
+            const suggestions = expanded
+              ? suggestAssignees(
+                  { score: door.score, ...(door.subdivision ? { subdivision: door.subdivision } : {}) },
+                  reps,
+                )
+              : []
+            return (
+              <Card key={door.addressKey}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="truncate text-[13.5px] font-semibold">{door.address}</p>
+                  <span className="shrink-0 text-[12px] text-white/40">{door.score}</span>
+                </div>
+                {door.subdivision && (
+                  <p className="mt-0.5 text-[12px] text-white/45">{door.subdivision}</p>
+                )}
+                <button
+                  onClick={() => setPicked(expanded ? null : door.addressKey)}
+                  className="mt-2 text-[11.5px] text-white/45 underline"
+                >
+                  {expanded ? 'Hide suggestions' : 'Who should take this?'}
+                </button>
+
+                {expanded && (
+                  <div className="mt-2 space-y-2 border-t border-white/8 pt-2">
+                    {suggestions.length === 0 ? (
+                      <p className="text-[11.5px] text-white/40">
+                        No active reps on the team to suggest.
+                      </p>
+                    ) : (
+                      suggestions.map((s) => (
+                        <div key={s.repId}>
+                          <div className="flex items-baseline justify-between gap-3">
+                            <p className="text-[12.5px] font-semibold">{nameOf(s.repId)}</p>
+                            <span className="text-[12px] text-white/40">{s.score}</span>
+                          </div>
+                          <ul className="mt-0.5 space-y-0.5">
+                            {s.factors.map((f) => (
+                              <li key={f.label} className="text-[11.5px] leading-relaxed text-white/45">
+                                <span className={f.weight < 0 ? 'text-amber-200/70' : 'text-white/60'}>
+                                  {f.weight > 0 ? '+' : ''}
+                                  {f.weight}
+                                </span>{' '}
+                                {f.label} — {f.detail}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))
+                    )}
+                    <p className="text-[11px] leading-relaxed text-white/30">
+                      Assigning needs the door to exist on the server first. Knock it, or sync, and it
+                      becomes assignable.
+                    </p>
+                  </div>
+                )}
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
+      <p className="px-1 text-[11px] leading-relaxed text-white/30">
+        A rep carrying more than {COMFORTABLE_OPEN_ASSIGNMENTS} open doors is marked as stretched rather
+        than simply ranked lower without explanation.
+      </p>
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+
+function TerritoryTab({
+  coverage,
+  hasDoors,
+}: {
+  coverage: ReturnType<typeof territoryCoverage>
+  hasDoors: boolean
+}) {
+  if (coverage.length === 0) {
+    return (
+      <Nothing
+        title="Nothing to measure yet"
+        body="Coverage compares the door list built on this device against knocks on the server. Neither has anything in it."
+      />
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <Card>
+        <p className="text-[12px] leading-relaxed text-white/45">
+          Available doors come from the list built on this device; knocks come from the server. A
+          neighbourhood this phone has never loaded shows nothing available — never as fully covered.
+          {!hasDoors && ' No door list is loaded here right now, so every denominator below is unknown.'}
+        </p>
+      </Card>
+
+      {coverage.map((row) => (
+        <Card key={row.subdivision}>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="truncate text-[13.5px] font-semibold">{row.subdivision}</p>
+            <span className="shrink-0 text-[12px] text-white/40">
+              {row.available > 0 ? pct(row.share) : '—'}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[12px] text-white/45">
+            {row.knocked} knocked
+            {row.available > 0
+              ? ` of ${row.available} on the list`
+              : ' · not on this device’s list, so the total is unknown'}
+            {row.bestScore !== null && ` · best door ${row.bestScore}`}
+          </p>
+          {row.available > 0 && (
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/8">
+              <div
+                className="h-full rounded-full bg-gold-400"
+                style={{ width: `${Math.round(row.share * 100)}%` }}
+              />
+            </div>
+          )}
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+
+function LogTab({
+  rows,
+  nameOf,
+  loading,
+}: {
+  rows: ManagerSnapshot['audit']
+  nameOf: (id: string | null) => string
+  loading: boolean
+}) {
+  if (loading) return <Card><p className="text-[13px] text-white/45">Reading the server…</p></Card>
+  if (rows.length === 0) {
+    return (
+      <Nothing
+        title="No assignment decisions yet"
+        body="Every hand-over and release is recorded here permanently, by the database itself rather than by the app."
+      />
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <Card>
+        <p className="text-[12px] leading-relaxed text-white/45">
+          Written by the database on every assignment change, and not editable by anyone — including an
+          admin. The score shown is the one frozen at the moment the decision was made.
+        </p>
+      </Card>
+      <Card>
+        <ul className="divide-y divide-white/6">
+          {rows.map((row) => (
+            <li key={row.id} className="py-2.5">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="truncate text-[13px] font-semibold">
+                  {row.action === 'assigned' ? 'Assigned' : 'Released'} · {nameOf(row.assignedTo)}
+                </p>
+                <span className="shrink-0 text-[11.5px] text-white/35">{ago(row.occurredAt)}</span>
+              </div>
+              <p className="mt-0.5 truncate text-[12px] text-white/45">
+                {row.address}
+                {row.subdivision ? ` · ${row.subdivision}` : ''} · score {row.scoreAtAssignment}
+              </p>
+              {row.reason && <p className="mt-0.5 text-[11.5px] text-white/35">{row.reason}</p>}
+              <p className="mt-0.5 text-[11px] text-white/25">by {nameOf(row.actor)}</p>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
+  )
+}

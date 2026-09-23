@@ -107,6 +107,17 @@ export default function HomePage() {
 
       <SyncPanel />
 
+      {/* Shown to everyone. What each person can actually see is decided by row
+          level security on the server, not by whether this link is rendered. */}
+      <Link to="/manager" className="block">
+        <Card>
+          <p className="text-[13.5px] font-semibold">Team</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-white/45">
+            Who knocked what, who is out on a route, how doors were handed out and why.
+          </p>
+        </Card>
+      </Link>
+
       {open.length > 0 && (
         <>
           <SectionTitle hint={`${open.length} open`}>IN PROGRESS</SectionTitle>
