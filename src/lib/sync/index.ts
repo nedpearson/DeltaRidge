@@ -14,6 +14,7 @@ import { inspectionResolver } from './resolve'
 import { pushObservation, pushPhoto, pushVoiceNote } from './push'
 import { pushHandoff } from './handoff'
 import { pushLead, pushLeadActivity, pushLeadAttachment } from './leads'
+import { pushRoutePoint, pushRouteSession } from './routes'
 import type { OutboxEntity } from '../db'
 
 export interface SyncResult {
@@ -35,11 +36,15 @@ export interface SyncResult {
 const ORDER: Record<OutboxEntity, number> = {
   inspection: 0,
   lead: 0,
+  // A session before its points, for the same reason a lead comes before its
+  // knocks: a point that arrives first has nothing to belong to.
+  routeSession: 0,
   photo: 1,
   observation: 1,
   voiceNote: 1,
   // After its lead, so a knock never arrives before the door it was at.
   leadActivity: 1,
+  routePoint: 1,
   // After the activity, so the recording can be filed against the knock it
   // was made during rather than floating loose on the lead.
   leadAttachment: 2,
@@ -88,6 +93,8 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
       else if (item.entity === 'lead') await pushLead(item.entityId, orgId, userId)
       else if (item.entity === 'leadActivity') await pushLeadActivity(item.entityId, orgId, userId)
       else if (item.entity === 'leadAttachment') await pushLeadAttachment(item.entityId, orgId, userId)
+      else if (item.entity === 'routeSession') await pushRouteSession(item.entityId, orgId, userId)
+      else if (item.entity === 'routePoint') await pushRoutePoint(item.entityId, orgId, userId)
       await clearOutboxItem(item.id)
       result.pushed += 1
     } catch (err) {

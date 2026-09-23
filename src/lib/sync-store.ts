@@ -56,6 +56,8 @@ export type RemoteEntity =
   | 'leadActivity'
   | 'leadAttachment'
   | 'appointment'
+  | 'routeSession'
+  | 'routePoint'
 
 /**
  * Which organisation's server the map currently describes.

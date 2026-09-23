@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import LeadNotePanel from '@/components/LeadNotePanel'
+import { evidenceFor } from '@/features/routes/knock-evidence'
 import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/components/ui'
 import {
   addEvent,
@@ -130,7 +131,8 @@ export default function LeadPage() {
     async (outcome: DoorOutcome) => {
       if (!lead) return
       const at = new Date().toISOString()
-      const { lead: next, event } = applyOutcome(lead, outcome, at)
+      const gps = await evidenceFor(lead)
+      const { lead: next, event } = applyOutcome(lead, outcome, at, { gps })
       await saveOutcome(next, event)
       await load(lead.id)
     },

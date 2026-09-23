@@ -114,6 +114,17 @@ export type OutboxEntity =
   | 'leadActivity'
   /** A voice note or photo captured while working a lead. */
   | 'leadAttachment'
+  /**
+   * A stretch of door-knocking the rep started and stopped.
+   *
+   * Through this queue and not a separate uploader, deliberately. Route data
+   * looks like telemetry, and telemetry is the kind of thing that gets its own
+   * "simpler" path which silently drops rows on a bad connection — which is the
+   * offline-sync problem the lead layer already has a solution for.
+   */
+  | 'routeSession'
+  /** One GPS fix inside one of those sessions. Never outside one. */
+  | 'routePoint'
 
 export interface OutboxItem {
   id: string

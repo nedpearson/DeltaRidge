@@ -258,6 +258,11 @@ export async function pushLeadActivity(localId: string, orgId: string, userId: s
         body: event.note ?? null,
         occurred_at: event.at,
         recorded_at_location: lead ? pointOrNull(lead.latitude, lead.longitude) : null,
+        // What the phone could say about being there, exactly as it was judged
+        // at the time. Null where the event is not a visit at all.
+        gps_verification: event.gps?.verification ?? null,
+        gps_distance_m: event.gps?.distanceMeters ?? null,
+        gps_accuracy_m: event.gps?.accuracyMeters ?? null,
       },
       { onConflict: 'organization_id,client_id' },
     )

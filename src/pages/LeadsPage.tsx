@@ -6,6 +6,8 @@ import MessagingReadiness from '@/components/MessagingReadiness'
 import { OwnerLine } from '@/components/OwnerLine'
 import PropertyThumbnail from '@/components/PropertyThumbnail'
 import { Button, Card, Empty, Field, SectionTitle, Select } from '@/components/ui'
+import RoutePanel from '@/components/RoutePanel'
+import { evidenceFor } from '@/features/routes/knock-evidence'
 import type { StormCoverage } from '@/features/leads/coverage'
 import {
   DEFAULT_SETTINGS,
@@ -701,8 +703,14 @@ export default function LeadsPage() {
       let inspectionId: string | undefined
       if (outcome === 'inspect_now') inspectionId = await startInspection(door)
 
+      // Asked for here rather than inside applyOutcome, which is pure. A four
+      // second ceiling, and a failure is recorded as "no fix" rather than
+      // holding up the knock.
+      const gps = await evidenceFor(door)
+
       const { lead, event } = applyOutcome(base, outcome, at, {
         ...options,
+        gps,
         ...(inspectionId !== undefined ? { inspectionId } : {}),
       })
       await saveOutcome(lead, event)
@@ -858,6 +866,10 @@ export default function LeadsPage() {
                   ))}
                 </Card>
               )}
+
+              {/* Above the storm panel: a rep decides whether to record before
+                  they start walking, not after they have worked half a street. */}
+              <RoutePanel />
 
               <CoveragePanel coverage={run.coverage} events={run.stormEvents} />
 

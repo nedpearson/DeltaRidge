@@ -260,6 +260,27 @@ export function consentTally(leads: readonly ManagedLead[]): ConsentTally {
   return { total: leads.length, call, sms, email, optedOut, reachableSomehow: reachable }
 }
 
+/**
+ * How well the phone's own position matched the door, at the moment of the
+ * knock.
+ *
+ * Structural rather than imported from the routes feature, so the pipeline —
+ * which every screen depends on — does not gain a dependency on GPS code. The
+ * classification itself lives in `features/routes/verification`.
+ *
+ * Stored on the event and never recomputed. A parcel centroid can be corrected
+ * later and a phone's accuracy cannot be recovered at all, so re-deriving this
+ * months afterwards would silently change the record of what was known at the
+ * time.
+ */
+export interface KnockVerificationRecord {
+  verification: 'verified' | 'probable' | 'unverified' | 'gps_unavailable'
+  /** Centre-to-centre metres. Absent when there was no fix. */
+  distanceMeters?: number
+  /** The device's own accuracy estimate, in metres. */
+  accuracyMeters?: number
+}
+
 export interface ContactEvent {
   id: string
   leadId: string
@@ -267,6 +288,8 @@ export interface ContactEvent {
   kind: ContactKind
   outcome?: DoorOutcome
   note?: string
+  /** Absent on events that are not a visit — a call, a note typed at a desk. */
+  gps?: KnockVerificationRecord
 }
 
 interface OutcomeRule {
@@ -308,6 +331,8 @@ export interface ApplyOptions {
   /** Captured at the door, when somebody actually came to it. */
   contactName?: string
   contactPhone?: string
+  /** What the phone could say about being at this property, if anything. */
+  gps?: KnockVerificationRecord
 }
 
 /**
@@ -376,6 +401,7 @@ export function applyOutcome(
     kind: outcome === 'appointment_set' ? 'appointment_set' : 'door_knock',
     outcome,
     ...(options.note !== undefined && options.note !== '' ? { note: options.note } : {}),
+    ...(options.gps !== undefined ? { gps: options.gps } : {}),
   }
 
   return { lead: next, event }

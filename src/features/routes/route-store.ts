@@ -1,0 +1,173 @@
+import { openDB, type IDBPDatabase } from 'idb'
+import { newId, queueSync } from '@/lib/db'
+import { deviceId } from '@/lib/device'
+
+/**
+ * A rep's own record of when they were working and where they walked.
+ *
+ * Captured through the SAME outbox as knocks, notes, photos and lead statuses,
+ * deliberately and without a shortcut. Route data looks like telemetry, and
+ * telemetry is the kind of thing that gets its own "simpler" uploader which
+ * drops points when the network is bad — which is precisely the offline-sync
+ * problem the lead layer just spent a week fixing. One queue, one retry
+ * schedule, one place to look when something has not arrived.
+ *
+ * The privacy shape is in the data model, not in a policy document:
+ *
+ *   - A point cannot exist without a session, and a session cannot exist
+ *     without the rep having pressed start.
+ *   - `stopSession` is the only thing that closes one. Nothing closes it on the
+ *     rep's behalf, and nothing reopens it.
+ *   - Nothing here is recorded between sessions. There is no code path that
+ *     could, because `recordPoint` refuses without an open session.
+ */
+
+const DB_NAME = 'delta-ridge-routes'
+const SESSIONS = 'sessions'
+const POINTS = 'points'
+
+export interface RouteSession {
+  id: string
+  startedAt: string
+  endedAt?: string
+  /** What the rep called it, if anything. */
+  label?: string
+  /** Why it ended: the rep stopped it, or the app found it left open. */
+  endedReason?: 'stopped' | 'abandoned'
+  deviceId: string
+}
+
+export interface RoutePoint {
+  id: string
+  sessionId: string
+  recordedAt: string
+  latitude: number
+  longitude: number
+  /**
+   * The device's own accuracy estimate, carried through untouched. Every claim
+   * made from this point is bounded by it.
+   */
+  accuracyMeters?: number
+  altitudeMeters?: number
+  speedMps?: number
+  headingDeg?: number
+}
+
+let dbPromise: Promise<IDBPDatabase> | null = null
+
+function getDb(): Promise<IDBPDatabase> {
+  if (!dbPromise) {
+    dbPromise = openDB(DB_NAME, 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(SESSIONS)) {
+          const sessions = db.createObjectStore(SESSIONS, { keyPath: 'id' })
+          sessions.createIndex('by-started', 'startedAt')
+        }
+        if (!db.objectStoreNames.contains(POINTS)) {
+          const points = db.createObjectStore(POINTS, { keyPath: 'id' })
+          points.createIndex('by-session', 'sessionId')
+        }
+      },
+    })
+  }
+  return dbPromise
+}
+
+/** Queueing is best-effort: a failed enqueue must not lose the rep's record. */
+async function queue(entity: 'routeSession' | 'routePoint', id: string): Promise<void> {
+  try {
+    await queueSync(entity, id)
+  } catch {
+    // The session is re-queued when it is stopped, and the sync screen counts
+    // what is actually waiting rather than what was meant to be.
+  }
+}
+
+export async function startSession(at: string, label?: string): Promise<RouteSession> {
+  const session: RouteSession = {
+    id: newId(),
+    startedAt: at,
+    deviceId: deviceId(),
+    ...(label !== undefined && label !== '' ? { label } : {}),
+  }
+  const db = await getDb()
+  await db.put(SESSIONS, session)
+  await queue('routeSession', session.id)
+  return session
+}
+
+export async function stopSession(
+  id: string,
+  at: string,
+  reason: RouteSession['endedReason'] = 'stopped',
+): Promise<RouteSession | null> {
+  const db = await getDb()
+  const existing = (await db.get(SESSIONS, id)) as RouteSession | undefined
+  if (!existing) return null
+  // Already closed: not an error, and not something to overwrite. A rep who
+  // taps stop twice has stopped once.
+  if (existing.endedAt) return existing
+
+  const closed: RouteSession = { ...existing, endedAt: at, endedReason: reason }
+  await db.put(SESSIONS, closed)
+  await queue('routeSession', closed.id)
+  return closed
+}
+
+/** The session currently open on this device, if there is one. */
+export async function openSession(): Promise<RouteSession | null> {
+  const db = await getDb()
+  const all = (await db.getAll(SESSIONS)) as RouteSession[]
+  const open = all.filter((s) => !s.endedAt).sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+  return open[0] ?? null
+}
+
+export async function readSession(id: string): Promise<RouteSession | null> {
+  const db = await getDb()
+  return ((await db.get(SESSIONS, id)) as RouteSession | undefined) ?? null
+}
+
+export async function listSessions(limit = 30): Promise<RouteSession[]> {
+  const db = await getDb()
+  const all = (await db.getAll(SESSIONS)) as RouteSession[]
+  return all.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, limit)
+}
+
+/**
+ * The minimum a point must move, and the minimum time between points, before
+ * one is kept.
+ *
+ * Both exist for the rep's battery and the honesty of the trail. A phone
+ * standing still emits a cloud of jittering fixes; storing them would make a
+ * doorstep conversation look like pacing, and would fill the queue with
+ * hundreds of rows that say nothing.
+ */
+export const MIN_POINT_SPACING_METERS = 12
+export const MIN_POINT_INTERVAL_MS = 15_000
+
+export async function recordPoint(
+  sessionId: string,
+  point: Omit<RoutePoint, 'id' | 'sessionId'>,
+): Promise<RoutePoint | null> {
+  const session = await readSession(sessionId)
+  // The load-bearing refusal. Without it this module could record a rep's
+  // location at any time, and a later caller would eventually do so by mistake.
+  if (!session || session.endedAt) return null
+
+  const row: RoutePoint = { ...point, id: newId(), sessionId }
+  const db = await getDb()
+  await db.put(POINTS, row)
+  await queue('routePoint', row.id)
+  return row
+}
+
+export async function readPoint(id: string): Promise<RoutePoint | null> {
+  const db = await getDb()
+  return ((await db.get(POINTS, id)) as RoutePoint | undefined) ?? null
+}
+
+export async function listPoints(sessionId: string): Promise<RoutePoint[]> {
+  const db = await getDb()
+  const rows = (await db.getAllFromIndex(POINTS, 'by-session', sessionId)) as RoutePoint[]
+  return rows.sort((a, b) => a.recordedAt.localeCompare(b.recordedAt))
+}
