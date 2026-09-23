@@ -1,5 +1,14 @@
 import { getSupabase } from '../supabase'
-import { clearOutboxItem, listDueOutbox, listOutbox, listStalledOutbox, markOutboxError } from '../sync-store'
+import {
+  clearOutboxItem,
+  listDueOutbox,
+  listForeignOutbox,
+  listOutbox,
+  listStalledOutbox,
+  markOutboxError,
+  unblockAuthOutbox,
+} from '../sync-store'
+import { recordDrain } from './meta'
 import { inspectionResolver } from './resolve'
 import { pushObservation, pushPhoto, pushVoiceNote } from './push'
 import { pushHandoff } from './handoff'
@@ -11,6 +20,8 @@ export interface SyncResult {
   failed: number
   /** Items that have stopped retrying on their own and need a human. */
   stalled: number
+  /** Queued on this device by a different sign-in. Never pushed under this one. */
+  foreign: number
   errors: string[]
   skipped: 'offline' | 'no-session' | 'no-membership' | null
 }
@@ -40,13 +51,21 @@ const ORDER: Record<OutboxEntity, number> = {
  * a backoff recorded rather than being silently dropped.
  */
 export async function syncOutbox(orgId: string | null, userId: string | null): Promise<SyncResult> {
-  const result: SyncResult = { pushed: 0, failed: 0, stalled: 0, errors: [], skipped: null }
+  const result: SyncResult = { pushed: 0, failed: 0, stalled: 0, foreign: 0, errors: [], skipped: null }
 
-  if (!navigator.onLine) return { ...result, skipped: 'offline' }
+  // These three return WITHOUT touching the queue on purpose. Being offline,
+  // signed out, or not yet in an organisation are not failures of the work —
+  // recording them as attempts would spend the retry budget on conditions the
+  // rep cannot fix from a driveway, and eventually give up on real doors.
+  if (!navigator.onLine) return { ...result, skipped: 'offline', foreign: await countForeign(userId) }
   if (!userId || !getSupabase()) return { ...result, skipped: 'no-session' }
   if (!orgId) return { ...result, skipped: 'no-membership' }
 
-  const due = await listDueOutbox()
+  // There is a session again, so anything parked on a stale token goes back in
+  // the queue immediately rather than waiting out a backoff it did not earn.
+  await unblockAuthOutbox()
+
+  const due = await listDueOutbox(userId)
   const ordered = [...due].sort((a, b) => ORDER[a.entity] - ORDER[b.entity])
 
   // One resolver per drain: forty photos on one roof resolve the inspection
@@ -75,11 +94,28 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
   }
 
   result.stalled = (await listStalledOutbox()).length
+  result.foreign = await countForeign(userId)
+  recordDrain(result.pushed, result.failed)
   return result
 }
 
+async function countForeign(userId: string | null): Promise<number> {
+  return (await listForeignOutbox(userId)).length
+}
+
 /** Everything still queued, for the UI that has to explain it to a rep. */
-export async function pendingWork(): Promise<{ total: number; stalled: number }> {
-  const [all, stalled] = await Promise.all([listOutbox(), listStalledOutbox()])
-  return { total: all.length, stalled: stalled.length }
+export async function pendingWork(
+  currentUserId: string | null = null,
+): Promise<{ total: number; stalled: number; foreign: number; blocked: number }> {
+  const [all, stalled, foreign] = await Promise.all([
+    listOutbox(),
+    listStalledOutbox(),
+    listForeignOutbox(currentUserId),
+  ])
+  return {
+    total: all.length,
+    stalled: stalled.length,
+    foreign: foreign.length,
+    blocked: all.filter((i) => i.blockedReason === 'auth').length,
+  }
 }

@@ -103,6 +103,15 @@ export interface ManagedLead {
   /** Why it was on the door list, frozen at promotion. */
   reasons: string[]
   status: LeadStatus
+  /**
+   * The office's own word for this lead, as it was last read from the server.
+   *
+   * The door sheet's vocabulary is narrower than the database's: there is no
+   * button for 'sold' or 'proposal_pending' because those are decided after the
+   * estimate, not in a driveway. Keeping the server's word here is what lets a
+   * push refuse to write a display-level status back over a real one.
+   */
+  remoteStatus?: string
   createdAt: string
   updatedAt: string
   contactName?: string

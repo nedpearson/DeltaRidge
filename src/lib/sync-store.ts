@@ -1,5 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb'
-import { MAX_SYNC_ATTEMPTS } from './db'
+import { MAX_SYNC_ATTEMPTS, ownsOutboxItem } from './db'
 import type { LocalInspection, LocalObservation, LocalPhoto, LocalVoiceNote, OutboxItem, SyncState } from './db'
 
 /**
@@ -79,15 +79,38 @@ export async function listOutbox(): Promise<OutboxItem[]> {
  * Whether an item should be attempted on this drain. Pure, so the retry
  * schedule can be tested without a clock or a database.
  */
-export function isDue(item: Pick<OutboxItem, 'givenUp' | 'nextAttemptAt'>, now: number): boolean {
+export function isDue(
+  item: Pick<OutboxItem, 'givenUp' | 'nextAttemptAt' | 'blockedReason'>,
+  now: number,
+): boolean {
   if (item.givenUp) return false
+  // An auth-blocked item is retried immediately once there is a session again,
+  // with no backoff to wait out: the thing that was wrong was the sign-in, and
+  // it has just been fixed.
+  if (item.blockedReason === 'auth') return true
   if (!item.nextAttemptAt) return true
   return new Date(item.nextAttemptAt).getTime() <= now
 }
 
-/** Items due for an attempt now: never given up, and past any backoff. */
-export async function listDueOutbox(now: number = Date.now()): Promise<OutboxItem[]> {
-  return (await listOutbox()).filter((item) => isDue(item, now))
+/**
+ * Items this user may attempt now: theirs, not given up, past any backoff.
+ *
+ * The ownership filter is the load-bearing part. Without it, a rep signing in
+ * on a colleague's phone drains the colleague's queue under their own account,
+ * and every one of those doors lands in the wrong rep's numbers.
+ */
+export async function listDueOutbox(
+  currentUserId: string | null,
+  now: number = Date.now(),
+): Promise<OutboxItem[]> {
+  return (await listOutbox()).filter(
+    (item) => ownsOutboxItem(item, currentUserId) && isDue(item, now),
+  )
+}
+
+/** Work on this device that belongs to a different sign-in. Never pushed. */
+export async function listForeignOutbox(currentUserId: string | null): Promise<OutboxItem[]> {
+  return (await listOutbox()).filter((item) => !ownsOutboxItem(item, currentUserId))
 }
 
 /** Items that stopped retrying on their own and need the rep to see them. */
@@ -109,18 +132,67 @@ export function backoffDelayMs(attempts: number): number {
   return Math.min(base, 300_000)
 }
 
+/**
+ * Errors the retry budget must not be spent on.
+ *
+ * An expired or missing token is not six failures followed by permanent
+ * surrender; it is one sign-in away. Counting it as a failure is how a day of
+ * real field work reaches `givenUp` while the rep is doing nothing wrong and
+ * sees nothing to fix.
+ *
+ * Matched on the wire text because Supabase surfaces these as ordinary request
+ * errors rather than a typed code. Deliberately narrow: anything not clearly
+ * about authentication is treated as a normal failure and does consume an
+ * attempt, because silently exempting unknown errors would let a genuinely
+ * broken item retry forever.
+ */
+export function isAuthError(message: string): boolean {
+  const m = message.toLowerCase()
+  return (
+    m.includes('jwt') ||
+    m.includes('token') ||
+    m.includes('not authenticated') ||
+    m.includes('unauthorized') ||
+    m.includes('401') ||
+    m.includes('invalid claim') ||
+    m.includes('session')
+  )
+}
+
 export async function markOutboxError(id: string, message: string, now: number = Date.now()): Promise<void> {
   const db = await getCaptureDb()
   const item = (await db.get('outbox', id)) as OutboxItem | undefined
   if (!item) return
+
+  if (isAuthError(message)) {
+    // Recorded, shown, and left with its attempt count untouched.
+    await db.put('outbox', { ...item, lastError: message, blockedReason: 'auth' })
+    return
+  }
+
   const attempts = item.attempts + 1
-  await db.put('outbox', {
+  const next: OutboxItem = {
     ...item,
     attempts,
     lastError: message,
     nextAttemptAt: new Date(now + backoffDelayMs(attempts)).toISOString(),
     givenUp: attempts >= MAX_SYNC_ATTEMPTS,
-  })
+  }
+  delete next.blockedReason
+  await db.put('outbox', next)
+}
+
+/** Clears the auth block once a session exists again, without touching attempts. */
+export async function unblockAuthOutbox(): Promise<number> {
+  const db = await getCaptureDb()
+  const blocked = (await listOutbox()).filter((i) => i.blockedReason === 'auth')
+  for (const item of blocked) {
+    const revived: OutboxItem = { ...item }
+    delete revived.blockedReason
+    delete revived.nextAttemptAt
+    await db.put('outbox', revived)
+  }
+  return blocked.length
 }
 
 /**
@@ -135,9 +207,10 @@ export async function retryStalledOutbox(): Promise<number> {
   const stalled = (await listOutbox()).filter((i) => i.givenUp)
   for (const item of stalled) {
     const revived: OutboxItem = { ...item, attempts: 0 }
-    // Written back without the two fields that hold it out of the queue.
+    // Written back without the fields that hold it out of the queue.
     delete revived.nextAttemptAt
     delete revived.givenUp
+    delete revived.blockedReason
     await db.put('outbox', revived)
   }
   return stalled.length

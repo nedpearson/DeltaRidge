@@ -2,6 +2,7 @@ import { readAttachment, readEvent, readLead } from '@/features/leads/lead-store
 import type { ContactKind, LeadStatus, ManagedLead } from '@/features/leads/pipeline'
 import { getSupabase } from '../supabase'
 import { getRemoteId, setRemoteId } from '../sync-store'
+import { TERMINAL_REMOTE_STATUSES } from './pull'
 import { ensurePropertyFor, pointOrNull } from './resolve'
 
 /**
@@ -122,6 +123,18 @@ export async function pushLead(localId: string, orgId: string, userId: string): 
   const propertyId = await ensurePropertyFor(propertySeed(lead), orgId)
   const customerId = await ensureLeadCustomer(lead, orgId)
 
+  /**
+   * A lead the office has already closed out is not the door sheet's to reopen.
+   *
+   * The two vocabularies are different sizes. A rep's phone can only say
+   * 'inspected' about a lead the office has marked 'sold', because there is no
+   * sold button at a door — so pushing the mapped status back would silently
+   * walk a sold job back to inspected, and nobody would ever know which of the
+   * two was true. The rest of the row still goes up; only the status is left
+   * to the system that owns it.
+   */
+  const officeOwnsStatus = lead.remoteStatus ? TERMINAL_REMOTE_STATUSES.has(lead.remoteStatus) : false
+
   const { data, error } = await supabase
     .from('leads')
     .upsert(
@@ -131,7 +144,7 @@ export async function pushLead(localId: string, orgId: string, userId: string): 
         property_id: propertyId,
         customer_id: customerId,
         assigned_to: userId,
-        status: remoteLeadStatus(lead.status),
+        ...(officeOwnsStatus ? {} : { status: remoteLeadStatus(lead.status) }),
         opportunity_score: lead.score,
         score_computed_at: lead.createdAt,
         first_contacted_at: lead.knockCount > 0 ? lead.createdAt : null,
@@ -266,7 +279,30 @@ export async function pushLeadAttachment(localId: string, orgId: string, userId:
 
   const leadId =
     (await getRemoteId('lead', attachment.leadId)) ?? (await pushLead(attachment.leadId, orgId, userId))
-  const activityId = await getRemoteId('leadActivity', attachment.eventId)
+
+  /**
+   * The knock this was taken during, pushed first if it has not been.
+   *
+   * Previously this read the id map and accepted `null` when the activity had
+   * not synced yet — the attachment row was written with `activity_id = null`
+   * and the outbox item was cleared on success, so the link between the photo
+   * and the knock it documents was lost permanently and silently. A photo that
+   * cannot be tied to the door event it came from is not evidence of anything.
+   *
+   * Pushing the activity here rather than relying on queue order is the same
+   * shape as the lead resolution above, and it survives the case that broke it:
+   * an attachment draining in a batch where its activity failed or was never
+   * queued.
+   */
+  let activityId: string | null = null
+  if (attachment.eventId) {
+    activityId = await getRemoteId('leadActivity', attachment.eventId)
+    if (!activityId) {
+      await pushLeadActivity(attachment.eventId, orgId, userId)
+      activityId = await getRemoteId('leadActivity', attachment.eventId)
+      if (!activityId) throw new Error('the knock this was taken during has not synced yet')
+    }
+  }
 
   const path = attachmentPath(orgId, leadId, attachment.id, attachment.kind)
   const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, attachment.blob, {

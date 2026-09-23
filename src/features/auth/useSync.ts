@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { pendingWork, syncOutbox, type SyncResult } from '@/lib/sync/index'
+import { pullLeads, type PullResult } from '@/lib/sync/pull'
 import { listStalledOutbox, retryStalledOutbox } from '@/lib/sync-store'
 import type { OutboxItem } from '@/lib/db'
 import { useSession } from './session'
@@ -17,28 +18,55 @@ import { useSession } from './session'
  * error and a manual retry rather than being left to a background loop nobody
  * can see.
  */
+/** How often a background drain is also allowed to read the server back. */
+const PULL_INTERVAL_MS = 120_000
+
 export function useSync() {
   const { session, membership } = useSession()
   const [pending, setPending] = useState(0)
+  const [foreign, setForeign] = useState(0)
+  const [blocked, setBlocked] = useState(0)
   const [stalled, setStalled] = useState<OutboxItem[]>([])
   const [last, setLast] = useState<SyncResult | null>(null)
+  const [lastPull, setLastPull] = useState<PullResult | null>(null)
+  const lastPullAt = useRef(0)
   const [running, setRunning] = useState(false)
   const inFlight = useRef(false)
 
+  const userId = session?.user.id ?? null
+
   const refreshPending = useCallback(() => {
-    void pendingWork()
-      .then(({ total }) => setPending(total))
+    void pendingWork(userId)
+      .then(({ total, foreign: f, blocked: b }) => {
+        setPending(total)
+        setForeign(f)
+        setBlocked(b)
+      })
       .catch(() => undefined)
     void listStalledOutbox().then(setStalled).catch(() => undefined)
-  }, [])
+  }, [userId])
 
   const run = useCallback(async () => {
     if (inFlight.current) return
     inFlight.current = true
     setRunning(true)
     try {
-      const result = await syncOutbox(membership?.organizationId ?? null, session?.user.id ?? null)
+      const orgId = membership?.organizationId ?? null
+      const uid = session?.user.id ?? null
+      // Push first, always. The device's unsent work is the newer story, and
+      // pulling before pushing would compare a local row against a server row
+      // that does not yet know about the knock sitting in the queue.
+      const result = await syncOutbox(orgId, uid)
       setLast(result)
+
+      // Throttled separately from the push. A drain is cheap and runs every
+      // 30 seconds; a pull reads the organisation's whole pipeline, and doing
+      // that twice a minute on a phone with one bar is how an app becomes the
+      // reason the battery died.
+      if (orgId && uid && Date.now() - lastPullAt.current > PULL_INTERVAL_MS) {
+        lastPullAt.current = Date.now()
+        setLastPull(await pullLeads(orgId, uid))
+      }
     } finally {
       inFlight.current = false
       setRunning(false)
@@ -67,5 +95,24 @@ export function useSync() {
     }
   }, [run, refreshPending, session, membership])
 
-  return { pending, stalled, last, running, syncNow: run, retryFailed }
+  /** Forces a pull now, for the diagnostics screen's explicit button. */
+  const pullNow = useCallback(async () => {
+    const orgId = membership?.organizationId ?? null
+    const uid = session?.user.id ?? null
+    lastPullAt.current = Date.now()
+    setLastPull(await pullLeads(orgId, uid))
+  }, [membership, session])
+
+  return {
+    pending,
+    stalled,
+    foreign,
+    blocked,
+    last,
+    lastPull,
+    running,
+    syncNow: run,
+    pullNow,
+    retryFailed,
+  }
 }

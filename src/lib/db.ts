@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
+import { deviceId } from './device'
 import type { PhotoCategory } from '@/features/inspections/photo-categories'
 
 /**
@@ -123,6 +124,37 @@ export interface OutboxItem {
   attempts: number
   lastError?: string
   /**
+   * Who was signed in when this was captured, and where.
+   *
+   * These three exist to answer a question the queue previously could not:
+   * whose work is this? A field phone gets handed between reps, a shift ends
+   * with a sign-out, a token expires halfway down a street. An anonymous queue
+   * drained by whoever signs in next files one rep's doors under another rep's
+   * name — which then flows into their numbers, their commission and their
+   * performance review.
+   *
+   * `userId` is null when nothing was signed in at capture time. That work
+   * belongs to the device and is claimed by the next person to sign in ON THIS
+   * DEVICE, because that is who knocked the door. Work captured under a
+   * DIFFERENT user is never pushed under the current one — it is held and
+   * shown. See `ownsOutboxItem`.
+   *
+   * Undefined, rather than null, means the item predates this field. Those are
+   * treated as claimable: they were queued before the app could tell, and the
+   * only device they can be on is this one.
+   */
+  userId?: string | null
+  orgId?: string | null
+  deviceId?: string
+  /**
+   * Set when the server refused for a reason no retry can fix on its own —
+   * today that means authentication. Held separately from `lastError` because
+   * it must NOT consume an attempt: a token that expired mid-street is not six
+   * failures, it is one sign-in away, and burning the retry budget on it is how
+   * a day of real field work reaches `givenUp` and stops trying.
+   */
+  blockedReason?: 'auth'
+  /**
    * Earliest time this item should be attempted again. Absent means "now".
    *
    * Without this, a permanently failing item — a photo whose inspection was
@@ -141,6 +173,43 @@ export interface OutboxItem {
 
 /** Attempts before an item stops retrying on its own and asks for a human. */
 export const MAX_SYNC_ATTEMPTS = 6
+
+/**
+ * What the queue is doing with one item, in words a person can act on.
+ *
+ * Derived rather than stored. The underlying state is already fully described
+ * by attempts, backoff, the blocked reason and the give-up flag; storing a
+ * status alongside them would create a second source of truth that can
+ * disagree with the first.
+ */
+export type OutboxStatus = 'pending' | 'retry' | 'blocked_auth' | 'not_yours' | 'failed'
+
+export function outboxStatus(
+  item: OutboxItem,
+  currentUserId: string | null,
+  now: number = Date.now(),
+): OutboxStatus {
+  if (item.givenUp) return 'failed'
+  if (!ownsOutboxItem(item, currentUserId)) return 'not_yours'
+  if (item.blockedReason === 'auth') return 'blocked_auth'
+  if (item.nextAttemptAt && new Date(item.nextAttemptAt).getTime() > now) return 'retry'
+  return 'pending'
+}
+
+/**
+ * Whether the signed-in user may push this item.
+ *
+ * Unowned work (queued while signed out, or queued before the app recorded an
+ * owner) is claimable by whoever signs in on this device — they are the person
+ * who did it. Work captured under another account is not claimable by anyone,
+ * ever, including an admin: it stays on the device, visible and counted, until
+ * its own rep signs back in.
+ */
+export function ownsOutboxItem(item: OutboxItem, currentUserId: string | null): boolean {
+  if (!currentUserId) return false
+  if (item.userId === undefined || item.userId === null) return true
+  return item.userId === currentUserId
+}
 
 interface DeltaRidgeDB extends DBSchema {
   inspections: { key: string; value: LocalInspection; indexes: { 'by-updated': string } }
@@ -201,6 +270,7 @@ async function enqueue(
   entityId: string,
 ): Promise<void> {
   const existing = await db.get('outbox', `${entity}:${entityId}`)
+  const owner = currentOwner()
   await db.put('outbox', {
     id: `${entity}:${entityId}`,
     entity,
@@ -208,7 +278,40 @@ async function enqueue(
     op: 'upsert',
     queuedAt: existing?.queuedAt ?? new Date().toISOString(),
     attempts: 0,
+    // Ownership is stamped on FIRST capture and never reassigned by a later
+    // edit. Otherwise a second rep opening the same lead to fix a typo would
+    // quietly take ownership of the first rep's knock.
+    userId: existing?.userId !== undefined ? existing.userId : owner.userId,
+    orgId: existing?.orgId !== undefined ? existing.orgId : owner.orgId,
+    deviceId: existing?.deviceId ?? deviceId(),
   })
+}
+
+/**
+ * Who is signed in right now, for stamping onto a new queue item.
+ *
+ * A module-level hook rather than a parameter on every save call. `queueSync`
+ * is called from a dozen places — a knock, a note, a photo, a status change —
+ * and threading the session through all of them would mean any future caller
+ * that forgot it would silently queue unowned work.
+ */
+let ownerHook: () => { userId: string | null; orgId: string | null } = () => ({
+  userId: null,
+  orgId: null,
+})
+
+export function setOutboxOwnerSource(
+  fn: () => { userId: string | null; orgId: string | null },
+): void {
+  ownerHook = fn
+}
+
+function currentOwner(): { userId: string | null; orgId: string | null } {
+  try {
+    return ownerHook()
+  } catch {
+    return { userId: null, orgId: null }
+  }
 }
 
 /**

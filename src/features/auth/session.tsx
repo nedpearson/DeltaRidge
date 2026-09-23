@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { setOutboxOwnerSource } from '@/lib/db'
 import { getSupabase } from '@/lib/supabase'
 
 export interface Membership {
@@ -104,6 +105,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await supabase?.auth.signOut()
     setMembership(null)
   }, [supabase])
+
+  /**
+   * Tells the outbox who is signed in, so every newly queued item is stamped
+   * with its owner at capture time.
+   *
+   * A hook rather than a parameter on every save call: `queueSync` is called
+   * from a dozen places — a knock, a note, a photo, a status change — and
+   * threading the session through all of them means any future caller that
+   * forgets it queues anonymous work that the next sign-in inherits.
+   */
+  useEffect(() => {
+    setOutboxOwnerSource(() => ({
+      userId: session?.user.id ?? null,
+      orgId: membership?.organizationId ?? null,
+    }))
+  }, [session, membership])
 
   const value = useMemo<SessionState>(
     () => ({

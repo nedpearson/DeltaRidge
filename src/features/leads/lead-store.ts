@@ -183,6 +183,26 @@ export async function saveLead(lead: ManagedLead): Promise<void> {
   await queue(lead)
 }
 
+/**
+ * Writes a lead that came FROM the server, without queueing it back.
+ *
+ * The distinction matters: `saveLead` means "the rep changed this, tell the
+ * office". This means "the office already knows". Routing a pulled row through
+ * the normal save would enqueue a push of the row that was just received, which
+ * at best wastes a request and at worst writes a stale local view back over a
+ * newer server one.
+ */
+export async function saveLeadFromServer(lead: ManagedLead): Promise<void> {
+  const db = await getCrmDb()
+  await db.put(LEADS, lead)
+}
+
+/** As above, for a knock that was recorded on another device. */
+export async function saveEventFromServer(event: ContactEvent): Promise<void> {
+  const db = await getCrmDb()
+  await db.put(EVENTS, event)
+}
+
 export async function addEvent(event: ContactEvent): Promise<void> {
   const db = await getCrmDb()
   await db.put(EVENTS, event)
