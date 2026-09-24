@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button, Card, SectionTitle } from '@/components/ui'
 import { useRouteTracking } from '@/features/routes/useRouteTracking'
 import { pausedSeconds } from '@/features/routes/route-store'
@@ -305,6 +306,13 @@ export default function RoutePanel() {
           <Button variant="gold" full className="mt-3" disabled={starting} onClick={() => void start()}>
             {starting ? 'Starting…' : 'Start route'}
           </Button>
+          {/* The only way into history. A route nobody can reopen was not worth recording. */}
+          <Link
+            to="/routes"
+            className="mt-3 block text-center text-[12px] text-white/45 underline underline-offset-2"
+          >
+            Past routes
+          </Link>
         </Card>
       </>
     )

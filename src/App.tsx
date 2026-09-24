@@ -12,6 +12,7 @@ import EstimatePage from '@/pages/EstimatePage'
 import CostBookPage from '@/pages/CostBookPage'
 import DiagnosticsPage from '@/pages/DiagnosticsPage'
 import ManagerPage from '@/pages/ManagerPage'
+import RouteHistoryPage from '@/pages/RouteHistoryPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import { SessionProvider } from '@/features/auth/session'
 import { useSync } from '@/features/auth/useSync'
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/costs" element={<CostBookPage />} />
           <Route path="/diagnostics" element={<DiagnosticsPage />} />
           <Route path="/manager" element={<ManagerPage />} />
+          <Route path="/routes" element={<RouteHistoryPage />} />
           <Route path="/inspections" element={<InspectionsPage />} />
           <Route path="/new" element={<NewInspectionPage />} />
           <Route path="/inspection/:id" element={<InspectionPage />} />
