@@ -123,14 +123,14 @@ describe('the frame has to hold a house in BOTH directions', () => {
   })
 
   it('holds a whole roof once the aspect is fixed instead of the height', () => {
-    // 5:2 on the card, 5:3 in the viewer. Both leave room around a 15 m house.
-    expect(tallSpan(HOUSE_SPAN_METRES, 5, 2)).toBeGreaterThan(24)
-    expect(tallSpan(HOUSE_SPAN_METRES, 5, 3)).toBeGreaterThan(40)
+    // 2:1 on the card, 3:2 in the viewer. Both leave room around a 15 m house.
+    expect(tallSpan(HOUSE_SPAN_METRES, 2, 1)).toBeGreaterThan(30)
+    expect(tallSpan(HOUSE_SPAN_METRES, 3, 2)).toBeGreaterThan(44)
   })
 
   it('means the same thing at every element width, which a pixel height did not', () => {
     for (const width of [320, 608, 1200]) {
-      expect(tallSpan(HOUSE_SPAN_METRES, 5, 2)).toBeCloseTo(28, 6)
+      expect(tallSpan(HOUSE_SPAN_METRES, 2, 1)).toBeCloseTo(35, 6)
       // The point: nothing above depends on `width` at all any more.
       expect(width).toBeGreaterThan(0)
     }
@@ -152,10 +152,34 @@ describe('framing the lot the parish recorded', () => {
   it('frames the lot rather than a fixed distance around its centroid', () => {
     const framed = parcelFrame(DEEP, { width: 608, height: 243 })
     expect(framed).not.toBeNull()
-    // The frame has to hold the whole lot, which is 120 m deep — a 70 m frame
-    // centred on the centroid would cut off both the house and the back fence.
     const heightMetres = metresPerPixel(30.4005, framed!.view.zoom) * 243
+    // It has to hold the whole 120 m lot — a 70 m frame centred on the centroid
+    // would cut off both the house and the back fence...
     expect(heightMetres).toBeGreaterThan(120)
+    // ...and it has to STOP there. This is the assertion that was missing the
+    // first time: `padBounds` defaults to a 440 m floor, which inflated every
+    // suburban lot to half a subdivision with a small box in the middle. The
+    // test passed anyway, because 440 is also greater than 120.
+    expect(heightMetres).toBeLessThan(200)
+  })
+
+  it('does not inflate a small lot to the default padding floor', () => {
+    // 20 m x 20 m: about the tightest a real parcel gets.
+    const TINY: ReadonlyArray<readonly [number, number]> = [
+      [-91.1, 30.4],
+      [-91.099792, 30.4],
+      [-91.099792, 30.40018],
+      [-91.1, 30.40018],
+      [-91.1, 30.4],
+    ]
+    const framed = parcelFrame(TINY, { width: 608, height: 304 })
+    const heightMetres = metresPerPixel(30.4, framed!.view.zoom) * 304
+    // `padBounds` defaults to a 440 m floor. With it, this 20 m lot came back in
+    // a frame over a kilometre across — half a subdivision with a small orange
+    // box somewhere in the middle, which is what Ned's screenshot showed.
+    expect(heightMetres).toBeLessThan(90)
+    // The lot has to be a real part of the picture, not a speck in it.
+    expect(20 / heightMetres).toBeGreaterThan(0.25)
   })
 
   it('sizes itself to the lot, so a narrow lot and a big block differ', () => {

@@ -19,7 +19,7 @@ import { project } from '@/features/leads/map-projection'
  * edges.
  *
  * So: the frame is asked for as a width of GROUND, the element measures itself,
- * and its aspect is fixed at 5:2 rather than its height. "One house and its
+ * and its aspect is fixed at 2:1 rather than its height. "One house and its
  * neighbours" now means the same thing on a phone and on a desktop, the roof
  * fits vertically, and the subject is always dead centre.
  *
@@ -37,7 +37,7 @@ export default function PropertyThumbnail({
   longitude,
   boundary,
   alt,
-  className = 'aspect-[5/2] max-h-56',
+  className = 'aspect-[2/1] max-h-64',
   /** Tapping the image opens a bigger, zoomable view of the same roof. */
   onOpen,
 }: {

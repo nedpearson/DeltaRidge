@@ -50,7 +50,7 @@ export default function RoofView({
    * roof rather than a roof. Fixing the ratio keeps both dimensions about one
    * house whatever the element is.
    */
-  aspect = 5 / 3,
+  aspect = 3 / 2,
   /** Where the zoom starts, as an index into SPAN_STEPS_METRES. */
   initialStep = DEFAULT_STEP < 0 ? 2 : DEFAULT_STEP,
   onClose,

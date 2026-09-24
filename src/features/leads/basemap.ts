@@ -193,6 +193,13 @@ export function propertyImageUrl(
  *
  * `zoomOut` widens the frame for the viewer's zoom control: 1 is the lot,
  * higher numbers are more of the street.
+ *
+ * One consequence worth knowing rather than hiding: a lot is roughly square and
+ * a card is not, so fitting the lot means the frame overshoots on the long
+ * axis. A 20-metre lot in a 2:1 card comes with about 120 metres of street
+ * across. That is the price of showing the whole lot, and the reason the card's
+ * aspect is 2:1 rather than the 2.5:1 it started at — every extra bit of width
+ * is street nobody asked for.
  */
 export function parcelFrame(
   boundary: ReadonlyArray<readonly [number, number]>,
@@ -210,7 +217,14 @@ export function parcelFrame(
 
   // A little air around the lot so the boundary is not flush with the edge,
   // then whatever the zoom control has asked for on top.
-  const view = viewForBounds(padBounds(bounds, 0.18), size)
+  //
+  // The minimum has to be passed explicitly. `padBounds` defaults to 0.004° —
+  // about 440 metres — which is a sensible floor for a cloud of 150 doors and
+  // catastrophic for one lot: every parcel smaller than 440 m got inflated to
+  // 440 m, so a card meant to show one house showed half a subdivision with a
+  // small orange box in the middle of it. 0.0004° is about 44 m, which only
+  // ever matters for a ring so small it would otherwise scale to infinity.
+  const view = viewForBounds(padBounds(bounds, 0.12, 0.0004), size)
   const widened: View = { center: view.center, zoom: view.zoom - Math.log2(Math.max(1, zoomOut)) }
   return { view: widened, url: basemapUrl(widened, size, 'satellite') }
 }
