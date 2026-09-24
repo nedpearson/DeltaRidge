@@ -9,7 +9,13 @@ import {
   rateLabel,
   FUNNEL_LABEL,
 } from '@/features/routes/recap'
-import { eventsBetween } from '@/features/leads/lead-store'
+import {
+  groupOpenItems,
+  openItems as buildOpenItems,
+  type OpenItem,
+} from '@/features/routes/open-items'
+import { eventsBetween, readLeads } from '@/features/leads/lead-store'
+import { listInspections } from '@/lib/db'
 import { unsyncedPointCount } from '@/lib/sync/routes'
 
 /**
@@ -66,8 +72,16 @@ export default function RoutePanel() {
     // funnel from the same events the totals came from, rather than from a
     // second read that could disagree with them.
     events: DoorEvent[]
+    open: OpenItem[]
   } | null>(null)
   const [counts, setCounts] = useState<LiveCounts>(EMPTY_COUNTS)
+  /**
+   * What is still open, read when the rep reaches for End route.
+   *
+   * Null means not looked at yet, which is what the button press changes. It is
+   * shown to inform the decision and never to block it - see the buttons below.
+   */
+  const [pendingOpen, setPendingOpen] = useState<OpenItem[] | null>(null)
 
   const readCounts = useCallback(async (): Promise<{ counts: LiveCounts; events: DoorEvent[] }> => {
     if (!session) return { counts: EMPTY_COUNTS, events: [] }
@@ -108,6 +122,37 @@ export default function RoutePanel() {
     }
   }, [session, readCounts])
 
+  /**
+   * Reads what is still open against the doors this route touched.
+   *
+   * Never throws. If leads or inspections cannot be read, the rep gets an empty
+   * list and ends their route - a failed read must not become a screen that
+   * stands between somebody and going home.
+   */
+  const readOpen = useCallback(
+    async (events: readonly DoorEvent[], at: string): Promise<OpenItem[]> => {
+      try {
+        const [leads, inspections] = await Promise.all([readLeads(), listInspections()])
+        return buildOpenItems({
+          leads,
+          events,
+          inspections: inspections.map((i) => ({ id: i.id, status: i.status })),
+          now: at,
+        })
+      } catch {
+        return []
+      }
+    },
+    [],
+  )
+
+  const askToStop = async () => {
+    setConfirmStop(true)
+    if (!session) return
+    const { events } = await readCounts()
+    setPendingOpen(await readOpen(events, new Date().toISOString()))
+  }
+
   const end = async () => {
     if (!session) return
     const { counts: finalCounts, events } = await readCounts()
@@ -119,7 +164,12 @@ export default function RoutePanel() {
       stats: routeStats({ ...session, endedAt: at }, points, events),
       counts: finalCounts,
       events,
+      // Read again at the closing instant rather than reusing what the confirm
+      // screen showed: the rep may have gone and fixed something, and the
+      // report should say what is true now, not what was true a minute ago.
+      open: pendingOpen !== null ? await readOpen(events, at) : [],
     })
+    setPendingOpen(null)
     await stop()
   }
 
@@ -207,6 +257,32 @@ export default function RoutePanel() {
             )}
           </div>
 
+          {/*
+            The part of this screen actually worth reading. Everything above
+            says what happened; this says what will not happen unless somebody
+            does it. Named records only - never a judgement about the rep.
+          */}
+          {summary.open.length > 0 && (
+            <div className="mt-4 border-t border-white/8 pt-3">
+              <p className="text-[11px] uppercase tracking-wider text-amber-200/60">
+                Still open · {summary.open.length}
+              </p>
+              <ul className="mt-2 space-y-2">
+                {groupOpenItems(summary.open).map((group) => (
+                  <li key={group.kind}>
+                    <p className="text-[11.5px] text-white/50">{group.label}</p>
+                    {group.items.map((item) => (
+                      <p key={item.leadId} className="truncate text-[12.5px] text-white/80">
+                        {item.address}
+                        <span className="text-white/35"> — {item.detail}</span>
+                      </p>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <Button variant="gold" full className="mt-3" onClick={() => setSummary(null)}>
             Done
           </Button>
@@ -267,8 +343,51 @@ export default function RoutePanel() {
         {problem && <p className="mt-2 text-[12px] leading-relaxed text-amber-200/80">{problem}</p>}
 
         {confirmStop ? (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Button variant="secondary" onClick={() => setConfirmStop(false)}>
+          <div className="mt-3">
+            {/*
+              Shown to inform the decision, never to gate it. The End route
+              button below is always enabled - a rep standing in the rain at
+              5pm gets to go home, and software that argues with them about it
+              teaches them to stop starting routes at all.
+            */}
+            {pendingOpen !== null && pendingOpen.length > 0 && (
+              <div className="mb-3 rounded-lg border border-amber-300/20 bg-amber-300/5 p-3">
+                <p className="text-[12.5px] font-semibold text-amber-100/90">
+                  {pendingOpen.length} still open
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {groupOpenItems(pendingOpen).map((group) => (
+                    <li key={group.kind}>
+                      <p className="text-[11px] uppercase tracking-wider text-amber-200/50">
+                        {group.label} · {group.items.length}
+                      </p>
+                      {group.items.slice(0, 3).map((item) => (
+                        <p key={item.leadId} className="truncate text-[12px] text-white/65">
+                          {item.address}
+                        </p>
+                      ))}
+                      {group.items.length > 3 && (
+                        <p className="text-[11.5px] text-white/35">
+                          and {group.items.length - 3} more
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[11.5px] leading-relaxed text-white/40">
+                  These are on the summary after you end, and they stay on the doors. Ending the
+                  route does not lose them.
+                </p>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setConfirmStop(false)
+                setPendingOpen(null)
+              }}
+            >
               Keep going
             </Button>
             <Button
@@ -280,13 +399,14 @@ export default function RoutePanel() {
             >
               End route
             </Button>
+            </div>
           </div>
         ) : (
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Button variant="secondary" onClick={() => void (paused ? resume() : pause())}>
               {paused ? 'Resume' : 'Pause'}
             </Button>
-            <Button variant="secondary" onClick={() => setConfirmStop(true)}>
+            <Button variant="secondary" onClick={() => void askToStop()}>
               End route
             </Button>
           </div>
