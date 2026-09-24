@@ -5,6 +5,7 @@ import { evidenceFor } from '@/features/routes/knock-evidence'
 import { mayCallAt } from '@/features/compliance/engine'
 import { ALL_SOLICITATION_RULES } from '@/features/compliance/solicitation'
 import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/components/ui'
+import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
 import {
   addEvent,
   listAttachments,
@@ -594,6 +595,8 @@ export default function LeadPage() {
           </ol>
         </Card>
       )}
+
+      <RoofrPanel leadId={lead.id} />
 
       <SectionTitle>WHY IT WAS ON THE LIST</SectionTitle>
       <Card>

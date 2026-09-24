@@ -5,3 +5,23 @@ project_id = "udrxvpkihkbrudvwggpr"
 
 [db]
 major_version = 17
+
+# -----------------------------------------------------------------------------
+# Edge Functions
+# -----------------------------------------------------------------------------
+# verify_jwt stays TRUE for the Roofr endpoint, which is not the obvious choice
+# and is worth explaining.
+#
+# Turning it off is the usual advice for a webhook, because the sender cannot
+# mint a Supabase JWT. But leaving it on costs nothing here: Zapier sends the
+# publishable anon key as the Authorization bearer, which is already in every
+# copy of the browser bundle and grants nothing on its own, and sends the real
+# credential in x-delta-ridge-token. The gateway check is therefore a free
+# outer layer in front of our own, rather than the thing standing between an
+# anonymous POST and the database.
+#
+# The credential that actually matters is per-organisation, stored only as a
+# SHA-256 hash, and set as an Edge Function secret — never in this file, never
+# in the repo.
+[functions.roofr-events]
+verify_jwt = true

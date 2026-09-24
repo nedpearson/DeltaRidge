@@ -14,5 +14,20 @@
     "tsBuildInfoFile": "./tsconfig.test.tsbuildinfo",
     "types": ["vite/client", "vite-plugin-pwa/client", "vitest/globals"]
   },
-  "include": ["tests", "src"]
+  /*
+   * The Edge Functions' PURE modules are typechecked here too.
+   *
+   * Only `events.ts` and `payload.ts` — never the `index.ts` beside them, which
+   * imports `npm:` specifiers and calls Deno globals that do not exist in this
+   * project's type environment. The pure files hold every decision worth
+   * testing (what a payload means, which lead may be pushed); the index files
+   * hold plumbing. Listing the directory wholesale would make this config fail
+   * on Deno syntax and tempt somebody to delete the line.
+   */
+  "include": [
+    "tests",
+    "src",
+    "supabase/functions/*/events.ts",
+    "supabase/functions/*/payload.ts"
+  ]
 }

@@ -18,6 +18,7 @@ import RoutesTab from '@/features/manager/tabs/RoutesTab'
 import PerformanceTab from '@/features/manager/tabs/PerformanceTab'
 import GradesTab from '@/features/manager/tabs/GradesTab'
 import SettingsTab from '@/features/manager/tabs/SettingsTab'
+import RoofrTab from '@/features/integrations/roofr/RoofrTab'
 import { readGradingConfig } from '@/features/manager/grade-store'
 import { DEFAULT_CONFIG, type GradingConfig } from '@/features/manager/grading'
 import { DEFAULT_WINDOW_DAYS } from '@/features/manager/read'
@@ -60,6 +61,7 @@ type Tab =
   | 'territory'
   | 'log'
   | 'settings'
+  | 'roofr'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'team', label: 'Team' },
@@ -71,6 +73,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'territory', label: 'Territory' },
   { id: 'log', label: 'Log' },
   { id: 'settings', label: 'Settings' },
+  { id: 'roofr', label: 'Roofr' },
 ]
 
 function ago(iso: string | null): string {
@@ -300,6 +303,8 @@ export default function ManagerPage() {
           onSaved={() => void load()}
         />
       )}
+
+      {tab === 'roofr' && <RoofrTab organizationId={orgId} canManage={canManage} />}
 
       {tab === 'leads' && (
         <AssignTab
