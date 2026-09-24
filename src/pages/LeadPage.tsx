@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import LeadNotePanel from '@/components/LeadNotePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
 import { mayCallAt } from '@/features/compliance/engine'
@@ -11,6 +11,7 @@ import IntegrityPanel from '@/features/leads/IntegrityPanel'
 import LeadPropertyIntelligence from '@/features/leads/LeadPropertyIntelligence'
 import LeadContactIdentityPanel from '@/features/contacts/LeadContactIdentityPanel'
 import LeadTimeline from '@/features/leads/LeadTimeline'
+import LeadSectionNav from '@/features/leads/LeadSectionNav'
 import { readLink } from '@/features/integrations/roofr/store'
 import { pendingWork } from '@/lib/sync'
 import {
@@ -79,6 +80,17 @@ const NUMBER_SOURCES: readonly ContactSource[] = [
 
 const CHANNELS: ContactChannel[] = ['call', 'sms', 'email']
 
+const LEAD_SECTIONS = [
+  { id: 'lead-overview', label: 'Overview' },
+  { id: 'lead-contact-identity', label: 'Contact' },
+  { id: 'lead-property-intelligence', label: 'Property' },
+  { id: 'lead-permission', label: 'Permission' },
+  { id: 'lead-field-activity', label: 'Activity' },
+  { id: 'lead-timeline', label: 'Timeline' },
+  { id: 'lead-data-health', label: 'Health' },
+  { id: 'lead-roofr', label: 'Roofr' },
+] as const
+
 function when(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
     month: 'short',
@@ -97,6 +109,7 @@ function toIso(local: string): string | undefined {
 export default function LeadPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { membership } = useSession()
   const [lead, setLead] = useState<ManagedLead | null>(null)
   const [editingNumber, setEditingNumber] = useState(false)
@@ -368,6 +381,11 @@ export default function LeadPage() {
       ? smsBlock.reason
       : null
 
+  const returnTo =
+    typeof (location.state as { returnTo?: unknown } | null)?.returnTo === 'string'
+      ? ((location.state as { returnTo: string }).returnTo)
+      : '/leads'
+
   return (
     <div>
       {/*
@@ -377,6 +395,9 @@ export default function LeadPage() {
         The compliance gates are the same ones as before — this moved the
         buttons, it did not loosen them.
       */}
+      <LeadSectionNav sections={LEAD_SECTIONS} />
+
+      <div id="lead-overview" className="scroll-mt-16">
       <ContactActions
         phone={lead.contactPhone ?? null}
         phoneNote={phoneSource === null ? null : CONTACT_SOURCE_LABEL[phoneSource]}
@@ -429,12 +450,13 @@ export default function LeadPage() {
           </Button>
         </div>
       </div>
+      </div>
 
-      <div id="lead-contact-identity" className="scroll-mt-4">
+      <div id="lead-contact-identity" className="scroll-mt-16">
         <LeadContactIdentityPanel lead={lead} />
       </div>
 
-      <div id="lead-property-intelligence" className="scroll-mt-4">
+      <div id="lead-property-intelligence" className="scroll-mt-16">
         <LeadPropertyIntelligence lead={lead} />
       </div>
 
@@ -560,7 +582,7 @@ export default function LeadPage() {
         )}
       </Card>
 
-      <div id="lead-permission" className="scroll-mt-4">
+      <div id="lead-permission" className="scroll-mt-16">
       <SectionTitle>PERMISSION</SectionTitle>
       <Card>
         {lead.optedOutAt ? (
@@ -607,6 +629,7 @@ export default function LeadPage() {
       </Card>
 
       </div>
+      <div id="lead-field-activity" className="scroll-mt-16">
       <SectionTitle>WHAT HAPPENED</SectionTitle>
       <Card className="grid grid-cols-2 gap-2">
         {QUICK.map((outcome) => (
@@ -621,6 +644,7 @@ export default function LeadPage() {
           Do not knock
         </Button>
       </Card>
+      </div>
 
       <SectionTitle>NEXT VISIT</SectionTitle>
       <Card>
@@ -645,11 +669,13 @@ export default function LeadPage() {
       <SectionTitle>NOTES</SectionTitle>
       <LeadNotePanel leadId={lead.id} onSaved={addNote} />
 
-      <div id="lead-timeline" className="scroll-mt-4">
+      <div id="lead-timeline" className="scroll-mt-16">
         <LeadTimeline leadId={lead.id} history={history} attachments={attachments} />
       </div>
 
-      <DataHealthPanel issues={healthIssues} onFix={fixHealthIssue} />
+      <div id="lead-data-health" className="scroll-mt-16">
+        <DataHealthPanel issues={healthIssues} onFix={fixHealthIssue} />
+      </div>
 
       <IntegrityPanel
         evidence={{
@@ -678,7 +704,7 @@ export default function LeadPage() {
         }}
       />
 
-      <div id="lead-roofr" className="scroll-mt-4">
+      <div id="lead-roofr" className="scroll-mt-16">
         <RoofrPanel leadId={lead.id} />
       </div>
 
@@ -698,8 +724,8 @@ export default function LeadPage() {
         </p>
       </Card>
 
-      <Button variant="ghost" full className="mt-6" onClick={() => navigate('/leads')}>
-        Back to the list
+      <Button variant="ghost" full className="mt-6" onClick={() => navigate(returnTo)}>
+        Back
       </Button>
     </div>
   )
