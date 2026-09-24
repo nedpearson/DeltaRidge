@@ -1,5 +1,5 @@
 import { loadEnv } from '@/lib/env'
-import { boundsOf, padBounds, viewForBounds, zoomForGroundSpan } from './map-projection'
+import { MAX_TILE_ZOOM, boundsOf, padBounds, viewForBounds, zoomForGroundSpan } from './map-projection'
 import type { Size, View } from './map-projection'
 
 /**
@@ -191,8 +191,8 @@ export function propertyImageUrl(
  * fits them — and the caller can draw the boundary on top, which settles which
  * house is the subject without needing the centre to land on the roof.
  *
- * `zoomOut` widens the frame for the viewer's zoom control: 1 is the lot,
- * higher numbers are more of the street.
+ * `zoomOut` moves the frame for the viewer's zoom control: 1 is the lot, higher
+ * is more of the street, below 1 is closer in than the lot.
  *
  * One consequence worth knowing rather than hiding: a lot is roughly square and
  * a card is not, so fitting the lot means the frame overshoots on the long
@@ -225,7 +225,13 @@ export function parcelFrame(
   // small orange box in the middle of it. 0.0004° is about 44 m, which only
   // ever matters for a ring so small it would otherwise scale to infinity.
   const view = viewForBounds(padBounds(bounds, 0.12, 0.0004), size)
-  const widened: View = { center: view.center, zoom: view.zoom - Math.log2(Math.max(1, zoomOut)) }
+  // Below 1 this zooms IN past the lot, which is what a rep wants when they are
+  // counting roof planes rather than finding the driveway. It used to be
+  // clamped at 1, so every zoom step tighter than the lot was a silent no-op:
+  // the button moved, the readout moved, the picture did not.
+  const factor = zoomOut > 0 ? zoomOut : 1
+  const zoom = Math.min(MAX_TILE_ZOOM, view.zoom - Math.log2(factor))
+  const widened: View = { center: view.center, zoom }
   return { view: widened, url: basemapUrl(widened, size, 'satellite') }
 }
 

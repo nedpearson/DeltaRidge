@@ -218,3 +218,42 @@ describe('framing the lot the parish recorded', () => {
     expect(Number.isFinite(framed!.view.center.latitude)).toBe(true)
   })
 })
+
+describe('zooming a lot frame', () => {
+  const LOT: ReadonlyArray<readonly [number, number]> = [
+    [-91.1, 30.4],
+    [-91.09969, 30.4],
+    [-91.09969, 30.40036],
+    [-91.1, 30.40036],
+    [-91.1, 30.4],
+  ]
+  const SIZE = { width: 608, height: 405 }
+
+  it('goes closer in than the lot, not just wider than it', () => {
+    // This was clamped at the lot, so every zoom step tighter than it was a
+    // silent no-op: the button moved, the readout moved, the picture did not.
+    const lot = parcelFrame(LOT, SIZE, 1)!
+    const closer = parcelFrame(LOT, SIZE, 40 / 70)!
+    expect(closer.view.zoom).toBeGreaterThan(lot.view.zoom)
+    expect(closer.view.zoom).toBeCloseTo(lot.view.zoom - Math.log2(40 / 70), 6)
+  })
+
+  it('keeps the centre wherever the zoom goes', () => {
+    const steps = [25 / 70, 1, 340 / 70].map((f) => parcelFrame(LOT, SIZE, f)!)
+    for (const s of steps) {
+      expect(s.view.center.latitude).toBeCloseTo(steps[1]!.view.center.latitude, 9)
+      expect(s.view.center.longitude).toBeCloseTo(steps[1]!.view.center.longitude, 9)
+    }
+  })
+
+  it('stops at what the tiles serve rather than asking for a zoom that has none', () => {
+    const absurd = parcelFrame(LOT, SIZE, 0.0001)!
+    expect(absurd.view.zoom).toBe(MAX_TILE_ZOOM)
+  })
+
+  it('treats a nonsense factor as the lot rather than as infinity', () => {
+    const lot = parcelFrame(LOT, SIZE, 1)!
+    expect(parcelFrame(LOT, SIZE, 0)!.view.zoom).toBeCloseTo(lot.view.zoom, 6)
+    expect(parcelFrame(LOT, SIZE, -3)!.view.zoom).toBeCloseTo(lot.view.zoom, 6)
+  })
+})
