@@ -132,7 +132,10 @@ export default function HealthTab({ organizationId }: { organizationId: string |
     // Not built yet, and listed so the absence is visible rather than implied.
     for (const [key, label, detail] of [
       ['eagleview', 'EagleView', 'Imagery and measurements — not built yet'],
-      ['mrms', 'NOAA MRMS', 'Radar hail estimates — not built yet'],
+      // Gridded MRMS MESH is still not built and still needs a server to decode
+      // GRIB2. Radar-estimated hail itself IS running, from NCEI SWDI's NEXRAD
+      // Level-III detections, which is keyless, CORS-open and needs no server.
+      ['mrms', 'NOAA MRMS grids', 'Gridded MESH — not built; radar hail runs from NCEI SWDI'],
       ['contacts', 'Contact data', 'Needs a business agreement — see Contact data'],
     ] as const) {
       built.push({

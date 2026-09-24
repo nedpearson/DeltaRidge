@@ -80,13 +80,13 @@ describe('coverage reports the sources separately', () => {
   ]
 
   it('counts the current year on its own', () => {
-    const c = buildCoverage(resolveWindow('last_24_months', NOW), events, false)
+    const c = buildCoverage(resolveWindow('last_24_months', NOW), events, [], false)
     expect(c.totalEvents).toBe(4)
     expect(c.currentYearEvents).toBe(2)
   })
 
   it('reports oldest and newest so freshness is visible', () => {
-    const c = buildCoverage(resolveWindow('last_24_months', NOW), events, false)
+    const c = buildCoverage(resolveWindow('last_24_months', NOW), events, [], false)
     expect(c.oldestAt).toBe('2025-03-31T20:00:00Z')
     expect(c.newestAt).toBe('2026-05-08T12:52:00Z')
   })
@@ -103,7 +103,7 @@ describe('coverage reports the sources separately', () => {
    * count, because a blended number reads as completeness.
    */
   it('names radar as not configured instead of blending it in', () => {
-    const c = buildCoverage(resolveWindow('this_year', NOW), events, false)
+    const c = buildCoverage(resolveWindow('this_year', NOW), events, [], false)
     expect(c.radar.kind).toBe('not_configured')
     if (c.radar.kind === 'not_configured') {
       expect(c.radar.why).toContain('MRMS/MESH')
@@ -113,21 +113,48 @@ describe('coverage reports the sources separately', () => {
   })
 
   it('distinguishes a failed feed from genuinely quiet weather', () => {
-    const failed = buildCoverage(resolveWindow('this_year', NOW), [], true)
+    const failed = buildCoverage(resolveWindow('this_year', NOW), [], [], true)
     expect(emptyWindowExplanation(failed)).toContain('not a statement about the weather')
 
-    const quiet = buildCoverage(resolveWindow('this_year', NOW), [], false)
+    const quiet = buildCoverage(resolveWindow('this_year', NOW), [], [], false)
     expect(emptyWindowExplanation(quiet)).toContain('No official hail reports')
     expect(emptyWindowExplanation(quiet)).toContain('would not appear here')
   })
 
   it('carries an explicit radar status when one is supplied', () => {
-    const c = buildCoverage(resolveWindow('this_year', NOW), events, false, {
+    const c = buildCoverage(resolveWindow('this_year', NOW), events, [], false, {
       kind: 'live',
       newestAt: '2026-09-20T14:00:00Z',
       count: 11,
     })
     expect(c.radar.kind).toBe('live')
+  })
+
+  /**
+   * The counterpart to the blending test above, now that radar actually runs.
+   * The official row has to keep counting official reports only, and its
+   * "most recent" has to stay a date somebody actually reported something on.
+   */
+  it('keeps the official count and its newest date free of radar', () => {
+    const radar = [
+      { ...event('2026-09-20T22:10:00Z', 1.5), observation: 'radar_estimate' as const },
+      { ...event('2026-09-21T01:00:00Z', 2), observation: 'radar_estimate' as const },
+    ]
+    const c = buildCoverage(resolveWindow('last_24_months', NOW), events, radar, false, {
+      kind: 'live',
+      newestAt: '2026-09-21T01:00:00Z',
+      count: radar.length,
+    })
+
+    expect(c.official.kind).toBe('live')
+    if (c.official.kind === 'live') {
+      expect(c.official.count).toBe(4)
+      expect(c.official.newestAt).toBe('2026-05-08T12:52:00Z')
+    }
+    expect(c.radar.kind).toBe('live')
+    if (c.radar.kind === 'live') expect(c.radar.count).toBe(2)
+    // The combined figure is allowed to be combined — it is the list length.
+    expect(c.totalEvents).toBe(6)
   })
 
   it('never claims radar coverage by default', () => {

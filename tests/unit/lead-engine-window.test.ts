@@ -21,6 +21,17 @@ function capturingFetch(): Capture {
   const fetchImpl = ((input: RequestInfo | URL) => {
     const url = input instanceof URL ? input.toString() : String(input)
     urls.push(url)
+    // SWDI answers in CSV, not JSON, and its "no hail" answer is a summary
+    // block rather than an empty list. Handing it JSON here would make the
+    // radar source look broken in every test that does not care about radar.
+    if (url.includes('swdiws')) {
+      return Promise.resolve(
+        new Response('summary\ncount,0\ntotalTimeInSeconds,0.0', {
+          status: 200,
+          headers: { 'content-type': 'text/plain' },
+        }),
+      )
+    }
     const body = url.includes('lsr.py') ? { type: 'FeatureCollection', features: [] } : []
     return Promise.resolve(
       new Response(JSON.stringify(body), {
@@ -79,19 +90,47 @@ describe('lead engine storm window', () => {
     const run = await runLeadEngine(settings({ windowKey: 'this_year' }), { fetchImpl, now: NOW })
 
     expect(run.coverage.official.kind).toBe('live')
+    expect(run.coverage.radar.kind).toBe('live')
     expect(run.coverage.totalEvents).toBe(0)
-    expect(run.coverage.radar.kind).toBe('not_configured')
-    expect(run.notes.join(' ')).toContain('Radar-estimated hail is not configured')
+    expect(run.notes.join(' ')).toContain('No qualifying hail')
   })
 
-  it('names the radar gap rather than blending it into the official count', async () => {
-    const { fetchImpl } = capturingFetch()
+  /**
+   * Radar used to be the named gap. It now runs — but the thing that test was
+   * really protecting is unchanged and still worth a test: the two sources are
+   * counted separately, never summed into one figure that reads as
+   * completeness.
+   */
+  it('counts radar separately from the official ground reports', async () => {
+    const { urls, fetchImpl } = capturingFetch()
 
     const run = await runLeadEngine(settings({ windowKey: 'this_year' }), { fetchImpl, now: NOW })
 
-    expect(run.coverage.official).not.toEqual(run.coverage.radar)
-    if (run.coverage.radar.kind !== 'not_configured') throw new Error('radar should be unconfigured')
-    expect(run.coverage.radar.why).toContain('MRMS/MESH')
+    expect(run.coverage.official.kind).toBe('live')
+    expect(run.coverage.radar.kind).toBe('live')
+    if (run.coverage.radar.kind === 'live') {
+      expect(run.coverage.radar.note).toContain('NEXRAD')
+      // The floor is part of the claim: the same count at 1.0" means something
+      // else, because MEHS over-predicts.
+      expect(run.coverage.radar.note).toContain(`${DEFAULT_SETTINGS.radarMinHailInches}"`)
+    }
+
+    // And it asked the radar service for the same window it asked NOAA for.
+    const radarCalls = urls.filter((u) => u.includes('swdiws'))
+    expect(radarCalls.length).toBeGreaterThan(0)
+    expect(radarCalls.every((u) => u.includes('/nx3hail/2026'))).toBe(true)
+  })
+
+  it('leaves radar off when the workspace has turned it off', async () => {
+    const { urls, fetchImpl } = capturingFetch()
+
+    const run = await runLeadEngine(settings({ windowKey: 'this_year', useRadar: false }), {
+      fetchImpl,
+      now: NOW,
+    })
+
+    expect(run.coverage.radar.kind).toBe('not_configured')
+    expect(urls.some((u) => u.includes('swdiws'))).toBe(false)
   })
 
   it('carries the qualifying storms so the count can be checked against the events', async () => {

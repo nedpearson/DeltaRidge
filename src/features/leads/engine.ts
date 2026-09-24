@@ -5,15 +5,21 @@ import { EbrPermitProvider } from '@/integrations/permits/ebr'
 import type { PermitRecord } from '@/integrations/permits/types'
 import { createStormProvider, type StormEvent } from '@/integrations/storm'
 import { boundFetch } from '@/lib/fetch'
+import { loadEnv } from '@/lib/env'
 import {
   buildCoverage,
   emptyWindowExplanation,
+  radarFailed,
+  radarLive,
   RADAR_NOT_CONFIGURED,
+  RADAR_OFF,
+  type SourceStatus,
   type StormCoverage,
 } from './coverage'
 import {
   candidatesFromPermits,
   contractorActivity,
+  distanceMiles,
   scoreLeads,
   type ContractorActivity,
   type ScoredLead,
@@ -48,6 +54,21 @@ export interface LeadRunSettings {
   /** Legacy rolling window, kept so a cached run from before still reads. */
   stormMonths: number
   minHailInches: number
+  /**
+   * Radar-estimated hail, alongside ground reports. Undefined on a run cached
+   * before radar existed, which is read as off.
+   */
+  useRadar?: boolean
+  /**
+   * A HIGHER size floor for radar than for ground reports, and the difference
+   * is not fussiness. MEHS is the largest hail a model infers *aloft*, and it
+   * over-predicts badly in this market: measured over the service area for the
+   * 24 months to 2026-09-24, 1,265 radar cell-days cleared 1.0" and only 12.6%
+   * of them had any ground report within 15 km the same day. At 1.25" that is
+   * 589 and 21.6%. Dropping this to 1.0" puts almost every door in the parish
+   * "under hail" and the ranking stops discriminating.
+   */
+  radarMinHailInches?: number
   radiusMiles: number
   /** Only consider roofs first permitted before this year. */
   builtBefore: number
@@ -78,6 +99,8 @@ export const DEFAULT_SETTINGS: LeadRunSettings = {
   windowKey: 'last_24_months',
   stormMonths: 24,
   minHailInches: 1,
+  useRadar: true,
+  radarMinHailInches: 1.25,
   radiusMiles: 3,
   builtBefore: new Date().getFullYear() - 12,
   maxLeads: 150,
@@ -101,6 +124,12 @@ export interface LeadRun {
   competitors: ContractorActivity[]
   counts: {
     stormsConsidered: number
+    /** Of those, ground reports. Optional: absent on a run cached before radar. */
+    officialReports?: number
+    /** Of those, radar estimates above the radar size floor. */
+    radarEstimates?: number
+    /** Of the radar estimates, how many a ground report corroborates. */
+    radarCorroborated?: number
     candidatesConsidered: number
     reroofPermits: number
     geocodedThisRun: number
@@ -296,6 +325,66 @@ export interface RunDeps {
   now?: Date
 }
 
+/**
+ * Which radar source this workspace is configured for.
+ *
+ * Reading env is allowed to fail here. A misconfigured or absent env must
+ * degrade the storm panel, never stop a rep pulling a door list.
+ */
+function radarProviderId(): 'swdi' | 'off' {
+  try {
+    return loadEnv().VITE_RADAR_HAIL
+  } catch {
+    return 'off'
+  }
+}
+
+/**
+ * How far a ground report can be from a radar estimate and still be about the
+ * same hail. Ten miles, same UTC day.
+ *
+ * Louisiana spotter density is low and a single storm cell tracks tens of miles
+ * across an afternoon, so a tighter radius would mark genuinely corroborated
+ * hail as radar-only. A looser one would let an unrelated cell forty miles away
+ * vouch for this one.
+ */
+export const CORROBORATION_MILES = 10
+
+/**
+ * Marks each radar estimate with whether a ground report stands behind it.
+ *
+ * This is the flag the spec asked for, and it exists so that nothing downstream
+ * has to decide the question itself — the lead card, the coverage note and the
+ * claim language all read the same field. Corroboration is not used to filter:
+ * an uncorroborated estimate in a parish with no spotters is often real hail
+ * nobody was there to see. It is used to say which one a rep is looking at.
+ */
+export function flagCorroboration(
+  radar: readonly StormEvent[],
+  official: readonly StormEvent[],
+): StormEvent[] {
+  const reportsByDay = new Map<string, StormEvent[]>()
+  for (const report of official) {
+    const day = report.occurredAt.slice(0, 10)
+    const bucket = reportsByDay.get(day)
+    if (bucket) bucket.push(report)
+    else reportsByDay.set(day, [report])
+  }
+
+  return radar.map((event) => {
+    const sameDay = reportsByDay.get(event.occurredAt.slice(0, 10)) ?? []
+    const corroborated = sameDay.some(
+      (r) =>
+        distanceMiles(event.latitude, event.longitude, r.latitude, r.longitude) <=
+        CORROBORATION_MILES,
+    )
+    return {
+      ...event,
+      radarConfidence: corroborated ? ('corroborated' as const) : ('radar_only' as const),
+    }
+  })
+}
+
 export async function runLeadEngine(
   settings: LeadRunSettings = DEFAULT_SETTINGS,
   deps: RunDeps = {},
@@ -307,12 +396,17 @@ export async function runLeadEngine(
   const storms = createStormProvider('noaa', fetchImpl)
   const permits = new EbrPermitProvider(fetchImpl)
 
+  // Radar is on unless this workspace turned it off, or a cached run from
+  // before radar existed is being re-run with its own settings.
+  const radarEnabled = settings.useRadar !== false && radarProviderId() === 'swdi'
+  const radarMinInches = settings.radarMinHailInches ?? DEFAULT_SETTINGS.radarMinHailInches ?? 1.25
+
   const window = resolveWindow(settings.windowKey, now, settings.customRange)
   const { from, to } = window
 
   // Fired together: they are independent, and a rep waiting in a driveway
   // should not pay for two round trips in series.
-  const [stormResult, buildResult, reroofResult] = await Promise.allSettled([
+  const [stormResult, radarResult, buildResult, reroofResult] = await Promise.allSettled([
     storms.searchEvents({
       bbox: settings.bbox,
       from,
@@ -320,6 +414,15 @@ export async function runLeadEngine(
       eventTypes: ['hail'],
       minHailSizeInches: settings.minHailInches,
     }),
+    radarEnabled
+      ? createStormProvider('swdi', fetchImpl).searchEvents({
+          bbox: settings.bbox,
+          from,
+          to,
+          eventTypes: ['hail'],
+          minHailSizeInches: radarMinInches,
+        })
+      : Promise.resolve<StormEvent[]>([]),
     // Deliberately NOT bbox-filtered. The parish only began populating
     // coordinates on permits around 2016, so a bbox filter — which is a
     // server-side test on lat/long — silently throws away almost every permit
@@ -338,7 +441,13 @@ export async function runLeadEngine(
     }),
   ])
 
-  const stormEvents: StormEvent[] = stormResult.status === 'fulfilled' ? stormResult.value : []
+  const officialEvents: StormEvent[] = stormResult.status === 'fulfilled' ? stormResult.value : []
+  const rawRadarEvents: StormEvent[] = radarResult.status === 'fulfilled' ? radarResult.value : []
+  const radarEvents = flagCorroboration(rawRadarEvents, officialEvents)
+  // One list from here on. The two sources stay distinguishable on every event
+  // via `observation`, which is what lets the coverage panel, the lead card and
+  // the claim language keep them apart without keeping two arrays apart.
+  const stormEvents: StormEvent[] = [...officialEvents, ...radarEvents]
   const buildPermits: PermitRecord[] = buildResult.status === 'fulfilled' ? buildResult.value : []
   const reroofPermits: PermitRecord[] = reroofResult.status === 'fulfilled' ? reroofResult.value : []
 
@@ -355,7 +464,31 @@ export async function runLeadEngine(
       'Re-roof permits could not be loaded, so this list has NOT been filtered for roofs that were already replaced.',
     )
   }
-  const coverage = buildCoverage(window, stormEvents, stormResult.status === 'rejected')
+  let radarStatus: SourceStatus
+  if (!radarEnabled) {
+    radarStatus = settings.useRadar === false ? RADAR_OFF : RADAR_NOT_CONFIGURED
+  } else if (radarResult.status === 'rejected') {
+    const why =
+      radarResult.reason instanceof Error
+        ? radarResult.reason.message
+        : 'The NOAA radar hail service could not be reached on this run.'
+    radarStatus = radarFailed(why)
+    notes.push(`${why} Ground reports are still being used.`)
+  } else {
+    radarStatus = radarLive(
+      radarEvents,
+      radarMinInches,
+      radarEvents.filter((e) => e.radarConfidence === 'corroborated').length,
+    )
+  }
+
+  const coverage = buildCoverage(
+    window,
+    officialEvents,
+    radarEvents,
+    stormResult.status === 'rejected',
+    radarStatus,
+  )
 
   if (stormEvents.length === 0 && stormResult.status === 'fulfilled') {
     notes.push(
@@ -477,6 +610,9 @@ export async function runLeadEngine(
     competitors: contractorActivity(reroofPermits),
     counts: {
       stormsConsidered: stormEvents.length,
+      officialReports: officialEvents.length,
+      radarEstimates: radarEvents.length,
+      radarCorroborated: radarEvents.filter((e) => e.radarConfidence === 'corroborated').length,
       candidatesConsidered: candidates.length,
       reroofPermits: reroofPermits.length,
       geocodedThisRun,

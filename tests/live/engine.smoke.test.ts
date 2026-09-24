@@ -27,6 +27,10 @@ describe('live lead engine', () => {
     console.log('\n=== TOP 12 DOORS ========================')
     for (const l of run.leads.slice(0, 12)) {
       console.log(`${String(l.score).padStart(3)}  ${l.address.slice(0, 40).padEnd(40)} ${l.components.hailSizeInches}" @ ${l.components.distanceMiles}mi  roof ${l.components.roofAgeYears}y`)
+      // reasons[0] is the storm sentence. It is printed because it is the one
+      // line a rep repeats at a door, and it must never call a radar estimate
+      // a report.
+      console.log(`     ${l.reasons[0]}`)
       console.log(`     ${l.reasons[1]}`)
     }
     console.log('\n=== COMPETITORS =========================')

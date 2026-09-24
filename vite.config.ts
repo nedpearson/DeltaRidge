@@ -117,10 +117,20 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['tests/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
-    // tests/live/ calls the real parish and NWS services. Useful to run by
-    // hand when an upstream feed changes shape; never in a normal test run,
+    // tests/live/ calls the real parish, NWS and NCEI services. Useful to run
+    // by hand when an upstream feed changes shape; never in a normal test run,
     // where a third party being slow would look like our bug.
-    //   npx vitest run --config vite.config.ts tests/live --exclude ''
-    exclude: ['tests/live/**', 'node_modules/**', 'dist/**'],
+    //
+    //   Windows:  set LIVE=1 && npx vitest run tests/live
+    //   bash:     LIVE=1 npx vitest run tests/live
+    //
+    // An env switch rather than `--exclude ''`, which the documented form used
+    // to rely on: vitest now APPENDS --exclude to this list instead of
+    // replacing it, and an empty pattern crashes the glob walker outright.
+    exclude: [
+      ...(process.env['LIVE'] === '1' ? [] : ['tests/live/**']),
+      'node_modules/**',
+      'dist/**',
+    ],
   },
 })

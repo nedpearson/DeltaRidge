@@ -1,4 +1,4 @@
-import type { StormEvent } from '@/integrations/storm'
+import type { HailObservation, StormEvent } from '@/integrations/storm'
 import { countByYear, type ResolvedWindow } from './window'
 
 /**
@@ -14,12 +14,18 @@ import { countByYear, type ResolvedWindow } from './window'
  */
 
 export type HailSourceKind =
-  /** A human reported hail on the ground and the NWS logged it. */
-  | 'official_report'
-  /** Radar estimated hail aloft. Not the same claim. */
-  | 'radar_estimate'
+  /**
+   * 'official_report' — a human reported hail on the ground and the NWS logged it.
+   * 'radar_estimate'  — radar estimated hail aloft. Not the same claim.
+   */
+  | HailObservation
   /** A rep saw it themselves. */
   | 'field_confirmed'
+
+/** An event with no recorded observation predates radar and is a ground report. */
+export function observationOf(event: StormEvent): HailObservation {
+  return event.observation ?? 'official_report'
+}
 
 export const HAIL_SOURCE_LABEL: Record<HailSourceKind, string> = {
   official_report: 'Official hail report',
@@ -28,7 +34,13 @@ export const HAIL_SOURCE_LABEL: Record<HailSourceKind, string> = {
 }
 
 export type SourceStatus =
-  | { readonly kind: 'live'; readonly newestAt: string | null; readonly count: number }
+  | {
+      readonly kind: 'live'
+      readonly newestAt: string | null
+      readonly count: number
+      /** What this count is a count OF, when that is not obvious. */
+      readonly note?: string
+    }
   | { readonly kind: 'not_configured'; readonly why: string }
   | { readonly kind: 'failed'; readonly why: string }
 
@@ -44,13 +56,14 @@ export interface StormCoverage {
 }
 
 /**
- * MRMS / MESH is not wired up, and saying so is the point.
+ * Kept because runs cached before radar existed carry this status, and because
+ * it remains the truthful description of gridded MRMS MESH, which is still not
+ * wired up: MRMS publishes GRIB2 on S3, a browser cannot decode it, and this
+ * application has no server.
  *
- * It cannot be: MRMS publishes GRIB2 grids on S3, which a browser cannot
- * decode, and this application has no server. Adding it means a server-side or
- * edge job that reads the grid, extracts MESH above a threshold and writes
- * events. Until that exists the honest thing is a named gap rather than a
- * blended number that looks complete.
+ * What IS wired up is NOAA NCEI's SWDI `nx3hail` — the NEXRAD Level-III hail
+ * detection algorithm, MEHS per storm cell, plain CSV, CORS-open, no key. It
+ * answers the same question without the grid. See integrations/storm/swdi.ts.
  */
 export const RADAR_NOT_CONFIGURED: SourceStatus = {
   kind: 'not_configured',
@@ -60,13 +73,28 @@ export const RADAR_NOT_CONFIGURED: SourceStatus = {
     'ground reports are being used.',
 }
 
+/** Radar deliberately switched off for this workspace. Not a failure. */
+export const RADAR_OFF: SourceStatus = {
+  kind: 'not_configured',
+  why:
+    'Radar-estimated hail is turned off for this workspace, so only official ground ' +
+    'reports are being used. Set VITE_RADAR_HAIL=swdi to turn it on.',
+}
+
+export function radarFailed(why: string): SourceStatus {
+  return { kind: 'failed', why }
+}
+
 export function buildCoverage(
   window: ResolvedWindow,
-  events: readonly StormEvent[],
+  officialEvents: readonly StormEvent[],
+  radarEvents: readonly StormEvent[],
   officialFailed: boolean,
   radar: SourceStatus = RADAR_NOT_CONFIGURED,
 ): StormCoverage {
-  const times = events.map((e) => e.occurredAt).sort()
+  const all = [...officialEvents, ...radarEvents]
+  const times = all.map((e) => e.occurredAt).sort()
+  const officialTimes = officialEvents.map((e) => e.occurredAt).sort()
   const oldestAt = times[0] ?? null
   const newestAt = times[times.length - 1] ?? null
   const currentYear = String(new Date(window.to).getFullYear())
@@ -78,13 +106,46 @@ export function buildCoverage(
           kind: 'failed',
           why: 'The official storm report feed could not be reached on this run.',
         }
-      : { kind: 'live', newestAt, count: events.length },
+      : {
+          kind: 'live',
+          // Deliberately the newest OFFICIAL report, not the newest of either.
+          // This line sits under "Official ground reports" and would otherwise
+          // date a ground report to a day only radar saw anything.
+          newestAt: officialTimes[officialTimes.length - 1] ?? null,
+          count: officialEvents.length,
+        },
     radar,
-    totalEvents: events.length,
-    currentYearEvents: events.filter((e) => e.occurredAt.startsWith(currentYear)).length,
+    totalEvents: all.length,
+    currentYearEvents: all.filter((e) => e.occurredAt.startsWith(currentYear)).length,
     oldestAt,
     newestAt,
     byYear: countByYear(times),
+  }
+}
+
+/**
+ * The radar row, once it has actually run.
+ *
+ * Carries the size floor in the sentence because the floor is the whole reason
+ * the number is what it is: MEHS over-predicts, and a count taken at 1.0" is a
+ * different claim from the same count taken at 1.25".
+ */
+export function radarLive(
+  events: readonly StormEvent[],
+  minInches: number,
+  corroborated: number,
+): SourceStatus {
+  const times = events.map((e) => e.occurredAt).sort()
+  const floor = `${minInches}"`
+  return {
+    kind: 'live',
+    newestAt: times[times.length - 1] ?? null,
+    count: events.length,
+    note:
+      `NEXRAD Level-III hail detection (NOAA NCEI SWDI), one reading per place per day at ` +
+      `${floor} or larger. ${corroborated} of ${events.length} have a ground report within ` +
+      '10 miles the same day. Radar estimates hail aloft and over-predicts it; the rest are ' +
+      'radar only and are labelled that way on the lead.',
   }
 }
 
@@ -100,5 +161,14 @@ export function emptyWindowExplanation(coverage: StormCoverage): string {
       'would not appear here.'
     )
   }
-  return `No qualifying hail in ${coverage.window.label.toLowerCase()} for this area.`
+  if (coverage.radar.kind === 'failed') {
+    return (
+      `No official hail reports in ${coverage.window.label.toLowerCase()} for this area, and ` +
+      'the radar hail service could not be reached on this run, so this is not the full picture.'
+    )
+  }
+  return (
+    `No qualifying hail in ${coverage.window.label.toLowerCase()} for this area — ` +
+    'neither a ground report nor a radar estimate above the size floor.'
+  )
 }

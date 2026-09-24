@@ -10,6 +10,20 @@
 
 export type StormEventType = 'hail' | 'wind' | 'tornado' | 'other'
 
+/**
+ * How an event was observed. This is not a provider name and not a nicety.
+ *
+ * A ground report is somebody saying hail fell on them. A radar estimate is a
+ * model inferring the largest hail aloft inside a storm cell. Those are
+ * different claims, they are wrong in different directions, and the product
+ * shows them separately everywhere rather than summing them into one number
+ * that reads as completeness.
+ */
+export type HailObservation = 'official_report' | 'radar_estimate'
+
+/** Whether a radar estimate has any ground report standing behind it. */
+export type RadarConfidence = 'corroborated' | 'radar_only'
+
 export interface StormEvent {
   /** Provider-scoped stable id, so re-ingestion is idempotent. */
   externalId: string
@@ -25,6 +39,13 @@ export interface StormEvent {
   countyParish?: string
   state?: string
   magnitudeNote?: string
+  /**
+   * Optional only so that a run cached before radar existed still reads. Treat
+   * an absent value as 'official_report' — that is all this app had until then.
+   */
+  observation?: HailObservation
+  /** Set on radar estimates only. See RadarConfidence. */
+  radarConfidence?: RadarConfidence
 }
 
 /**
@@ -42,7 +63,7 @@ export interface StormGeometry {
   attribution: string
 }
 
-export type StormProviderId = 'noaa' | 'hailtrace'
+export type StormProviderId = 'noaa' | 'hailtrace' | 'swdi'
 
 export interface StormQuery {
   /** Bounding box: [west, south, east, north] */

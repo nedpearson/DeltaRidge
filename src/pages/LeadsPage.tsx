@@ -9,7 +9,7 @@ import RoofViewSheet from '@/components/RoofViewSheet'
 import { Button, Card, Empty, Field, SectionTitle, Select } from '@/components/ui'
 import RoutePanel from '@/components/RoutePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
-import type { StormCoverage } from '@/features/leads/coverage'
+import { observationOf, type StormCoverage } from '@/features/leads/coverage'
 import {
   DEFAULT_SETTINGS,
   readCachedRun,
@@ -482,15 +482,24 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
         </p>
 
         <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-white/8 pt-3">
-          <p className="text-[13px] text-white/80">Radar-estimated hail (MRMS/MESH)</p>
-          <p className="shrink-0 text-[11px] uppercase tracking-wider text-amber-300">
-            not configured
-          </p>
+          <p className="text-[13px] text-white/80">Radar-estimated hail (NEXRAD)</p>
+          {coverage.radar.kind === 'live' ? (
+            <p className="shrink-0 font-display text-[15px] text-emerald-400">
+              {coverage.radar.count}
+            </p>
+          ) : (
+            <p className="shrink-0 text-[11px] uppercase tracking-wider text-amber-300">
+              {coverage.radar.kind === 'failed' ? 'unavailable' : 'not configured'}
+            </p>
+          )}
         </div>
         <p className="mt-0.5 text-[11px] leading-relaxed text-white/35">
-          {coverage.radar.kind === 'not_configured'
-            ? coverage.radar.why
-            : 'Radar-estimated hail is running.'}
+          {coverage.radar.kind === 'live'
+            ? (coverage.radar.note ?? 'Radar-estimated hail is running.')
+            : coverage.radar.why}
+          {coverage.radar.kind === 'live' && coverage.radar.newestAt
+            ? ` Most recent: ${shortDate(coverage.radar.newestAt)}.`
+            : ''}
         </p>
 
         {coverage.byYear.length > 0 && (
@@ -525,10 +534,24 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
                 <li key={e.externalId} className="flex items-baseline justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-[12.5px] text-white/75">
-                      {[e.city, e.countyParish].filter(Boolean).join(', ') || 'Unnamed location'}
+                      {[e.city, e.countyParish].filter(Boolean).join(', ') ||
+                        // A radar detection is a grid square, not a town. Its
+                        // coordinates are the only honest name it has.
+                        `${e.latitude.toFixed(2)}, ${e.longitude.toFixed(2)}`}
                     </p>
+                    {/*
+                      The source is per-event, never assumed. This line used to
+                      read "official report" for everything, which was true
+                      until radar landed and would have mislabelled every radar
+                      estimate the moment it did.
+                    */}
                     <p className="text-[10.5px] text-white/30">
-                      {shortDate(e.occurredAt)} · official report
+                      {shortDate(e.occurredAt)} ·{' '}
+                      {observationOf(e) === 'official_report'
+                        ? 'official report'
+                        : e.radarConfidence === 'corroborated'
+                          ? 'radar estimate, report nearby'
+                          : 'radar estimate only'}
                     </p>
                   </div>
                   <span className="shrink-0 font-display text-[13px] text-gold-400">

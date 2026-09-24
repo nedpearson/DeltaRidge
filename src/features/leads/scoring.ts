@@ -198,6 +198,40 @@ function formatInches(inches: number): string {
   return `${inches.toFixed(inches % 1 === 0 ? 0 : 2).replace(/0$/, '')}"`
 }
 
+/**
+ * The single place a storm becomes a sentence a rep will say out loud.
+ *
+ * A radar estimate is NOT a report, and the difference has to survive all the
+ * way to the door. "1.5" hail reported 0.4 mi away" is a claim about what
+ * somebody saw; radar saw nothing — a model inferred hail aloft inside a cell,
+ * and in this market it over-predicts. Phrasing the two identically is how a
+ * rep ends up telling a homeowner their house was hit when nothing of the kind
+ * is on record, which is the exact failure mode claims/storm-evidence.ts exists
+ * to prevent. So the wording branches here, once, and the lead card, the score
+ * detail and the reasons all read from it.
+ */
+export function stormPhrase(storm: StormEvent, miles: number): string {
+  const size = formatInches(storm.hailSizeInches ?? 0)
+  const where = `${miles.toFixed(1)} mi away`
+  const when = formatDate(storm.occurredAt)
+
+  if ((storm.observation ?? 'official_report') === 'official_report') {
+    return `${size} hail reported ${where} on ${when}`
+  }
+  return storm.radarConfidence === 'corroborated'
+    ? `Radar estimated ${size} hail ${where} on ${when}, and hail was reported on the ground nearby that day`
+    : `Radar estimated ${size} hail ${where} on ${when} — nobody reported hail on the ground that day`
+}
+
+/** The same distinction, compressed to fit a score-breakdown row. */
+export function stormSizeDetail(storm: StormEvent): string {
+  const size = formatInches(storm.hailSizeInches ?? 0)
+  if ((storm.observation ?? 'official_report') === 'official_report') return `${size} reported`
+  return storm.radarConfidence === 'corroborated'
+    ? `${size} radar estimate, ground report nearby`
+    : `${size} radar estimate, unconfirmed on the ground`
+}
+
 function formatDate(iso: string): string {
   const d = new Date(iso)
   return Number.isNaN(d.getTime())
@@ -263,7 +297,7 @@ function stormTerms(
       label: 'Hail size',
       weight: weights.hailSize,
       value: hailSizeScore(inches),
-      detail: `${formatInches(inches)} reported`,
+      detail: stormSizeDetail(storm),
     },
     {
       label: 'Storm recency',
@@ -272,7 +306,10 @@ function stormTerms(
       detail: `${Math.round(days)} days ago`,
     },
     {
-      label: 'Close to the report',
+      label:
+        (storm.observation ?? 'official_report') === 'official_report'
+          ? 'Close to the report'
+          : 'Close to the radar estimate',
       weight: weights.proximity,
       value: proximityScore(miles, radius),
       detail: `${miles.toFixed(1)} mi away`,
@@ -426,7 +463,7 @@ export function scoreLeads(input: ScoreInput): ScoreResult {
     const breakdown = roundToTotal(rawFactors, Math.round(score * 100))
 
     const reasons = [
-      `${formatInches(hailSizeInches)} hail reported ${best.miles.toFixed(1)} mi away on ${formatDate(best.storm.occurredAt)}`,
+      stormPhrase(best.storm, best.miles),
       replacedAt
         ? `Roof last permitted ${formatDate(replacedAt)} — about ${Math.round(roofAgeYears)} years old`
         : `Built ${formatDate(candidate.roofPermit.issuedAt)} with no re-roof permit since — about ${Math.round(roofAgeYears)} years on the original roof`,
