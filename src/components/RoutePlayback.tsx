@@ -200,7 +200,7 @@ export default function RoutePlayback({
               entry={entry}
               reached={reached}
               active={isLatest}
-              onOpenLead={onOpenLead}
+              {...(onOpenLead ? { onOpenLead } : {})}
             />
           )
         })}
