@@ -131,6 +131,7 @@ export default function RouteHistoryPage() {
     const outcomes = outcomeBreakdown(door, { nonZero: true })
     const funnel = buildFunnel(door)
     const note = ATTRIBUTION_NOTE[openSummary.attribution]
+    const hasTrail = points.length > 0
 
     return (
       <div>
@@ -154,15 +155,35 @@ export default function RouteHistoryPage() {
             <Stat value={duration(openSummary.stats.routeSeconds)} label="start to stop" />
             <Stat value={String(openSummary.stats.doors.doors)} label="doors" />
           </div>
+          {/*
+            Said on the card rather than only inside the Replay tab, because
+            "0.0 mi recorded" on its own reads as a rep who did not move. It is
+            the difference between no distance and no measurement.
+          */}
+          {!hasTrail && (
+            <p className="mt-2 text-[11.5px] leading-relaxed text-white/45">
+              No GPS was recorded on this route, so there is no distance to report — 0.0 mi means
+              nothing was measured, not that nobody moved.
+            </p>
+          )}
           {note && <p className="mt-2 text-[11.5px] leading-relaxed text-amber-200/70">{note}</p>}
         </Card>
 
+        {/*
+          Replay is offered only when there is something to replay. Every route
+          recorded so far has no trail - they were run in a desktop browser with
+          no geolocation - so defaulting to Replay meant opening a route showed
+          an empty box and nothing else. The tab that HAS content is the one to
+          land on, and a button that can only lead somewhere empty should not
+          look like a live choice.
+        */}
         <div className="mb-3 flex gap-2">
           <Button
             variant={mode === 'replay' ? 'gold' : 'secondary'}
+            disabled={!hasTrail}
             onClick={() => setMode('replay')}
           >
-            Replay
+            {hasTrail ? 'Replay' : 'Replay · no trail'}
           </Button>
           <Button
             variant={mode === 'activity' ? 'gold' : 'secondary'}
@@ -172,15 +193,8 @@ export default function RouteHistoryPage() {
           </Button>
         </div>
 
-        {mode === 'replay' ? (
-          points.length > 0 ? (
-            <RoutePlayback session={open} points={points} activities={activities} />
-          ) : (
-            <Empty
-              title="No trail to replay"
-              body="No GPS was recorded on this route. The doors under Activity are still the doors that were worked."
-            />
-          )
+        {mode === 'replay' && hasTrail ? (
+          <RoutePlayback session={open} points={points} activities={activities} />
         ) : (
           <>
             {outcomes.length > 0 && (
@@ -269,6 +283,9 @@ export default function RouteHistoryPage() {
                 {s.attribution === 'inferred' && (
                   <p className="mt-2 text-[11px] text-amber-200/60">Doors matched by time of day</p>
                 )}
+                {(pointsBySession[s.sessionId]?.length ?? 0) === 0 && (
+                  <p className="mt-1 text-[11px] text-white/35">No GPS recorded — nothing to replay</p>
+                )}
 
                 <Button
                   variant="secondary"
@@ -276,7 +293,8 @@ export default function RouteHistoryPage() {
                   className="mt-3"
                   onClick={() => {
                     setOpenId(s.sessionId)
-                    setMode('replay')
+                    // Land on the tab that has something in it.
+                    setMode((pointsBySession[s.sessionId]?.length ?? 0) > 0 ? 'replay' : 'activity')
                   }}
                 >
                   View route
