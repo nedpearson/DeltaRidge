@@ -25,3 +25,6 @@ major_version = 17
 # in the repo.
 [functions.roofr-events]
 verify_jwt = true
+
+[functions.eagleview-imagery]
+verify_jwt = true

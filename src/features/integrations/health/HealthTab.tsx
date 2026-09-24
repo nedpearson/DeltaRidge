@@ -66,7 +66,7 @@ export default function HealthTab({ organizationId }: { organizationId: string |
     })
 
     if (supabase !== null && organizationId !== null) {
-      const [settings, events, outbox] = await Promise.all([
+      const [settings, events, outbox, imagery] = await Promise.all([
         supabase
           .from('roofr_settings')
           .select('webhook_secret_hash, push_enabled, last_inbound_at, last_outbound_at')
@@ -84,11 +84,19 @@ export default function HealthTab({ organizationId }: { organizationId: string |
           .eq('organization_id', organizationId)
           .order('created_at', { ascending: false })
           .limit(200),
+        supabase
+          .from('imagery_requests')
+          .select('status, requested_at, completed_at')
+          .eq('organization_id', organizationId)
+          .eq('provider', 'eagleview')
+          .order('requested_at', { ascending: false })
+          .limit(200),
       ])
 
       const s = (settings.data ?? null) as Record<string, unknown> | null
       const inboundRows = ((events.data ?? []) as unknown[]).map((r) => r as Record<string, unknown>)
       const outboundRows = ((outbox.data ?? []) as unknown[]).map((r) => r as Record<string, unknown>)
+      const imageryRows = ((imagery.data ?? []) as unknown[]).map((r) => r as Record<string, unknown>)
 
       built.push({
         key: 'roofr_in',
@@ -127,11 +135,31 @@ export default function HealthTab({ organizationId }: { organizationId: string |
           now,
         ),
       })
+
+      const imagerySuccess = imageryRows.filter((r) => r['status'] === 'succeeded')
+      const imageryFailure = imageryRows.filter((r) => r['status'] === 'failed')
+      built.push({
+        key: 'eagleview',
+        label: 'EagleView',
+        detail: 'Imagery API discovery and full-resolution images',
+        health: assessHealth(
+          {
+            // A server secret cannot be read by this screen. The first request
+            // records not_configured or actual traffic, so health stays honest.
+            configured: imageryRows.some((r) => r['status'] !== 'not_configured'),
+            successes: imagerySuccess.length,
+            failures: imageryFailure.length,
+            lastSuccessAt: (imagerySuccess[0]?.['completed_at'] as string | null) ?? null,
+            lastFailureAt: (imageryFailure[0]?.['completed_at'] as string | null) ?? null,
+            expectedWithinHours: null,
+          },
+          now,
+        ),
+      })
     }
 
     // Not built yet, and listed so the absence is visible rather than implied.
     for (const [key, label, detail] of [
-      ['eagleview', 'EagleView', 'Imagery and measurements — not built yet'],
       // Gridded MRMS MESH is still not built and still needs a server to decode
       // GRIB2. Radar-estimated hail itself IS running, from NCEI SWDI's NEXRAD
       // Level-III detections, which is keyless, CORS-open and needs no server.

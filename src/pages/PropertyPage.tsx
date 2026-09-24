@@ -23,6 +23,7 @@ import { distanceMiles } from '@/features/leads/scoring'
 import type { Fact } from '@/lib/provenance'
 import type { ParcelRecord } from '@/integrations/parcel'
 import type { StormEvent } from '@/integrations/storm'
+import RoofImageryPanel from '@/features/imagery/RoofImageryPanel'
 
 /**
  * Everything known about one address, with the source of every claim on screen.
@@ -211,7 +212,13 @@ export default function PropertyPage() {
       <div className="mt-3">
         {tab === 'property' && <PropertyTab profile={profile} />}
         {tab === 'owner' && <OwnerTab profile={profile} {...(lead.parcel ? { parcel: lead.parcel } : {})} />}
-        {tab === 'roof' && <RoofTab profile={profile} />}
+        {tab === 'roof' && (
+          <RoofTab
+            profile={profile}
+            latitude={lead.latitude}
+            longitude={lead.longitude}
+          />
+        )}
         {tab === 'storms' && <StormsTab profile={profile} />}
         {tab === 'permits' && (
           <PermitsTab profile={profile} permits={permits} failed={permitError} />
@@ -342,14 +349,25 @@ function OwnerTab({ profile, parcel }: { profile: PropertyProfile; parcel?: Parc
   )
 }
 
-function RoofTab({ profile }: { profile: PropertyProfile }) {
+function RoofTab({
+  profile,
+  latitude,
+  longitude,
+}: {
+  profile: PropertyProfile
+  latitude: number
+  longitude: number
+}) {
   return (
-    <Card>
-      <FactRow label="Year built" fact={profile.roof.yearBuilt} />
-      <FactRow label="Last re-roof permit" fact={profile.roof.lastReroofAt} format={shortDate} />
-      <FactRow label="Roof age" fact={profile.roof.ageYears} format={(y) => `about ${y} years`} />
-      <FactRow label="Last roofing contractor" fact={profile.roof.lastContractor} />
-    </Card>
+    <>
+      <Card>
+        <FactRow label="Year built" fact={profile.roof.yearBuilt} />
+        <FactRow label="Last re-roof permit" fact={profile.roof.lastReroofAt} format={shortDate} />
+        <FactRow label="Roof age" fact={profile.roof.ageYears} format={(y) => `about ${y} years`} />
+        <FactRow label="Last roofing contractor" fact={profile.roof.lastContractor} />
+      </Card>
+      <RoofImageryPanel latitude={latitude} longitude={longitude} storms={profile.storms} />
+    </>
   )
 }
 
