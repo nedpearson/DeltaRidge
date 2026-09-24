@@ -17,6 +17,8 @@ import { pushHandoff } from './handoff'
 import { pushLead, pushLeadActivity, pushLeadAttachment } from './leads'
 import { POINT_BATCH_SIZE, pushRoutePoint, pushRoutePointBatch, pushRouteSession } from './routes'
 import type { OutboxEntity } from '../db'
+import { detailIsSafe } from '@/features/observability/trace'
+import { flushSteps, recordStep } from '@/features/observability/trace-store'
 
 export interface SyncResult {
   pushed: number
@@ -102,11 +104,43 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
       // routePoint is not handled here; see drainRoutePoints below.
       await clearOutboxItem(item.id)
       result.pushed += 1
+      if (item.traceId !== undefined) {
+        void recordStep({
+          traceId: item.traceId,
+          layer: 'outbox',
+          step: 'server.accepted',
+          outcome: 'ok',
+          entity: item.entity,
+          entityId: item.entityId,
+          userId,
+          orgId,
+        })
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       await markOutboxError(item.id, message)
       result.failed += 1
       if (result.errors.length < 5) result.errors.push(`${item.entity}: ${message}`)
+      if (item.traceId !== undefined) {
+        /*
+         * The message is recorded, not the payload, and `detailIsSafe` screens
+         * it before it travels: a server error can echo back a row, and a trace
+         * is read by whoever is debugging — a wider audience than whoever may
+         * see the lead.
+         */
+        const safe = detailIsSafe(message)
+        void recordStep({
+          traceId: item.traceId,
+          layer: 'outbox',
+          step: 'outbox.attempt',
+          outcome: 'failed',
+          entity: item.entity,
+          entityId: item.entityId,
+          detail: safe.safe ? message.slice(0, 200) : `withheld: ${safe.reason}`,
+          userId,
+          orgId,
+        })
+      }
     }
   }
 
@@ -115,6 +149,19 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
   result.stalled = (await listStalledOutbox()).length
   result.foreign = await countForeign(userId)
   recordDrain(result.pushed, result.failed)
+
+  /*
+   * Traces ride out on the same connectivity the work did.
+   *
+   * Last, and awaited only for its own errors — a failure to push commentary
+   * must not change what this function reports about the actual work.
+   */
+  try {
+    await flushSteps(orgId, userId)
+  } catch {
+    /* tracing is never load-bearing */
+  }
+
   return result
 }
 

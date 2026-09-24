@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import { deviceId } from './device'
 import type { PhotoCategory } from '@/features/inspections/photo-categories'
+import { newTraceId } from '@/features/observability/trace'
 
 /**
  * Offline-first local store.
@@ -126,6 +127,29 @@ export type OutboxEntity =
   /** One GPS fix inside one of those sessions. Never outside one. */
   | 'routePoint'
 
+/**
+ * One step of a trace, held on the device until it can be pushed.
+ *
+ * `deviceAt` is when the phone believed this happened. The server stamps its
+ * own arrival time separately, and the gap between the two is the number that
+ * explains most "it never synced" reports — a phone that held a knock for four
+ * hours in a dead zone looks identical to a lost record until you can see both
+ * clocks.
+ */
+export interface LocalTraceStep {
+  id: string
+  traceId: string
+  layer: 'device' | 'outbox'
+  step: string
+  outcome: 'started' | 'ok' | 'refused' | 'failed' | 'unknown'
+  entity?: string
+  entityId?: string
+  detail?: string
+  deviceAt: string
+  userId?: string | null
+  orgId?: string | null
+}
+
 export interface OutboxItem {
   id: string
   entity: OutboxEntity
@@ -134,6 +158,14 @@ export interface OutboxItem {
   queuedAt: string
   attempts: number
   lastError?: string
+  /**
+   * The id that follows this piece of work all the way to the server.
+   *
+   * Stamped on first capture and never reassigned, for the same reason
+   * ownership is not: a later edit is part of the same story, and re-minting
+   * here would break the thread precisely when somebody is trying to follow it.
+   */
+  traceId?: string
   /**
    * Who was signed in when this was captured, and where.
    *
@@ -228,27 +260,57 @@ interface DeltaRidgeDB extends DBSchema {
   observations: { key: string; value: LocalObservation; indexes: { 'by-inspection': string } }
   voiceNotes: { key: string; value: LocalVoiceNote; indexes: { 'by-inspection': string } }
   outbox: { key: string; value: OutboxItem }
+  /**
+   * Trace steps waiting to be pushed.
+   *
+   * Local first, exactly like the work they describe. The interesting failures
+   * — a knock captured in a dead zone that reaches the server four hours later
+   * — happen entirely on the device, so a trace that only exists once the
+   * server has heard about it cannot describe them.
+   */
+  traces: { key: string; value: LocalTraceStep; indexes: { 'by-trace': string } }
 }
 
 let dbPromise: Promise<IDBPDatabase<DeltaRidgeDB>> | null = null
 
 export function getDB(): Promise<IDBPDatabase<DeltaRidgeDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<DeltaRidgeDB>('delta-ridge', 1, {
-      upgrade(db) {
-        const inspections = db.createObjectStore('inspections', { keyPath: 'id' })
-        inspections.createIndex('by-updated', 'updatedAt')
+    dbPromise = openDB<DeltaRidgeDB>('delta-ridge', 2, {
+      /*
+       * Every creation is guarded, not keyed off `oldVersion` alone.
+       *
+       * A device that first opened the database at v1 and a device installing
+       * fresh at v2 both run this function, and calling createObjectStore for a
+       * store that already exists throws — which, in an offline-first app,
+       * means the database never opens and the rep's queued work is
+       * unreachable. Guarding costs nothing and removes a whole class of
+       * upgrade failure.
+       */
+      upgrade(db, oldVersion) {
+        if (!db.objectStoreNames.contains('inspections')) {
+          const inspections = db.createObjectStore('inspections', { keyPath: 'id' })
+          inspections.createIndex('by-updated', 'updatedAt')
+        }
+        if (!db.objectStoreNames.contains('photos')) {
+          const photos = db.createObjectStore('photos', { keyPath: 'id' })
+          photos.createIndex('by-inspection', 'inspectionId')
+        }
+        if (!db.objectStoreNames.contains('observations')) {
+          const observations = db.createObjectStore('observations', { keyPath: 'id' })
+          observations.createIndex('by-inspection', 'inspectionId')
+        }
+        if (!db.objectStoreNames.contains('voiceNotes')) {
+          const voiceNotes = db.createObjectStore('voiceNotes', { keyPath: 'id' })
+          voiceNotes.createIndex('by-inspection', 'inspectionId')
+        }
+        if (!db.objectStoreNames.contains('outbox')) {
+          db.createObjectStore('outbox', { keyPath: 'id' })
+        }
 
-        const photos = db.createObjectStore('photos', { keyPath: 'id' })
-        photos.createIndex('by-inspection', 'inspectionId')
-
-        const observations = db.createObjectStore('observations', { keyPath: 'id' })
-        observations.createIndex('by-inspection', 'inspectionId')
-
-        const voiceNotes = db.createObjectStore('voiceNotes', { keyPath: 'id' })
-        voiceNotes.createIndex('by-inspection', 'inspectionId')
-
-        db.createObjectStore('outbox', { keyPath: 'id' })
+        if (oldVersion < 2 && !db.objectStoreNames.contains('traces')) {
+          const traces = db.createObjectStore('traces', { keyPath: 'id' })
+          traces.createIndex('by-trace', 'traceId')
+        }
       },
     })
   }
@@ -282,6 +344,7 @@ async function enqueue(
 ): Promise<void> {
   const existing = await db.get('outbox', `${entity}:${entityId}`)
   const owner = currentOwner()
+  const trace = existing?.traceId ?? newTraceId()
   await db.put('outbox', {
     id: `${entity}:${entityId}`,
     entity,
@@ -295,7 +358,29 @@ async function enqueue(
     userId: existing?.userId !== undefined ? existing.userId : owner.userId,
     orgId: existing?.orgId !== undefined ? existing.orgId : owner.orgId,
     deviceId: existing?.deviceId ?? deviceId(),
+    traceId: existing?.traceId ?? trace,
   })
+
+  // Best effort, and deliberately after the work is already durable. A trace is
+  // worth having; it is never worth losing a knock over.
+  if (existing?.traceId === undefined) {
+    try {
+      await db.put('traces', {
+        id: `${trace}:queued`,
+        traceId: trace,
+        layer: 'outbox',
+        step: 'outbox.queued',
+        outcome: 'started',
+        entity,
+        entityId,
+        deviceAt: new Date().toISOString(),
+        userId: owner.userId,
+        orgId: owner.orgId,
+      })
+    } catch {
+      /* the queue is what matters; the trace is commentary */
+    }
+  }
 }
 
 /**

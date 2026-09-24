@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, SectionTitle } from '@/components/ui'
+import TracePanel from '@/features/observability/TracePanel'
 import { useSession } from '@/features/auth/session'
 import { useSync } from '@/features/auth/useSync'
 import { deviceId } from '@/lib/device'
@@ -102,6 +103,8 @@ export default function DiagnosticsPage() {
 
   return (
     <div className="space-y-4">
+      <TracePanel />
+
       <SectionTitle>SYNC DIAGNOSTICS</SectionTitle>
 
       <Card>
