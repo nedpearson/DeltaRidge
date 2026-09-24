@@ -71,11 +71,22 @@ export default function GradesTab({
     [team],
   )
 
-  const load = useCallback(async () => {
-    const result = await readGrades(orgId)
-    setStored(result.grades)
-    setError(result.error)
-  }, [orgId])
+  /**
+   * Reloads the filed grades. Takes the error it must not clobber.
+   *
+   * The bug this replaces: a failed save set the error, then immediately called
+   * this, which overwrote it with the successful read's `null`. The 403 from a
+   * refused write showed on screen for about one frame, and a manager pressing
+   * Save saw nothing happen at all — no grade, no reason, no clue.
+   */
+  const load = useCallback(
+    async (keepError: string | null = null) => {
+      const result = await readGrades(orgId)
+      setStored(result.grades)
+      setError(keepError ?? result.error)
+    },
+    [orgId],
+  )
 
   useEffect(() => {
     void load()
@@ -154,7 +165,8 @@ export default function GradesTab({
 
       {error && (
         <Card className="!bg-amber-500/8 ring-amber-500/20">
-          <p className="text-[12.5px] text-amber-100/80">Grades could not be read: {error}</p>
+          <p className="text-[12.5px] font-semibold text-amber-200">That did not save.</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-amber-100/70">{error}</p>
         </Card>
       )}
 
@@ -241,8 +253,8 @@ export default function GradesTab({
                     computed,
                   })
                   setBusy(null)
-                  if (result.error) setError(result.error)
-                  await load()
+                  setError(result.error)
+                  await load(result.error)
                 }}
                 onGrade={async (letter, comment, reason) => {
                   if (!orgId || !userId) return
@@ -261,8 +273,8 @@ export default function GradesTab({
                     gradedBy: userId,
                   })
                   setBusy(null)
-                  if (result.error) setError(result.error)
-                  await load()
+                  setError(result.error)
+                  await load(result.error)
                 }}
               />
             )}
