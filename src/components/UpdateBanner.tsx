@@ -57,7 +57,18 @@ export default function UpdateBanner() {
   const reason = state.holds[0]
 
   return (
-    <div className="fixed inset-x-0 bottom-20 z-50 mx-auto w-[min(26rem,calc(100%-2rem))]">
+    <div
+      className="fixed inset-x-0 z-50 mx-auto w-[min(26rem,calc(100%-2rem))]"
+      /*
+       * Sits above the nav by measurement rather than by the old hard-coded
+       * `bottom-20`, which assumed a nav height that was already wrong and would
+       * have put this banner on top of the nav on any phone with a home
+       * indicator.
+       */
+      style={{
+        bottom: 'calc(var(--bottom-nav-height, 0px) + env(safe-area-inset-bottom, 0px) + 0.75rem)',
+      }}
+    >
       <div className="flex items-center gap-3 rounded-xl bg-[#1b2740] px-4 py-3 shadow-lg ring-1 ring-sky-400/25">
         <p className="flex-1 text-[13px] leading-snug text-white/75">
           {held ? (

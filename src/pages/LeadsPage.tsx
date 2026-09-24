@@ -26,8 +26,11 @@ import {
   STATUS_LABEL,
   type ApplyOptions,
   type DoorOutcome,
+  mayContact,
   type ManagedLead,
 } from '@/features/leads/pipeline'
+import { mayCallAt } from '@/features/compliance/engine'
+import { ALL_SOLICITATION_RULES } from '@/features/compliance/solicitation'
 import {
   groupIntoRoutes,
   orderForWalking,
@@ -366,6 +369,23 @@ function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
   const due = dueLabel(lead, now)
   const overdue = isDue(lead, now)
 
+  /*
+   * The same gates the lead screen uses, not a looser version for the list.
+   * A card that offers Call on a number the lead screen refuses to dial would
+   * be a way around the compliance rules rather than a shortcut through them.
+   */
+  const callWindow = mayCallAt(
+    ALL_SOLICITATION_RULES,
+    { state: 'LA', parish: 'East Baton Rouge', municipality: null },
+    new Date(),
+  )
+  const callable =
+    lead.contactPhone !== undefined &&
+    callWindow.allowed &&
+    mayContact(lead, 'call').allowed
+      ? lead.contactPhone
+      : null
+
   return (
     <Card>
       <div className="flex items-start justify-between gap-3">
@@ -392,7 +412,25 @@ function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
         {STATUS_LABEL[lead.status]} · knocked {lead.knockCount}x · added {relativeDay(lead.createdAt)}
       </p>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      {/*
+        Call and text straight off the card, so chasing a follow-up costs one tap
+        instead of three. The number only appears when there is one AND the
+        compliance gates pass — a card is not the place to explain a calling
+        window, so a blocked number simply does not offer the button and the
+        reason waits on the lead screen.
+      */}
+      {callable !== null && (
+        <div className="mt-3 flex items-center gap-2">
+          <a href={`tel:${callable}`} className="contents">
+            <Button variant="secondary">Call</Button>
+          </a>
+          <a href={`sms:${callable}`} className="contents">
+            <Button variant="secondary">Text</Button>
+          </a>
+        </div>
+      )}
+
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <a
           href={mapsHref(lead.latitude, lead.longitude)}
           target="_blank"

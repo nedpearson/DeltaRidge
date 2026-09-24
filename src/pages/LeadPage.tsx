@@ -5,6 +5,7 @@ import { evidenceFor } from '@/features/routes/knock-evidence'
 import { mayCallAt } from '@/features/compliance/engine'
 import { ALL_SOLICITATION_RULES } from '@/features/compliance/solicitation'
 import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/components/ui'
+import ContactActions from '@/components/ContactActions'
 import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
 import IntegrityPanel from '@/features/leads/IntegrityPanel'
 import { readLink } from '@/features/integrations/roofr/store'
@@ -355,6 +356,39 @@ export default function LeadPage() {
 
   return (
     <div>
+      {/*
+        Above everything. The call and text controls used to sit three
+        screenfuls down, under year-built and permit history, which meant a rep
+        on a driveway scrolled past property research to reach a phone number.
+        The compliance gates are the same ones as before — this moved the
+        buttons, it did not loosen them.
+      */}
+      <ContactActions
+        phone={lead.contactPhone ?? null}
+        phoneNote={phoneSource === null ? null : CONTACT_SOURCE_LABEL[phoneSource]}
+        email={null}
+        latitude={lead.latitude}
+        longitude={lead.longitude}
+        call={{
+          allowed: callBlock.allowed && window.allowed,
+          reason: !callBlock.allowed
+            ? callBlock.reason
+            : !window.allowed
+              ? (window.reasons[0] ?? 'Outside the calling window')
+              : null,
+        }}
+        text={{
+          allowed: smsBlock.allowed && window.allowed,
+          reason: !smsBlock.allowed
+            ? smsBlock.reason
+            : !window.allowed
+              ? (window.reasons[0] ?? 'Outside the calling window')
+              : null,
+        }}
+        onCall={() => void logAttempt('call_placed')}
+        onText={() => void logAttempt('text_initiated')}
+      />
+
       <div className="rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 p-5 ring-1 ring-white/10">
         <p className="text-[11px] uppercase tracking-wider text-white/40">
           {STATUS_LABEL[lead.status]}

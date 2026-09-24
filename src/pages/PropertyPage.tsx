@@ -2,7 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { OwnerLine, occupancyEvidence } from '@/components/OwnerLine'
 import RoofView from '@/components/RoofView'
-import { Card, Empty, SectionTitle } from '@/components/ui'
+import { Button, Card, Empty, SectionTitle } from '@/components/ui'
+import ContactActions from '@/components/ContactActions'
+import { findByAddress } from '@/features/leads/lead-store'
+import {
+  CONTACT_SOURCE_LABEL,
+  contactSourceOf,
+  mayContact,
+  type ManagedLead,
+} from '@/features/leads/pipeline'
+import { mayCallAt } from '@/features/compliance/engine'
+import { ALL_SOLICITATION_RULES } from '@/features/compliance/solicitation'
 import { readCachedRun, type LeadRun } from '@/features/leads/engine'
 import { buildPropertyProfile, type PropertyProfile } from '@/features/leads/property-profile'
 import type { ScoredLead } from '@/features/leads/scoring'
@@ -52,6 +62,21 @@ export default function PropertyPage() {
   const [permits, setPermits] = useState<PermitRecord[] | null>(null)
   const [permitError, setPermitError] = useState(false)
   const [tab, setTab] = useState<Tab>('property')
+  /*
+   * The managed lead for this address, if the rep has already worked it.
+   *
+   * This screen is parcel research and holds no contact details of its own —
+   * that is deliberate and stays true. But once a homeowner has actually given
+   * a number at the door, it lives on the lead, and making the rep navigate
+   * back to the door list to dial it is the friction this whole change is
+   * about. Null simply means nobody has knocked here yet.
+   */
+  const [managed, setManaged] = useState<ManagedLead | null>(null)
+
+  useEffect(() => {
+    if (addressKey === '') return
+    void findByAddress(addressKey).then(setManaged)
+  }, [addressKey])
 
   useEffect(() => {
     void readCachedRun().then(setRun)
@@ -143,6 +168,32 @@ export default function PropertyPage() {
         <OwnerLine parcel={lead.parcel} />
       </Card>
 
+      {/*
+        Actions first, tabs second. The rep's highest-frequency needs — reach
+        this person, drive to this house — sit above the drill-down, because
+        scrolling through ownership metadata to find a phone number is the
+        friction that stops an app being used on a driveway.
+      */}
+      {managed !== null ? (
+        <PropertyContactBar lead={managed} />
+      ) : (
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-white/4 px-3 py-2.5">
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${lead.latitude},${lead.longitude}`}
+            target="_blank"
+            rel="noreferrer"
+            className="contents"
+          >
+            <Button variant="secondary">Navigate</Button>
+          </a>
+          {/* Honest about why there is nothing to dial: no number has been
+              collected here, rather than a broken or empty control. */}
+          <p className="min-w-0 flex-1 text-[11.5px] leading-tight text-white/45">
+            Nobody has knocked here yet, so there is no phone number to call.
+          </p>
+        </div>
+      )}
+
       <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1">
         {TABS.map((t) => (
           <button
@@ -189,9 +240,21 @@ function FactRow<T>({
   const known = fact.value !== null && fact.certainty !== 'unknown'
   return (
     <div className="border-t border-white/8 py-2 first:border-t-0 first:pt-0">
+      {/*
+        `min-w-0` on both children, and it is not cosmetic. A flex item defaults
+        to `min-width: auto`, which refuses to shrink below its content — so a
+        long value such as a full mailing address pushed the row wider than the
+        card and out of the viewport instead of wrapping. `break-words` then
+        lets a long unbroken token break rather than doing the same thing again.
+
+        No ellipsis: a truncated address is worse than a wrapped one, because a
+        rep cannot tell what was cut off.
+      */}
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-[12.5px] text-white/45">{label}</p>
-        <p className={`text-right text-[13.5px] ${known ? 'text-white/90' : 'text-white/30'}`}>
+        <p className="min-w-0 shrink-0 text-[12.5px] text-white/45">{label}</p>
+        <p
+          className={`min-w-0 break-words text-right text-[13.5px] ${known ? 'text-white/90' : 'text-white/30'}`}
+        >
           {known ? format(fact.value as T) : 'Not on record'}
         </p>
       </div>
@@ -264,9 +327,16 @@ function OwnerTab({ profile, parcel }: { profile: PropertyProfile; parcel?: Parc
           {occupancyEvidence(parcel)}
         </p>
       )}
+      {/*
+        This used to read "contact details are not collected ... no number is
+        dialled from here", which stopped being true when the door sheet gained
+        a contact editor. A stale reassurance is worse than none: it describes a
+        guarantee the software no longer makes.
+      */}
       <p className="mt-2 border-t border-white/8 pt-2 text-[11.5px] leading-relaxed text-white/35">
-        Contact details are not collected. This app knocks and mails; no phone or email is appended,
-        and no number is dialled from here.
+        No phone or email is appended to this parcel from a data broker. A number appears here only
+        when a homeowner gave it at the door, and calling it is gated on consent and on Louisiana’s
+        solicitation hours.
       </p>
     </Card>
   )
@@ -363,5 +433,49 @@ function PermitsTab({
           : 'A re-roof permit records that work was authorised, not that it was finished.'}
       </p>
     </Card>
+  )
+}
+
+
+/**
+ * The lead screen's contact gates, applied on the property screen.
+ *
+ * Imported wholesale rather than reimplemented. Two copies of "may this number
+ * be dialled" is how one of them quietly stops matching the law.
+ */
+function PropertyContactBar({ lead }: { lead: ManagedLead }) {
+  const callBlock = mayContact(lead, 'call')
+  const smsBlock = mayContact(lead, 'sms')
+  const window = mayCallAt(
+    ALL_SOLICITATION_RULES,
+    { state: 'LA', parish: 'East Baton Rouge', municipality: null },
+    new Date(),
+  )
+  const source = contactSourceOf(lead)
+
+  return (
+    <ContactActions
+      phone={lead.contactPhone ?? null}
+      phoneNote={source === null ? null : CONTACT_SOURCE_LABEL[source]}
+      email={null}
+      latitude={lead.latitude}
+      longitude={lead.longitude}
+      call={{
+        allowed: callBlock.allowed && window.allowed,
+        reason: !callBlock.allowed
+          ? callBlock.reason
+          : !window.allowed
+            ? (window.reasons[0] ?? 'Outside the calling window')
+            : null,
+      }}
+      text={{
+        allowed: smsBlock.allowed && window.allowed,
+        reason: !smsBlock.allowed
+          ? smsBlock.reason
+          : !window.allowed
+            ? (window.reasons[0] ?? 'Outside the calling window')
+            : null,
+      }}
+    />
   )
 }

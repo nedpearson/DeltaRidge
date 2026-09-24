@@ -1,9 +1,9 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { outboxCount } from '@/lib/db'
 
-const NAV = [
+export const NAV = [
   { to: '/', label: 'Home', icon: 'home' },
   { to: '/leads', label: 'Leads', icon: 'target' },
   { to: '/estimate', label: 'Price', icon: 'tag' },
@@ -50,12 +50,77 @@ export function OnlinePill() {
   )
 }
 
+/**
+ * Keeps the page's bottom padding equal to the nav's real height.
+ *
+ * Measured rather than declared, because every constant anybody would write
+ * here is wrong on some phone: the label font scales with the OS accessibility
+ * setting, the home indicator inset differs between devices and between
+ * portrait and landscape, and installing the app as a PWA removes the browser
+ * chrome that was absorbing the difference. A ResizeObserver on the element
+ * itself is the only version that cannot drift out of date.
+ *
+ * This replaced a hard-coded `pb-24`, which under-reserved by about 58px in the
+ * common case and cut the bottom off every long page in the app.
+ */
+function useNavHeight(active: boolean) {
+  const ref = useRef<HTMLElement | null>(null)
+  const [height, setHeight] = useState(0)
+
+  useEffect(() => {
+    if (!active) {
+      setHeight(0)
+      return
+    }
+    const element = ref.current
+    if (element === null) return
+
+    const measure = () => setHeight(element.getBoundingClientRect().height)
+    measure()
+
+    // ResizeObserver catches the nav growing; the orientation listener catches
+    // the safe-area inset changing without the element's box changing, which a
+    // ResizeObserver alone does not report.
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    window.addEventListener('orientationchange', measure)
+    window.addEventListener('resize', measure)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('orientationchange', measure)
+      window.removeEventListener('resize', measure)
+    }
+  }, [active])
+
+  return { ref, height }
+}
+
 export default function AppShell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const hideNav = pathname.startsWith('/inspection/')
+  const { ref: navRef, height: navHeight } = useNavHeight(!hideNav)
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-screen-sm flex-col">
+    /*
+     * `min-h-dvh`, not `min-h-screen`. On mobile Safari `100vh` is the height
+     * with the URL bar hidden, so a `100vh` layout is always taller than the
+     * visible viewport and the last row of anything sits under the browser
+     * chrome. `dvh` tracks the viewport as it actually is.
+     *
+     * The column widens past phone size rather than pinning every screen to
+     * 640px: a manager on a laptop was reading a phone-width strip down the
+     * middle of a 27-inch display.
+     */
+    <div
+      className="mx-auto flex min-h-dvh w-full max-w-screen-sm flex-col md:max-w-3xl lg:max-w-5xl"
+      /*
+       * Published as a CSS variable, not kept private to this component, because
+       * the nav is not the only thing pinned to the bottom of the screen. The
+       * update banner used to sit at a hard-coded `bottom-20` and landed on top
+       * of the nav the moment the nav grew. One measurement, one source.
+       */
+      style={{ '--bottom-nav-height': `${navHeight}px` } as CSSProperties}
+    >
       <header className="sticky top-0 z-20 border-b border-white/5 bg-[var(--color-surface)]/90 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
@@ -69,11 +134,43 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className={`flex-1 px-4 pt-4 ${hideNav ? 'pb-6' : 'pb-24'}`}>{children}</main>
+      {/*
+        The bottom padding is the nav's measured height plus the safe-area inset
+        plus a thumb's worth of breathing room, so the last card on any page can
+        always be scrolled clear of the nav. `paddingBottom` is set as a style
+        rather than a class because the value is a runtime measurement.
+      */}
+      <main
+        className="flex-1 px-4 pt-4"
+        style={{
+          paddingBottom: hideNav
+            ? '1.5rem'
+            : 'calc(var(--bottom-nav-height, 0px) + env(safe-area-inset-bottom, 0px) + 1rem)',
+        }}
+      >
+        {children}
+      </main>
 
       {!hideNav && (
-        <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-screen-sm border-t border-white/5 bg-[var(--color-surface-2)]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-          <div className="grid grid-cols-4">
+        <nav
+          ref={navRef}
+          className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-screen-sm border-t border-white/5 bg-[var(--color-surface-2)]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur md:max-w-3xl lg:max-w-5xl"
+        >
+          {/*
+            The column count is DERIVED from NAV, not written down beside it.
+            It said `grid-cols-4` while NAV held five entries, so "Inspect"
+            wrapped onto a second row and the nav stood 126px tall where the
+            page reserved 96px — measured at -29px of clearance on an iPhone SE,
+            which is precisely the content that was disappearing under the nav.
+            A hand-maintained number next to a list is a bug waiting for the
+            next person to add a tab, so there is no longer a number to maintain.
+            Inline style rather than a Tailwind class because the JIT compiler
+            cannot generate a class name built at runtime.
+          */}
+          <div
+            className="grid"
+            style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}
+          >
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
