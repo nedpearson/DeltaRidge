@@ -51,6 +51,8 @@ export default function RoofView({
    * house whatever the element is.
    */
   aspect = 3 / 2,
+  /** Stops the frame running off the screen on a wide display. */
+  maxHeight = '60vh',
   /** Where the zoom starts, as an index into SPAN_STEPS_METRES. */
   initialStep = DEFAULT_STEP < 0 ? 2 : DEFAULT_STEP,
   onClose,
@@ -60,26 +62,31 @@ export default function RoofView({
   address: string
   boundary?: ReadonlyArray<readonly [number, number]> | undefined
   aspect?: number
+  maxHeight?: string
   initialStep?: number
   onClose?: () => void
 }) {
   const box = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(0)
+  const [size, setSize] = useState({ width: 0, height: 0 })
   const [step, setStep] = useState(initialStep)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     const element = box.current
     if (!element) return
-    const measure = () => setWidth(element.clientWidth)
+    // BOTH dimensions, read back from the browser rather than computed from the
+    // width. On a wide screen the max-height caps the frame, and a height
+    // derived from width × aspect would then be 993 px for a box that is
+    // actually 450 — the image would hang off the top of the viewport, which is
+    // exactly what it did.
+    const measure = () => setSize({ width: element.clientWidth, height: element.clientHeight })
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
 
-  const height = width > 0 ? Math.round(width / aspect) : 0
-  const size = { width, height }
+  const { width, height } = size
   const span = SPAN_STEPS_METRES[step] ?? HOUSE_SPAN_METRES
 
   // The zoom control moves through spans either way; against a lot boundary it
@@ -120,8 +127,11 @@ export default function RoofView({
     <div>
       <div
         ref={box}
-        className="relative overflow-hidden rounded-2xl bg-[var(--color-surface-3)] ring-1 ring-white/8"
-        style={{ aspectRatio: `${aspect}` }}
+        className="relative w-full overflow-hidden rounded-2xl bg-[var(--color-surface-3)] ring-1 ring-white/8"
+        // w-full with an aspect ratio and a max height: the width stays full and
+        // only the height is capped. Capping with max-h alone makes the browser
+        // honour the ratio by shrinking the WIDTH instead.
+        style={{ aspectRatio: `${aspect}`, maxHeight }}
       >
         {url && !failed && (
           <img

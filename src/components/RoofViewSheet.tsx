@@ -27,7 +27,7 @@ export default function RoofViewSheet({
       role="presentation"
     >
       <div
-        className="w-full rounded-t-3xl bg-[var(--color-surface-2)] p-4 pb-8 ring-1 ring-white/10"
+        className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-[var(--color-surface-2)] p-4 pb-8 ring-1 ring-white/10"
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
