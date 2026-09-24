@@ -1,4 +1,5 @@
 import { readAttachment, readEvent, readLead } from '@/features/leads/lead-store'
+import { contactSourceOf } from '@/features/leads/pipeline'
 import type { ContactKind, LeadStatus, ManagedLead } from '@/features/leads/pipeline'
 import { getSupabase } from '../supabase'
 import { getRemoteId, setRemoteId } from '../sync-store'
@@ -110,6 +111,9 @@ async function ensureLeadCustomer(lead: ManagedLead, orgId: string): Promise<str
       organization_id: orgId,
       first_name: lead.contactName,
       primary_phone: lead.contactPhone ?? null,
+      // Carried with the number, always. A number that reaches the office
+      // without its provenance is a number the office cannot decide about.
+      phone_source: lead.contactPhone ? contactSourceOf(lead) : null,
     })
     .select('id')
     .single()

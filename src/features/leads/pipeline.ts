@@ -147,6 +147,14 @@ export interface ManagedLead {
   updatedAt: string
   contactName?: string
   contactPhone?: string
+  /**
+   * Where the phone number came from. See `ContactSource`.
+   *
+   * Absent on a record written before this field existed. Those are treated as
+   * `homeowner_at_door`, because the door sheet was the only code path that
+   * could set a number at all — not because absent means trustworthy.
+   */
+  contactSource?: ContactSource
   /** When to come back. ISO. */
   nextActionAt?: string
   /** An agreed time, which is a stronger claim than a follow-up. ISO. */
@@ -188,6 +196,64 @@ export const CHANNEL_LABEL: Record<ContactChannel, string> = {
   email: 'Email',
 }
 
+/**
+ * Where a phone number came from.
+ *
+ * This exists because a number the homeowner said out loud and a number off a
+ * records lookup were indistinguishable on the record, and that distinction is
+ * the whole question if the call is ever challenged. "We had their number" is
+ * not an answer; "she gave it to me at the door on the 12th" is.
+ *
+ * It is not a quality score. A looked-up number may well be correct. It is a
+ * statement about whether this person handed it over, which is a different
+ * fact and the one the TCPA cares about.
+ */
+export type ContactSource =
+  /** They said it, standing at their door. */
+  | 'homeowner_at_door'
+  /** They said it on a call they placed or returned. */
+  | 'homeowner_by_phone'
+  /** They wrote it — a form, a signed agreement, an email they sent. */
+  | 'homeowner_in_writing'
+  /** The parish roll or another public record. Not something they gave us. */
+  | 'public_record'
+  /** A people-search or skip-trace service. Not something they gave us. */
+  | 'third_party_lookup'
+  /** Nobody recorded where it came from. Treated as not from them. */
+  | 'unknown'
+
+export const CONTACT_SOURCE_LABEL: Record<ContactSource, string> = {
+  homeowner_at_door: 'They gave it at the door',
+  homeowner_by_phone: 'They gave it on a call',
+  homeowner_in_writing: 'They wrote it down',
+  public_record: 'Public record',
+  third_party_lookup: 'Records lookup',
+  unknown: 'Source not recorded',
+}
+
+/**
+ * Sources that are the homeowner handing over their own number.
+ *
+ * Everything else is somebody else telling us about them, however accurate.
+ */
+const FROM_THE_HOMEOWNER = new Set<ContactSource>([
+  'homeowner_at_door',
+  'homeowner_by_phone',
+  'homeowner_in_writing',
+])
+
+export function contactSourceOf(lead: ManagedLead): ContactSource | null {
+  if (lead.contactPhone === undefined) return null
+  // A record written before this field existed can only have come from the door
+  // sheet, which is the one place that ever set a number. Stated here so the
+  // assumption is arguable rather than silent.
+  return lead.contactSource ?? 'homeowner_at_door'
+}
+
+export function isFromHomeowner(source: ContactSource): boolean {
+  return FROM_THE_HOMEOWNER.has(source)
+}
+
 export interface ConsentRecord {
   at: string
   /**
@@ -221,6 +287,23 @@ export function mayContact(lead: ManagedLead, channel: ContactChannel): ContactB
   if (channel !== 'email' && lead.contactPhone === undefined) {
     return { allowed: false, reason: 'No phone number on this lead.' }
   }
+  // Consent recorded against a number the homeowner never handed over is not
+  // consent from the person who answers it. A looked-up number may be perfectly
+  // correct and still belong to somebody who never spoke to us.
+  if (channel !== 'email') {
+    const source = contactSourceOf(lead)
+    if (source !== null && !isFromHomeowner(source)) {
+      return {
+        allowed: false,
+        reason:
+          source === 'third_party_lookup'
+            ? 'This number came from a records lookup, not from them. Confirm it at the door and record it before calling.'
+            : source === 'public_record'
+              ? 'This number came from a public record, not from them. Confirm it at the door and record it before calling.'
+              : 'Nobody recorded where this number came from. Confirm it at the door before calling.',
+      }
+    }
+  }
   if (lead.consent?.[channel] === undefined) {
     return {
       allowed: false,
@@ -228,6 +311,43 @@ export function mayContact(lead: ManagedLead, channel: ContactChannel): ContactB
     }
   }
   return { allowed: true }
+}
+
+/**
+ * Records a name and number, with where they came from.
+ *
+ * The source is required. There is deliberately no overload that omits it: the
+ * whole point is that a number cannot enter the record without somebody saying
+ * how it got there, and an optional field would be blank on exactly the rows
+ * where it matters most.
+ *
+ * Changing the number resets any consent on the phone channels. Permission to
+ * call was permission to call THAT number; carrying it across to a different
+ * one is how a consent record stops meaning anything.
+ */
+export function setContact(
+  lead: ManagedLead,
+  details: { name?: string; phone?: string; source: ContactSource },
+  at: string,
+): ManagedLead {
+  const next: ManagedLead = { ...lead, updatedAt: at }
+
+  if (details.name !== undefined && details.name !== '') next.contactName = details.name
+
+  if (details.phone !== undefined && details.phone !== '') {
+    const changed = lead.contactPhone !== details.phone
+    next.contactPhone = details.phone
+    next.contactSource = details.source
+    if (changed && lead.consent) {
+      const consent = { ...lead.consent }
+      delete consent.call
+      delete consent.sms
+      if (Object.keys(consent).length > 0) next.consent = consent
+      else delete next.consent
+    }
+  }
+
+  return next
 }
 
 /** Records permission, or withdraws it. Never mutates the lead it was given. */
@@ -485,6 +605,9 @@ export function applyOutcome(
   }
   if (options.contactPhone !== undefined && options.contactPhone !== '') {
     next.contactPhone = options.contactPhone
+    // The door sheet knows its own provenance: somebody standing at the door
+    // said this. Nothing else in this function has to guess.
+    next.contactSource = 'homeowner_at_door'
   }
 
   // A UUID, not a composite of the lead id and the clock. Two things depend on

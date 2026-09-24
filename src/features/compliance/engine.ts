@@ -40,8 +40,18 @@ function inEffect(rule: ComplianceRule, asOf: string): boolean {
   return rule.effectiveUntil === null || rule.effectiveUntil >= asOf
 }
 
+/**
+ * `state: 'US'` means federal law, which applies in every state.
+ *
+ * Without this a federal rule sat in the table matching nothing — the engine
+ * compared the state code literally, so a TCPA rule filed under 'US' was
+ * invisible in Louisiana. Rules that are quietly never evaluated are the worst
+ * kind to have, because the table looks complete.
+ */
+export const FEDERAL = 'US'
+
 function appliesHere(rule: ComplianceRule, where: Jurisdiction): boolean {
-  if (rule.state !== where.state) return false
+  if (rule.state !== FEDERAL && rule.state !== where.state) return false
   if (rule.appliesTo.length === 0) return true
   const names = [where.parish, where.municipality].filter(
     (n): n is string => n !== null,
@@ -213,6 +223,7 @@ export function checkCompliance(
       case 'prohibit':
       case 'code_adoption':
       case 'incentive':
+      case 'contact_restriction':
         // These constrain what the software may SAY, not what it must collect.
         // They are surfaced through the dedicated helpers below rather than as
         // findings, so a proposal screen cannot accidentally render a grant
@@ -246,6 +257,122 @@ export function prohibitedConduct(
     }
   }
   return [...out]
+}
+
+// ---------------------------------------------------------------------------
+// When a homeowner may be telephoned
+// ---------------------------------------------------------------------------
+
+export interface CallWindowVerdict {
+  readonly allowed: boolean
+  /** Why not, in words a rep can act on. Empty when allowed. */
+  readonly reasons: readonly string[]
+  /** The rules that decided it, so the answer can be checked rather than trusted. */
+  readonly ruleIds: readonly string[]
+  /** What has to be true before a call may be placed at all, from every rule. */
+  readonly requires: readonly string[]
+}
+
+const WEEKDAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+function minutesOf(hhmm: string): number | null {
+  const m = /^(\d{2}):(\d{2})$/.exec(hhmm)
+  if (!m) return null
+  const h = Number(m[1])
+  const min = Number(m[2])
+  if (!Number.isFinite(h) || !Number.isFinite(min)) return null
+  return h * 60 + min
+}
+
+function clock(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  const suffix = h >= 12 ? 'pm' : 'am'
+  const twelve = h % 12 === 0 ? 12 : h % 12
+  return m === 0 ? `${twelve}${suffix}` : `${twelve}:${String(m).padStart(2, '0')}${suffix}`
+}
+
+/**
+ * Whether a solicitation call or text may be placed at this moment.
+ *
+ * EVERY applicable rule has to allow it. The tightest wins, which in Louisiana
+ * means the state order rather than the federal one: 8pm rather than 9pm, and
+ * nothing at all on a Sunday. A rep who has spent Sunday afternoon knocking is
+ * the person most likely to reach for the phone at exactly the wrong moment,
+ * which is the entire reason this is computed rather than written on a poster.
+ *
+ * `at` is the local wall-clock time at the called party. For this business the
+ * rep and the homeowner are in the same parish, so the device clock is right —
+ * and that assumption is stated here rather than buried, because it stops being
+ * true the first time Delta Ridge calls somebody who has moved out of state.
+ *
+ * Legal holidays are NOT computed. A rule that blacks them out returns a
+ * reminder to check, because a wrong holiday calendar is worse than none.
+ */
+export function mayCallAt(
+  all: readonly ComplianceRule[],
+  where: Jurisdiction,
+  at: Date,
+  asOf: string = at.toISOString().slice(0, 10),
+): CallWindowVerdict {
+  const reasons: string[] = []
+  const ruleIds: string[] = []
+  const requires = new Set<string>()
+
+  const minutes = at.getHours() * 60 + at.getMinutes()
+  const weekday = at.getDay()
+
+  for (const { rule, status } of rulesFor(all, where, asOf)) {
+    if (rule.effect.kind !== 'contact_restriction') continue
+    // An unverified rule is a question, not a restriction. It is surfaced by
+    // checkCompliance as something a human owes an answer to; it does not get
+    // to block a call on a citation nobody has read.
+    if (status === 'requires_verification') continue
+
+    ruleIds.push(rule.id)
+    for (const r of rule.effect.requires) requires.add(r)
+
+    if (rule.effect.blackoutWeekdays.includes(weekday)) {
+      reasons.push(`No solicitation calls on ${WEEKDAY_NAME[weekday]} (${rule.source?.citation ?? rule.id}).`)
+      continue
+    }
+
+    const from = rule.effect.permittedFrom ? minutesOf(rule.effect.permittedFrom) : null
+    const until = rule.effect.permittedUntil ? minutesOf(rule.effect.permittedUntil) : null
+
+    if (from !== null && minutes < from) {
+      reasons.push(`Too early — calls start at ${clock(from)} (${rule.source?.citation ?? rule.id}).`)
+    } else if (until !== null && minutes >= until) {
+      reasons.push(`Too late — calls stop at ${clock(until)} (${rule.source?.citation ?? rule.id}).`)
+    }
+
+    if (rule.effect.blackoutLegalHolidays) {
+      requires.add('not_a_legal_holiday')
+    }
+  }
+
+  // Nothing matched. A restriction engine that has no rules for a place must
+  // not read as permission — "we have not loaded any telephone rules for this
+  // jurisdiction" and "this call is fine" are opposite answers, and returning
+  // the second for the first is how an engine gives its most confident wrong
+  // answer in exactly the place it knows least about.
+  if (ruleIds.length === 0) {
+    return {
+      allowed: false,
+      reasons: [
+        'No telephone solicitation rules are loaded for this place, so nothing has cleared this call.',
+      ],
+      ruleIds: [],
+      requires: [],
+    }
+  }
+
+  return {
+    allowed: reasons.length === 0,
+    reasons,
+    ruleIds,
+    requires: [...requires],
+  }
 }
 
 export interface IncentiveOffer {

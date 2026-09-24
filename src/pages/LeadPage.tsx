@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import LeadNotePanel from '@/components/LeadNotePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
+import { mayCallAt } from '@/features/compliance/engine'
+import { ALL_SOLICITATION_RULES } from '@/features/compliance/solicitation'
 import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/components/ui'
 import {
   addEvent,
@@ -16,15 +18,20 @@ import {
   applyOutcome,
   CHANNEL_LABEL,
   CONTACT_KIND_LABEL,
+  CONTACT_SOURCE_LABEL,
+  contactSourceOf,
   dueLabel,
+  isFromHomeowner,
   mayContact,
   optOut,
   OUTCOME_LABEL,
   setConsent,
+  setContact,
   STATUS_LABEL,
   type ContactChannel,
   type ContactEvent,
   type ContactKind,
+  type ContactSource,
   type DoorOutcome,
   type ManagedLead,
 } from '@/features/leads/pipeline'
@@ -44,6 +51,21 @@ import { newId, saveInspection, type LocalInspection } from '@/lib/db'
  */
 
 const QUICK: DoorOutcome[] = ['no_answer', 'come_back', 'interested', 'appointment_set']
+/**
+ * The sources a rep can pick, in the order they actually happen.
+ *
+ * 'unknown' is deliberately absent: it is a state a legacy row can be IN, not
+ * an answer anybody should be able to choose. Offering it would make the
+ * easiest option the one that records nothing.
+ */
+const NUMBER_SOURCES: readonly ContactSource[] = [
+  'homeowner_at_door',
+  'homeowner_by_phone',
+  'homeowner_in_writing',
+  'public_record',
+  'third_party_lookup',
+]
+
 const CHANNELS: ContactChannel[] = ['call', 'sms', 'email']
 
 function when(iso: string): string {
@@ -105,6 +127,9 @@ export default function LeadPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [lead, setLead] = useState<ManagedLead | null>(null)
+  const [editingNumber, setEditingNumber] = useState(false)
+  const [newNumber, setNewNumber] = useState('')
+  const [numberSource, setNumberSource] = useState<ContactSource | null>(null)
   const [history, setHistory] = useState<ContactEvent[]>([])
   const [attachments, setAttachments] = useState<LeadAttachment[]>([])
   const [loading, setLoading] = useState(true)
@@ -204,6 +229,32 @@ export default function LeadPage() {
     await load(lead.id)
   }, [lead, load])
 
+  /**
+   * Records a number with where it came from.
+   *
+   * The source picker has no default and the save is refused without one. That
+   * is the whole feature: a number that enters the record without somebody
+   * saying how it got there is a number nobody can decide about later, and an
+   * optional field would be blank on exactly the rows where it matters.
+   */
+  const saveNumber = useCallback(async () => {
+    if (!lead || newNumber.trim() === '' || numberSource === null) return
+    const at = new Date().toISOString()
+    const next = setContact(lead, { phone: newNumber.trim(), source: numberSource }, at)
+    await saveLead(next)
+    await addEvent({
+      id: newId(),
+      leadId: lead.id,
+      at,
+      kind: 'note',
+      note: `Phone number recorded — ${CONTACT_SOURCE_LABEL[numberSource].toLowerCase()}.`,
+    })
+    setNewNumber('')
+    setNumberSource(null)
+    setEditingNumber(false)
+    await load(lead.id)
+  }, [lead, newNumber, numberSource, load])
+
   const moveNextAction = useCallback(async () => {
     const at = toIso(reschedule)
     if (!lead || at === undefined) return
@@ -255,6 +306,22 @@ export default function LeadPage() {
   const due = dueLabel(lead, new Date().toISOString())
   const callBlock = mayContact(lead, 'call')
   const smsBlock = mayContact(lead, 'sms')
+  const phoneSource = contactSourceOf(lead)
+
+  /*
+   * Whether the CLOCK allows a call, separately from whether this person does.
+   *
+   * Louisiana is tighter than federal on both counts — 8pm rather than 9pm, and
+   * nothing at all on a Sunday — and a rep who has spent Sunday afternoon
+   * knocking is precisely the person about to reach for the phone at the wrong
+   * moment. The window is computed rather than trained, because a poster on a
+   * wall has never stopped anybody.
+   */
+  const window = mayCallAt(
+    ALL_SOLICITATION_RULES,
+    { state: 'LA', parish: 'East Baton Rouge', municipality: null },
+    new Date(),
+  )
   // Narrowed once, here, rather than inside the JSX: a discriminated union
   // does not survive being re-tested in a ternary branch.
   const blockReason = !callBlock.allowed
@@ -295,13 +362,34 @@ export default function LeadPage() {
       <SectionTitle>REACH THEM</SectionTitle>
       <Card>
         {lead.contactPhone ? (
-          <p className="text-[15px] font-semibold">{lead.contactPhone}</p>
+          <>
+            <p className="text-[15px] font-semibold">{lead.contactPhone}</p>
+            {phoneSource && (
+              <p
+                className={`mt-0.5 text-[11.5px] ${
+                  isFromHomeowner(phoneSource) ? 'text-white/40' : 'text-amber-200/70'
+                }`}
+              >
+                {CONTACT_SOURCE_LABEL[phoneSource]}
+              </p>
+            )}
+          </>
         ) : (
           <p className="text-[13px] text-white/45">No phone number on this lead.</p>
         )}
 
+        {!window.allowed && lead.contactPhone && (
+          <div className="mt-2 rounded-xl bg-amber-500/8 px-3 py-2 ring-1 ring-amber-500/20">
+            {window.reasons.map((reason) => (
+              <p key={reason} className="text-[12px] leading-relaxed text-amber-100/80">
+                {reason}
+              </p>
+            ))}
+          </div>
+        )}
+
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {callBlock.allowed && lead.contactPhone ? (
+          {callBlock.allowed && window.allowed && lead.contactPhone ? (
             <a href={`tel:${lead.contactPhone}`} className="contents">
               <Button variant="secondary" onClick={() => void logAttempt('call_placed')}>
                 Call
@@ -312,7 +400,7 @@ export default function LeadPage() {
               Call
             </Button>
           )}
-          {smsBlock.allowed && lead.contactPhone ? (
+          {smsBlock.allowed && window.allowed && lead.contactPhone ? (
             <a href={`sms:${lead.contactPhone}`} className="contents">
               <Button variant="secondary" onClick={() => void logAttempt('text_initiated')}>
                 Text
@@ -333,6 +421,64 @@ export default function LeadPage() {
           Recorded as placed and initiated. The app hands the number to your phone and cannot see
           whether it was answered or delivered, so it does not say that it was.
         </p>
+        {editingNumber ? (
+          <div className="mt-3 border-t border-white/5 pt-3">
+            <Field label="Number">
+              <TextInput
+                type="tel"
+                value={newNumber}
+                onChange={(e) => setNewNumber(e.target.value)}
+                placeholder="225…"
+              />
+            </Field>
+            <p className="mt-3 text-[11.5px] font-medium text-white/60">Where did it come from?</p>
+            <div className="mt-2 space-y-1.5">
+              {NUMBER_SOURCES.map((source) => (
+                <button
+                  key={source}
+                  onClick={() => setNumberSource(source)}
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left ring-1 ${
+                    numberSource === source
+                      ? 'bg-gold-500/15 ring-gold-400/40'
+                      : 'bg-white/5 ring-white/8'
+                  }`}
+                >
+                  <span className="text-[13px]">{CONTACT_SOURCE_LABEL[source]}</span>
+                  {!isFromHomeowner(source) && (
+                    <span className="text-[10.5px] text-amber-200/70">not dialable here</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-white/35">
+              A number they did not hand over is stored and shown, and the call and text buttons
+              stay off for it. Confirm it with them and record it again to change that.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button variant="secondary" onClick={() => setEditingNumber(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="gold"
+                disabled={newNumber.trim() === '' || numberSource === null}
+                onClick={() => void saveNumber()}
+              >
+                {numberSource === null ? 'Pick a source' : 'Save number'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button variant="ghost" full className="mt-2" onClick={() => setEditingNumber(true)}>
+            {lead.contactPhone ? 'Change the number' : 'Add a number'}
+          </Button>
+        )}
+
+        {window.allowed && window.requires.length > 0 && (
+          <p className="mt-1 text-[10.5px] leading-relaxed text-white/25">
+            The hour is allowed. It does not clear the number — the state and national do-not-call
+            lists are screened outside this app, and legal holidays are not in it.
+          </p>
+        )}
       </Card>
 
       <SectionTitle>PERMISSION</SectionTitle>

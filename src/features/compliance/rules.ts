@@ -62,6 +62,11 @@ export type RuleCategory =
   | 'conduct'
   | 'incentive_programme'
   | 'documentation'
+  /** When and on what terms a homeowner may be telephoned or texted. */
+  | 'solicitation'
+
+/** The channels a solicitation rule can restrict. Text is a call under the TCPA. */
+export type RestrictedChannel = 'call' | 'sms'
 
 export interface DocumentationItem {
   readonly key: string
@@ -96,6 +101,29 @@ export type RuleEffect =
       readonly checklist: readonly DocumentationItem[]
     }
   | { readonly kind: 'code_adoption'; readonly codes: readonly string[] }
+  /**
+   * When a homeowner may be contacted, and what has to be true first.
+   *
+   * Carried as data rather than as prose because this is the one area where
+   * the software can actually stop the mistake: a rep tapping "call" at 7pm on
+   * a Sunday in Louisiana is a $1,500 decision, and no amount of small print on
+   * a training slide prevents it. `permittedFrom`/`permittedUntil` are local
+   * wall-clock times at the CALLED party's location, which for this business is
+   * the same parish the rep is standing in.
+   */
+  | {
+      readonly kind: 'contact_restriction'
+      readonly channels: readonly RestrictedChannel[]
+      /** Inclusive local start, "HH:MM". Null means no start restriction. */
+      readonly permittedFrom: string | null
+      /** Exclusive local end, "HH:MM". Null means no end restriction. */
+      readonly permittedUntil: string | null
+      /** Weekdays with no permitted solicitation at all. 0 is Sunday. */
+      readonly blackoutWeekdays: readonly number[]
+      readonly blackoutLegalHolidays: boolean
+      /** Conditions that must hold before a call may be placed at all. */
+      readonly requires: readonly string[]
+    }
   | {
       readonly kind: 'incentive'
       readonly programme: string
