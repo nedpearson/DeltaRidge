@@ -9,6 +9,7 @@ import ContactActions from '@/components/ContactActions'
 import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
 import IntegrityPanel from '@/features/leads/IntegrityPanel'
 import LeadPropertyIntelligence from '@/features/leads/LeadPropertyIntelligence'
+import LeadContactIdentityPanel from '@/features/contacts/LeadContactIdentityPanel'
 import { readLink } from '@/features/integrations/roofr/store'
 import { pendingWork } from '@/lib/sync'
 import {
@@ -416,6 +417,8 @@ export default function LeadPage() {
           </Button>
         </div>
       </div>
+
+      <LeadContactIdentityPanel lead={lead} />
 
       <LeadPropertyIntelligence lead={lead} />
 
