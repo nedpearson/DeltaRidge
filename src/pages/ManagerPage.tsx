@@ -15,6 +15,12 @@ import {
   type ManagerSnapshot,
 } from '@/features/manager/read'
 import RoutesTab from '@/features/manager/tabs/RoutesTab'
+import {
+  fieldToday,
+  locationNote,
+  REP_STATUS_LABEL,
+} from '@/features/manager/field-today'
+import { resolveHistoryWindow } from '@/features/routes/history'
 import PerformanceTab from '@/features/manager/tabs/PerformanceTab'
 import GradesTab from '@/features/manager/tabs/GradesTab'
 import SettingsTab from '@/features/manager/tabs/SettingsTab'
@@ -25,15 +31,15 @@ import { readGradingConfig } from '@/features/manager/grade-store'
 import { DEFAULT_CONFIG, type GradingConfig } from '@/features/manager/grading'
 import { DEFAULT_WINDOW_DAYS } from '@/features/manager/read'
 import {
-  activeRoutes,
   efficiencyFor,
-  fixFreshness,
   orgBaseline,
   rollUpActivity,
   suggestAssignees,
   territoryCoverage,
   COMFORTABLE_OPEN_ASSIGNMENTS,
+  type ActivityRow,
   type RepContext,
+  type RouteRow,
 } from '@/features/manager/metrics'
 
 /**
@@ -174,7 +180,6 @@ export default function ManagerPage() {
     () => territoryCoverage(doors, snapshot.activity),
     [doors, snapshot.activity],
   )
-  const live = useMemo(() => activeRoutes(snapshot.routes), [snapshot.routes])
 
   const openByRep = useMemo(() => {
     const map = new Map<string, number>()
@@ -259,7 +264,15 @@ export default function ManagerPage() {
         />
       )}
 
-      {tab === 'field' && <FieldTab routes={live} nameOf={nameOf} loading={loading} />}
+      {tab === 'field' && (
+        <FieldTab
+          repIds={snapshot.team.map((m) => m.userId)}
+          routes={snapshot.routes}
+          activity={snapshot.activity}
+          nameOf={nameOf}
+          loading={loading}
+        />
+      )}
 
       {tab === 'routes' && (
         <RoutesTab
@@ -477,67 +490,101 @@ function TeamTab({
 /* -------------------------------------------------------------------------- */
 
 function FieldTab({
+  repIds,
   routes,
+  activity,
   nameOf,
   loading,
 }: {
-  routes: ReturnType<typeof activeRoutes>
+  repIds: readonly string[]
+  routes: readonly RouteRow[]
+  activity: readonly ActivityRow[]
   nameOf: (id: string | null) => string
   loading: boolean
 }) {
+  // One definition of "today", shared with the rep's own history screen, and
+  // resolved against the local clock: a rep knocking at 7pm in Baton Rouge is
+  // already on tomorrow's date in UTC.
+  const today = useMemo(() => resolveHistoryWindow('today'), [])
+  const rows = useMemo(
+    () =>
+      fieldToday({
+        repIds,
+        routes: routes.filter((r) => r.startedAt >= today.from && r.startedAt <= today.to),
+        activity: activity.filter((a) => a.occurredAt >= today.from && a.occurredAt <= today.to),
+      }),
+    [repIds, routes, activity, today],
+  )
+
   if (loading) return <Card><p className="text-[13px] text-white/45">Reading the server…</p></Card>
+
+  const out = rows.filter((r) => r.status === 'active' || r.status === 'paused')
 
   return (
     <div className="space-y-2">
       <Card>
         <p className="text-[12px] leading-relaxed text-white/45">
-          Only routes a rep has started and not yet stopped appear here. Nobody&apos;s location is recorded
-          or shown outside one, including their own.
+          Only routes a rep has started and not yet stopped are followed here. Nobody&apos;s location is
+          recorded or shown outside one, including their own, and a declared break stops the
+          recording entirely.
         </p>
       </Card>
 
-      {routes.length === 0 ? (
+      {out.length === 0 && (
         <Nothing title="Nobody is on a route" body="This is what an ordinary evening looks like." />
-      ) : (
-        routes.map((route) => {
-          const fresh = fixFreshness(route.lastFixAt)
-          return (
-            <Card key={route.id}>
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="truncate text-[14px] font-semibold">{nameOf(route.userId)}</p>
-                <span className="shrink-0 text-[11.5px] text-white/35">
-                  started {ago(route.startedAt)}
-                </span>
-              </div>
-              {route.label && <p className="mt-0.5 text-[12px] text-white/45">{route.label}</p>}
-
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                <Stat value={String(route.pointCount)} label="fixes" />
-                <Stat value={ago(route.lastFixAt)} label="last fix" />
-                <Stat
-                  value={route.accuracyM === null ? '—' : `±${Math.round(route.accuracyM)}m`}
-                  label="accuracy"
-                />
-              </div>
-
-              {/*
-                The freshness wording is the honest part. A ten minute old fix
-                drawn as a dot is a claim about where somebody is now that the
-                data does not support.
-              */}
-              <p className="mt-2 text-[11.5px] leading-relaxed text-white/40">
-                {fresh === 'live' && 'Reporting normally.'}
-                {fresh === 'recent' &&
-                  'Last fix is a few minutes old — they may have moved since.'}
-                {fresh === 'stale' &&
-                  'No fix for a while. That is not evidence they stopped working: buildings, pockets and dead batteries all look like this.'}
-                {fresh === 'none' &&
-                  'No fix recorded on this route yet. The knocks are still being saved.'}
-              </p>
-            </Card>
-          )
-        })
       )}
+
+      {rows.map((row) => (
+        <Card key={row.repId}>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="truncate text-[14px] font-semibold">{nameOf(row.repId)}</p>
+            <span
+              className={
+                'shrink-0 text-[11px] uppercase tracking-wider ' +
+                (row.status === 'active'
+                  ? 'text-emerald-300'
+                  : row.status === 'paused'
+                    ? 'text-purple-300'
+                    : 'text-white/35')
+              }
+            >
+              {REP_STATUS_LABEL[row.status]}
+            </span>
+          </div>
+
+          {row.startedAt && (
+            <p className="mt-0.5 text-[11.5px] text-white/40">
+              started {ago(row.startedAt)}
+              {row.lastFixAt ? ` · last fix ${ago(row.lastFixAt)}` : ' · no fix yet'}
+            </p>
+          )}
+
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            <Stat value={String(row.doors.doors)} label="doors" />
+            <Stat value={String(row.doors.conversations)} label="spoke to" />
+            <Stat value={String(row.doors.appointments)} label="booked" />
+            <Stat value={String(row.inspections)} label="inspected" />
+          </div>
+
+          {/*
+            Status and location are two different facts and stay two different
+            lines. A rep working a dead-signal subdivision is genuinely active
+            with a forty minute old fix; drawing that as a dot would be a claim
+            about where somebody is that the data does not support. `mappable`
+            is the only thing allowed to put a pin on a map.
+          */}
+          <p className="mt-2 text-[11.5px] leading-relaxed text-white/40">
+            {locationNote(row)}
+            {row.status === 'active' && row.freshness === 'stale' && (
+              <>
+                {' '}
+                That is not evidence they stopped working: buildings, pockets and dead batteries all
+                look like this.
+              </>
+            )}
+          </p>
+        </Card>
+      ))}
     </div>
   )
 }
