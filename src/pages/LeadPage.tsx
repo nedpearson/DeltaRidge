@@ -43,6 +43,10 @@ import {
   type ManagedLead,
 } from '@/features/leads/pipeline'
 import { newId, saveInspection, type LocalInspection } from '@/lib/db'
+import { useSession } from '@/features/auth/session'
+import DataHealthPanel from '@/features/leads/DataHealthPanel'
+import { readLeadDataHealth } from '@/features/leads/data-health-store'
+import type { DataHealthIssue, FixTarget } from '@/features/leads/data-health'
 
 /**
  * One lead, everything said to it, and what to do next.
@@ -93,6 +97,7 @@ function toIso(local: string): string | undefined {
 export default function LeadPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { membership } = useSession()
   const [lead, setLead] = useState<ManagedLead | null>(null)
   const [editingNumber, setEditingNumber] = useState(false)
   const [newNumber, setNewNumber] = useState('')
@@ -109,6 +114,7 @@ export default function LeadPage() {
   const [roofrJobId, setRoofrJobId] = useState<string | null>(null)
   const [roofrLastEventAt, setRoofrLastEventAt] = useState<string | null>(null)
   const [queued, setQueued] = useState<{ total: number; stalled: number }>({ total: 0, stalled: 0 })
+  const [healthIssues, setHealthIssues] = useState<DataHealthIssue[]>([])
 
   const load = useCallback(async (leadId: string) => {
     const [found, events, files] = await Promise.all([
@@ -137,6 +143,52 @@ export default function LeadPage() {
     if (id) void load(id)
     else setLoading(false)
   }, [id, load])
+
+  useEffect(() => {
+    if (!lead) {
+      setHealthIssues([])
+      return
+    }
+    let cancelled = false
+    void readLeadDataHealth({
+      lead,
+      organizationId: membership?.organizationId ?? null,
+      roofrJobId,
+      roofrLastEventAt,
+      pendingSyncItems: queued.total,
+      failedSyncItems: queued.stalled,
+    }).then((result) => {
+      if (!cancelled) setHealthIssues(result)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [
+    lead,
+    membership?.organizationId,
+    queued.stalled,
+    queued.total,
+    roofrJobId,
+    roofrLastEventAt,
+  ])
+
+  const fixHealthIssue = useCallback(
+    (target: FixTarget) => {
+      if (target === 'sync') {
+        navigate('/diagnostics')
+        return
+      }
+      const ids: Record<Exclude<FixTarget, 'sync'>, string> = {
+        contact: 'lead-contact-identity',
+        property: 'lead-property-intelligence',
+        permission: 'lead-permission',
+        timeline: 'lead-timeline',
+        roofr: 'lead-roofr',
+      }
+      document.getElementById(ids[target])?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    },
+    [navigate],
+  )
 
   const record = useCallback(
     async (outcome: DoorOutcome) => {
@@ -378,9 +430,13 @@ export default function LeadPage() {
         </div>
       </div>
 
-      <LeadContactIdentityPanel lead={lead} />
+      <div id="lead-contact-identity" className="scroll-mt-4">
+        <LeadContactIdentityPanel lead={lead} />
+      </div>
 
-      <LeadPropertyIntelligence lead={lead} />
+      <div id="lead-property-intelligence" className="scroll-mt-4">
+        <LeadPropertyIntelligence lead={lead} />
+      </div>
 
       <SectionTitle>REACH THEM</SectionTitle>
       <Card>
@@ -504,6 +560,7 @@ export default function LeadPage() {
         )}
       </Card>
 
+      <div id="lead-permission" className="scroll-mt-4">
       <SectionTitle>PERMISSION</SectionTitle>
       <Card>
         {lead.optedOutAt ? (
@@ -549,6 +606,7 @@ export default function LeadPage() {
         )}
       </Card>
 
+      </div>
       <SectionTitle>WHAT HAPPENED</SectionTitle>
       <Card className="grid grid-cols-2 gap-2">
         {QUICK.map((outcome) => (
@@ -587,7 +645,11 @@ export default function LeadPage() {
       <SectionTitle>NOTES</SectionTitle>
       <LeadNotePanel leadId={lead.id} onSaved={addNote} />
 
-      <LeadTimeline leadId={lead.id} history={history} attachments={attachments} />
+      <div id="lead-timeline" className="scroll-mt-4">
+        <LeadTimeline leadId={lead.id} history={history} attachments={attachments} />
+      </div>
+
+      <DataHealthPanel issues={healthIssues} onFix={fixHealthIssue} />
 
       <IntegrityPanel
         evidence={{
@@ -616,7 +678,9 @@ export default function LeadPage() {
         }}
       />
 
-      <RoofrPanel leadId={lead.id} />
+      <div id="lead-roofr" className="scroll-mt-4">
+        <RoofrPanel leadId={lead.id} />
+      </div>
 
       <SectionTitle>WHY IT WAS ON THE LIST</SectionTitle>
       <Card>
