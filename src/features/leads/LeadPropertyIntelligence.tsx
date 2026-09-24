@@ -148,6 +148,7 @@ export default function LeadPropertyIntelligence({ lead }: { lead: ManagedLead }
 
         <Link
           to={`/property/${encodeURIComponent(lead.addressKey)}`}
+          state={{ returnTo: `/lead/${lead.id}` }}
           className="mt-3 flex min-h-11 items-center justify-center rounded-xl bg-white/6 px-3 text-[12.5px] font-medium text-white/75 ring-1 ring-white/10"
         >
           Open full property record
