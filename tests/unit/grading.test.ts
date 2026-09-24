@@ -11,6 +11,7 @@ import {
   type StoredGrade,
   type TeamContext,
 } from '@/features/manager/grading'
+import { findGrade, sameInstant } from '@/features/manager/grade-store'
 import { DEFAULT_FLOORS, performanceFor, pooled, rate } from '@/features/manager/performance'
 import type { AssignedLead } from '@/features/manager/performance'
 import type { ActivityRow, RouteRow } from '@/features/manager/metrics'
@@ -327,5 +328,44 @@ describe('sample floors', () => {
   it('are stated, not buried', () => {
     expect(DEFAULT_FLOORS.inspectionsForContractRate).toBeGreaterThan(1)
     expect(DEFAULT_FLOORS.knocksForContactRate).toBeGreaterThan(10)
+  })
+})
+
+describe('finding the grade that was filed', () => {
+  const row = {
+    id: 'g1',
+    repId: 'rep-1',
+    period: 'monthly' as const,
+    // Exactly how Postgres hands a timestamptz back.
+    periodStart: '2026-09-01 00:00:00+00',
+    periodEnd: '2026-10-01 00:00:00+00',
+    mode: 'assisted' as const,
+    computed: null,
+    managerLetter: 'B-',
+    managerComment: null,
+    managerOverrideReason: null,
+    managerCategoryScores: null,
+    gradedBy: 'rep-1',
+    gradedAt: '2026-09-24T01:05:00.000Z',
+    createdAt: '2026-09-24T01:05:00.000Z',
+  }
+
+  it('matches a stored timestamp against a client-built ISO string', () => {
+    // The bug: `===` on the two spellings never matched, so a grade that saved
+    // perfectly well left the screen showing no grade — which reads exactly
+    // like a save that failed.
+    expect(sameInstant('2026-09-01 00:00:00+00', '2026-09-01T00:00:00.000Z')).toBe(true)
+    expect(findGrade([row], 'rep-1', 'monthly', '2026-09-01T00:00:00.000Z')?.managerLetter).toBe('B-')
+  })
+
+  it('does not match a different month, a different rep, or a different period type', () => {
+    expect(findGrade([row], 'rep-1', 'monthly', '2026-08-01T00:00:00.000Z')).toBeNull()
+    expect(findGrade([row], 'rep-2', 'monthly', '2026-09-01T00:00:00.000Z')).toBeNull()
+    expect(findGrade([row], 'rep-1', 'weekly', '2026-09-01T00:00:00.000Z')).toBeNull()
+  })
+
+  it('treats an unparseable or missing timestamp as no match, never as a match', () => {
+    expect(sameInstant(null, '2026-09-01T00:00:00.000Z')).toBe(false)
+    expect(sameInstant('not a date', 'also not a date')).toBe(false)
   })
 })

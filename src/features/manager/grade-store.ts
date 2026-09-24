@@ -93,6 +93,36 @@ export async function saveGradingConfig(
   return { error: null }
 }
 
+/**
+ * Whether two timestamps are the same moment, whatever they look like.
+ *
+ * Postgres returns a timestamptz as `2026-09-01 00:00:00+00`; the client builds
+ * `2026-09-01T00:00:00.000Z`. Same instant, different strings — and comparing
+ * them with `===` silently never matched, so a grade that saved perfectly well
+ * left the screen still showing no grade. That reads exactly like a save that
+ * failed, which is the worst way for a write path to be wrong.
+ */
+export function sameInstant(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false
+  const x = Date.parse(a)
+  const y = Date.parse(b)
+  return Number.isFinite(x) && Number.isFinite(y) && x === y
+}
+
+/** The grade filed for one rep and one period, matched by instant. */
+export function findGrade(
+  grades: readonly GradeRow[],
+  repId: string,
+  period: StoredGrade['period'],
+  periodStart: string,
+): GradeRow | null {
+  return (
+    grades.find(
+      (g) => g.repId === repId && g.period === period && sameInstant(g.periodStart, periodStart),
+    ) ?? null
+  )
+}
+
 export interface GradeRow extends StoredGrade {
   id: string
   createdAt: string

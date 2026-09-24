@@ -12,7 +12,7 @@ import {
   type StoredGrade,
 } from '../grading'
 import { performanceFor, pooled, type AssignedLead } from '../performance'
-import { readGrades, saveComputedGrade, saveManagerGrade, type GradeRow } from '../grade-store'
+import { findGrade, readGrades, saveComputedGrade, saveManagerGrade, type GradeRow } from '../grade-store'
 import type { ActivityRow, BandRate, RouteRow } from '../metrics'
 
 /**
@@ -140,7 +140,7 @@ export default function GradesTab({
   }
 
   const gradeFor = (repId: string): GradeRow | null =>
-    stored.find((g) => g.repId === repId && g.periodStart === period.start && g.period === 'monthly') ?? null
+    findGrade(stored, repId, 'monthly', period.start)
 
   return (
     <div className="space-y-3">
