@@ -37,7 +37,7 @@ export default function PropertyThumbnail({
   longitude,
   boundary,
   alt,
-  className = 'aspect-[2/1] max-h-64',
+  className = 'aspect-[2/1] w-auto',
   /** Tapping the image opens a bigger, zoomable view of the same roof. */
   onOpen,
 }: {
@@ -85,6 +85,10 @@ export default function PropertyThumbnail({
           .join(' ')
       : null
 
+  // `-mx-4 -mt-4` bleeds the image to the card's edges. The aspect sets the
+  // height from that width — NOT a max-height, which fights the aspect ratio
+  // and ends up shrinking the width instead, leaving the image short of the
+  // card's right edge.
   const image = (
     <div ref={box} className={`relative -mx-4 -mt-4 mb-3 overflow-hidden ${className}`}>
       {url && (
