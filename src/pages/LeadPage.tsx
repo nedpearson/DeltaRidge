@@ -215,10 +215,10 @@ export default function LeadPage() {
       }
       const sectionId = ids[target]
       document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      window.history.replaceState(
-        window.history.state,
+      globalThis.window.history.replaceState(
+        globalThis.window.history.state,
         '',
-        `${window.location.pathname}${window.location.search}#${sectionId}`,
+        `${globalThis.window.location.pathname}${globalThis.window.location.search}#${sectionId}`,
       )
     },
     [navigate],
