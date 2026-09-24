@@ -212,9 +212,19 @@ export default function RoofView({
           </button>
         )}
 
-        {/* The readout is the point of framing by distance: a rep can judge a
-            roof against a number they already think in. */}
-        <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-[10.5px] text-white/70 backdrop-blur-sm">
+        {/*
+          Top-left, not bottom-left. Mapbox's terms require its logo and
+          attribution to stay visible, and both sit in the bottom corners of the
+          image it serves — a badge down there covers the logo.
+
+          The readout is the point of framing by distance: a rep can judge a
+          roof against a number they already think in.
+        */}
+        <div
+          className="pointer-events-none absolute top-2 rounded bg-black/60 px-2 py-1 text-[10.5px] text-white/70 backdrop-blur-sm"
+          // Clear of the close button when there is one.
+          style={{ left: onClose ? '3.25rem' : '0.5rem' }}
+        >
           {framed ? 'this lot' : `about ${spanFeet(span)} × ${spanFeet(tallSpan)} ft`}
         </div>
       </div>
