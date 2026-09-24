@@ -202,7 +202,11 @@ function DoorCard({
         </a>
         <Button
           variant="secondary"
-          onClick={() => navigate(`/property/${encodeURIComponent(lead.addressKey)}`)}
+          onClick={() =>
+            navigate(`/property/${encodeURIComponent(lead.addressKey)}`, {
+              state: { returnTo: '/leads' },
+            })
+          }
         >
           Property
         </Button>
