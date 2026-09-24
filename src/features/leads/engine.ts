@@ -5,7 +5,6 @@ import { EbrPermitProvider } from '@/integrations/permits/ebr'
 import type { PermitRecord } from '@/integrations/permits/types'
 import { createStormProvider, type StormEvent } from '@/integrations/storm'
 import { boundFetch } from '@/lib/fetch'
-import { loadEnv } from '@/lib/env'
 import {
   buildCoverage,
   emptyWindowExplanation,
@@ -328,15 +327,23 @@ export interface RunDeps {
 /**
  * Which radar source this workspace is configured for.
  *
- * Reading env is allowed to fail here. A misconfigured or absent env must
- * degrade the storm panel, never stop a rep pulling a door list.
+ * Deliberately NOT loadEnv(). That validates the WHOLE schema and throws when
+ * VITE_SUPABASE_URL or the anon key is missing — which is true in CI, in a
+ * fresh clone, and in any workspace with a typo in an unrelated key. The first
+ * CI run on main caught exactly that: radar reported "not configured" for a
+ * reason that had nothing to do with radar.
+ *
+ * Radar needs no credential. It is a public, keyless NOAA feed. Tying it to
+ * Supabase config meant a bad Supabase key silently also turned off radar
+ * hail — and a storm source that goes quiet for an unrelated reason is the one
+ * failure this panel exists to prevent.
+ *
+ * Reading one key straight off the env source cannot throw, so there is
+ * nothing to catch: anything other than an explicit 'off' means on.
  */
 function radarProviderId(): 'swdi' | 'off' {
-  try {
-    return loadEnv().VITE_RADAR_HAIL
-  } catch {
-    return 'off'
-  }
+  const raw = (import.meta.env as Record<string, unknown>)['VITE_RADAR_HAIL']
+  return raw === 'off' ? 'off' : 'swdi'
 }
 
 /**

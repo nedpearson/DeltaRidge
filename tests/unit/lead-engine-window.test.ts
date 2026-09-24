@@ -121,6 +121,33 @@ describe('lead engine storm window', () => {
     expect(radarCalls.every((u) => u.includes('/nx3hail/2026'))).toBe(true)
   })
 
+  /**
+   * Regression. Radar used to be gated on loadEnv(), which validates the whole
+   * schema and throws when VITE_SUPABASE_URL is absent — so on any machine
+   * without a .env, radar reported "not configured" for a reason that had
+   * nothing to do with radar. It passed locally (a .env was sitting there) and
+   * failed the moment CI ran on a clean checkout.
+   *
+   * Radar is a public, keyless NOAA feed. No Supabase credential, valid or
+   * otherwise, may decide whether it runs.
+   */
+  it('still runs radar when Supabase config is missing entirely', async () => {
+    const env = import.meta.env as Record<string, unknown>
+    const savedUrl = env['VITE_SUPABASE_URL']
+    const savedKey = env['VITE_SUPABASE_ANON_KEY']
+    delete env['VITE_SUPABASE_URL']
+    delete env['VITE_SUPABASE_ANON_KEY']
+
+    try {
+      const { fetchImpl } = capturingFetch()
+      const run = await runLeadEngine(settings({ windowKey: 'this_year' }), { fetchImpl, now: NOW })
+      expect(run.coverage.radar.kind).toBe('live')
+    } finally {
+      if (savedUrl !== undefined) env['VITE_SUPABASE_URL'] = savedUrl
+      if (savedKey !== undefined) env['VITE_SUPABASE_ANON_KEY'] = savedKey
+    }
+  })
+
   it('leaves radar off when the workspace has turned it off', async () => {
     const { urls, fetchImpl } = capturingFetch()
 
