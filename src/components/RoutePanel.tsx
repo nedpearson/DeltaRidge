@@ -3,6 +3,12 @@ import { Button, Card, SectionTitle } from '@/components/ui'
 import { useRouteTracking } from '@/features/routes/useRouteTracking'
 import { pausedSeconds } from '@/features/routes/route-store'
 import { routeStats, type DoorEvent } from '@/features/routes/route-stats'
+import {
+  buildFunnel,
+  outcomeBreakdown,
+  rateLabel,
+  FUNNEL_LABEL,
+} from '@/features/routes/recap'
 import { eventsBetween } from '@/features/leads/lead-store'
 import { unsyncedPointCount } from '@/lib/sync/routes'
 
@@ -53,7 +59,14 @@ const EMPTY_COUNTS: LiveCounts = {
 export default function RoutePanel() {
   const { session, points, problem, start, stop, pause, resume, paused, starting } = useRouteTracking()
   const [confirmStop, setConfirmStop] = useState(false)
-  const [summary, setSummary] = useState<{ stats: ReturnType<typeof routeStats>; counts: LiveCounts } | null>(null)
+  const [summary, setSummary] = useState<{
+    stats: ReturnType<typeof routeStats>
+    counts: LiveCounts
+    // Kept so the recap can break the day down by outcome and build the
+    // funnel from the same events the totals came from, rather than from a
+    // second read that could disagree with them.
+    events: DoorEvent[]
+  } | null>(null)
   const [counts, setCounts] = useState<LiveCounts>(EMPTY_COUNTS)
 
   const readCounts = useCallback(async (): Promise<{ counts: LiveCounts; events: DoorEvent[] }> => {
@@ -105,12 +118,17 @@ export default function RoutePanel() {
     setSummary({
       stats: routeStats({ ...session, endedAt: at }, points, events),
       counts: finalCounts,
+      events,
     })
     await stop()
   }
 
   if (summary) {
     const { stats, counts: final } = summary
+    const outcomes = outcomeBreakdown(summary.events, { nonZero: true })
+    // No estimate, proposal or sale source is available on the phone at route
+    // end, so those stages are omitted rather than reported as zero.
+    const funnel = buildFunnel(summary.events)
     return (
       <>
         <SectionTitle>ROUTE SUMMARY</SectionTitle>
@@ -142,6 +160,52 @@ export default function RoutePanel() {
             Distance counts only stretches the phone actually recorded. Gaps are left out rather than
             guessed at.
           </p>
+
+          {/*
+            Every outcome the rep recorded, in the order they read. Only the
+            ones that happened - a screen of zeros in a driveway is noise.
+          */}
+          {outcomes.length > 0 && (
+            <div className="mt-4 border-t border-white/8 pt-3">
+              <p className="text-[11px] uppercase tracking-wider text-white/35">Doors worked</p>
+              <ul className="mt-2 space-y-1">
+                {outcomes.map((row) => (
+                  <li key={row.outcome} className="flex items-baseline justify-between gap-3">
+                    <span className="text-[12.5px] text-white/75">{row.label}</span>
+                    <span className="font-display text-[13px] text-white/90">{row.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/*
+            The funnel. Each rate is against the stage above it, and a stage
+            with nothing above it shows a dash rather than 0% - see recap.ts.
+          */}
+          <div className="mt-4 border-t border-white/8 pt-3">
+            <p className="text-[11px] uppercase tracking-wider text-white/35">How the day converted</p>
+            <ul className="mt-2 space-y-1">
+              {funnel.stages.map((stage) => (
+                <li key={stage.key} className="flex items-baseline justify-between gap-3">
+                  <span className="text-[12.5px] text-white/75">{stage.label}</span>
+                  <span className="flex items-baseline gap-2">
+                    <span className="font-display text-[13px] text-white/90">{stage.count}</span>
+                    <span className="w-10 text-right text-[11px] text-white/35">
+                      {rateLabel(stage.rate)}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {funnel.unmeasured.length > 0 && (
+              <p className="mt-2 text-[11.5px] leading-relaxed text-white/40">
+                {funnel.unmeasured.map((k) => FUNNEL_LABEL[k].toLowerCase()).join(', ')} are not
+                counted on this screen. They are left out rather than shown as zero, because a zero
+                here would read as a bad day instead of a number nobody collected.
+              </p>
+            )}
+          </div>
 
           <Button variant="gold" full className="mt-3" onClick={() => setSummary(null)}>
             Done
