@@ -6,6 +6,9 @@ import { mayCallAt } from '@/features/compliance/engine'
 import { ALL_SOLICITATION_RULES } from '@/features/compliance/solicitation'
 import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/components/ui'
 import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
+import IntegrityPanel from '@/features/leads/IntegrityPanel'
+import { readLink } from '@/features/integrations/roofr/store'
+import { pendingWork } from '@/lib/sync'
 import {
   addEvent,
   listAttachments,
@@ -135,6 +138,14 @@ export default function LeadPage() {
   const [attachments, setAttachments] = useState<LeadAttachment[]>([])
   const [loading, setLoading] = useState(true)
   const [reschedule, setReschedule] = useState('')
+  /*
+   * Evidence the integrity panel needs that does not live on the lead itself.
+   * Loaded separately and allowed to stay null: a slow or absent server must not
+   * hold up the screen a rep is standing on a driveway to read.
+   */
+  const [roofrJobId, setRoofrJobId] = useState<string | null>(null)
+  const [roofrLastEventAt, setRoofrLastEventAt] = useState<string | null>(null)
+  const [queued, setQueued] = useState<{ total: number; stalled: number }>({ total: 0, stalled: 0 })
 
   const load = useCallback(async (leadId: string) => {
     const [found, events, files] = await Promise.all([
@@ -146,6 +157,17 @@ export default function LeadPage() {
     setHistory(events)
     setAttachments(files)
     setLoading(false)
+
+    // After the screen is usable, not before. Both of these can fail quietly;
+    // the panel reads their absence as "not sent to Roofr" and "nothing queued",
+    // which is what absence actually means here.
+    void readLink(leadId).then((link) => {
+      setRoofrJobId(link?.roofrJobId ?? null)
+      setRoofrLastEventAt(link?.lastEventAt ?? null)
+    })
+    void pendingWork().then((work) =>
+      setQueued({ total: work.total, stalled: work.stalled }),
+    )
   }, [])
 
   useEffect(() => {
@@ -595,6 +617,33 @@ export default function LeadPage() {
           </ol>
         </Card>
       )}
+
+      <IntegrityPanel
+        evidence={{
+          address: lead.address,
+          phoneSource: lead.contactPhone === undefined ? null : (contactSourceOf(lead) ?? null),
+          hasEmail: false,
+          callConsentAt: lead.consent?.call?.at ?? null,
+          smsConsentAt: lead.consent?.sms?.at ?? null,
+          callWindowRuleIds: window.ruleIds,
+          optedOut: lead.optedOutAt !== undefined,
+          stormSource: null,
+          stormEventAt: null,
+          imageryCapturedAt: null,
+          // 'probable' is not counted. It means a fix existed and did not place
+          // the rep at the door, and a line that says "GPS verified" has to mean
+          // the stronger thing or it means nothing.
+          gpsVerifiedKnocks: history.filter((e) => e.gps?.verification === 'verified').length,
+          totalKnocks: history.filter((e) => e.gps !== undefined).length,
+          voiceNotes: attachments.filter((a) => a.kind === 'voice').length,
+          voiceNotesTranscribed: 0,
+          roofrJobId,
+          roofrLastEventAt,
+          pendingSyncItems: queued.total,
+          failedSyncItems: queued.stalled,
+          now: new Date().toISOString(),
+        }}
+      />
 
       <RoofrPanel leadId={lead.id} />
 
