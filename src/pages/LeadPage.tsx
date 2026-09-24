@@ -198,7 +198,13 @@ export default function LeadPage() {
         timeline: 'lead-timeline',
         roofr: 'lead-roofr',
       }
-      document.getElementById(ids[target])?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const sectionId = ids[target]
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${window.location.pathname}${window.location.search}#${sectionId}`,
+      )
     },
     [navigate],
   )
