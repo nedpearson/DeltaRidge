@@ -24,12 +24,14 @@ export default function RoutesTab({
   orgId,
   nameOf,
   loading,
+  onOpenLead,
 }: {
   routes: readonly RouteRow[]
   activity: readonly ActivityRow[]
   orgId: string | null
   nameOf: (id: string | null) => string
   loading: boolean
+  onOpenLead: (leadId: string) => void
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
 
@@ -49,7 +51,16 @@ export default function RoutesTab({
   if (openId) {
     const route = routes.find((r) => r.id === openId)
     if (route) {
-      return <OneRoute route={route} activity={activity} orgId={orgId} nameOf={nameOf} onBack={() => setOpenId(null)} />
+      return (
+        <OneRoute
+          route={route}
+          activity={activity}
+          orgId={orgId}
+          nameOf={nameOf}
+          onOpenLead={onOpenLead}
+          onBack={() => setOpenId(null)}
+        />
+      )
     }
   }
 
@@ -91,12 +102,14 @@ function OneRoute({
   activity,
   orgId,
   nameOf,
+  onOpenLead,
   onBack,
 }: {
   route: RouteRow
   activity: readonly ActivityRow[]
   orgId: string | null
   nameOf: (id: string | null) => string
+  onOpenLead: (leadId: string) => void
   onBack: () => void
 }) {
   const [points, setPoints] = useState<RoutePoint[]>([])
@@ -242,7 +255,12 @@ function OneRoute({
           <p className="text-[12.5px] text-white/45">Reading the trail…</p>
         </Card>
       ) : (
-        <RoutePlayback session={session} points={points} activities={timelineActivities} />
+        <RoutePlayback
+          session={session}
+          points={points}
+          activities={timelineActivities}
+          onOpenLead={onOpenLead}
+        />
       )}
 
       <p className="text-[10.5px] leading-relaxed text-white/25">
