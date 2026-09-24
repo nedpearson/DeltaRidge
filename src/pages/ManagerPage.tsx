@@ -21,6 +21,13 @@ import {
   REP_STATUS_LABEL,
 } from '@/features/manager/field-today'
 import { resolveHistoryWindow } from '@/features/routes/history'
+import {
+  coverageGaps,
+  coverageTotals,
+  readCoverage,
+  PASSED_RADIUS_METERS,
+  type CoverageRow,
+} from '@/features/manager/coverage'
 import PerformanceTab from '@/features/manager/tabs/PerformanceTab'
 import GradesTab from '@/features/manager/tabs/GradesTab'
 import SettingsTab from '@/features/manager/tabs/SettingsTab'
@@ -180,6 +187,27 @@ export default function ManagerPage() {
     () => territoryCoverage(doors, snapshot.activity),
     [doors, snapshot.activity],
   )
+
+  /**
+   * Coverage is computed on the server and returns aggregates only.
+   *
+   * Loaded separately from the snapshot because it is the one read that needs
+   * a spatial join over every fix in the window, and it must not be able to
+   * delay or fail the rest of the screen.
+   */
+  const [routeCoverage, setRouteCoverage] = useState<CoverageRow[]>([])
+  const [routeCoverageError, setRouteCoverageError] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void readCoverage(orgId, windowFrom, windowTo).then((result) => {
+      if (cancelled) return
+      setRouteCoverage(result.rows)
+      setRouteCoverageError(result.error)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [orgId, windowFrom, windowTo])
 
   const openByRep = useMemo(() => {
     const map = new Map<string, number>()
@@ -366,7 +394,14 @@ export default function ManagerPage() {
         />
       )}
 
-      {tab === 'territory' && <TerritoryTab coverage={coverage} hasDoors={doors.length > 0} />}
+      {tab === 'territory' && (
+        <TerritoryTab
+          coverage={coverage}
+          hasDoors={doors.length > 0}
+          routeCoverage={routeCoverage}
+          routeCoverageError={routeCoverageError}
+        />
+      )}
 
       {tab === 'log' && <LogTab rows={snapshot.audit} nameOf={nameOf} loading={loading} />}
     </div>
@@ -770,6 +805,94 @@ function AssignTab({
 /* -------------------------------------------------------------------------- */
 
 function TerritoryTab({
+  coverage,
+  hasDoors,
+  routeCoverage,
+  routeCoverageError,
+}: {
+  coverage: ReturnType<typeof territoryCoverage>
+  hasDoors: boolean
+  routeCoverage: readonly CoverageRow[]
+  routeCoverageError: string | null
+}) {
+  const gaps = coverageGaps(routeCoverage)
+  const totals = coverageTotals(routeCoverage)
+
+  const whereTheTeamWent =
+    routeCoverage.length > 0 || routeCoverageError ? (
+      <>
+        <SectionTitle>WHERE THE TEAM ACTUALLY WENT</SectionTitle>
+        <Card className="mb-2">
+          {/*
+            The distinction the whole block exists for. Passing a house is not
+            knocking it, and the gap between the two is the only number here
+            that tells anybody what to do tomorrow.
+          */}
+          <p className="text-[12px] leading-relaxed text-white/45">
+            <b className="text-white/70">Passed</b> means the recorded trail came within{' '}
+            {PASSED_RADIUS_METERS} m of the house. It is not a visit and nobody is credited for it.{' '}
+            <b className="text-white/70">Knocked</b> means an outcome was recorded there. The gap
+            between them is work on a street the team has already paid to reach.
+          </p>
+          {routeCoverageError && (
+            <p className="mt-2 text-[11.5px] leading-relaxed text-amber-200/70">
+              Coverage could not be read: {routeCoverageError}. The figures below are missing, not
+              zero.
+            </p>
+          )}
+          {routeCoverage.length > 0 && (
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <Stat value={String(totals.passed)} label="doors passed" />
+              <Stat value={String(totals.knocked)} label="doors knocked" />
+              <Stat
+                value={totals.workRate === null ? '—' : pct(totals.workRate)}
+                label="of what they reached"
+              />
+            </div>
+          )}
+        </Card>
+
+        {gaps.map((gap) => (
+          <Card key={`gap-${gap.subdivision}`} className="mb-2">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="truncate text-[13.5px] font-semibold">{gap.subdivision}</p>
+              <span className="shrink-0 text-[12px] text-white/40">
+                {gap.workRate === null ? '—' : pct(gap.workRate)}
+              </span>
+            </div>
+            <p className="mt-0.5 text-[12px] text-white/45">
+              {gap.passedNotKnocked > 0
+                ? `${gap.passedNotKnocked} door${gap.passedNotKnocked === 1 ? '' : 's'} gone past and not knocked`
+                : 'Every door the trail reached was knocked'}
+              {gap.untouched > 0 && ` · ${gap.untouched} never reached`}
+            </p>
+          </Card>
+        ))}
+      </>
+    ) : null
+
+  if (coverage.length === 0) {
+    return (
+      <div className="space-y-2">
+        {whereTheTeamWent}
+        <Nothing
+          title="Nothing to measure yet"
+          body="Coverage compares the door list built on this device against knocks on the server. Neither has anything in it."
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {whereTheTeamWent}
+      <SectionTitle>AGAINST THIS DEVICE&apos;S DOOR LIST</SectionTitle>
+      <TerritoryFromDevice coverage={coverage} hasDoors={hasDoors} />
+    </div>
+  )
+}
+
+function TerritoryFromDevice({
   coverage,
   hasDoors,
 }: {
