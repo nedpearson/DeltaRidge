@@ -1,0 +1,34 @@
+# Dependabot SECURITY updates were already on for this repo; VERSION updates
+# were not. The difference matters: security updates only open a PR once an
+# advisory is published against something we depend on, which means the first
+# time we hear about a dependency is when it is already a problem. Version
+# updates keep the tree close enough to current that the security PR, when it
+# comes, is a small bump rather than a major-version migration under pressure.
+#
+# Weekly, grouped, capped. A public repo with one maintainer does not need
+# fifteen open PRs.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps land as one PR: CI either goes green or it does
+      # not, and reviewing them one at a time buys nothing.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    # Majors still arrive individually - those are the ones that need reading.
+
+  # The workflow pins actions by SHA, which is right, and which also means a
+  # human would never notice a new release. Dependabot updates the pin and
+  # writes the new version into the comment.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
