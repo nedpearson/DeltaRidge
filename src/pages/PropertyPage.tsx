@@ -133,7 +133,7 @@ export default function PropertyPage() {
             latitude={lead.latitude}
             longitude={lead.longitude}
             address={lead.address}
-            height={200}
+            boundary={lead.parcel?.boundary}
           />
         </div>
         <p className="text-[17px] font-semibold leading-tight">{lead.address}</p>

@@ -4,9 +4,11 @@ import {
   HOUSE_SPAN_METRES,
   SPAN_STEPS_METRES,
   hasBasemap,
+  parcelFrame,
   propertySpanUrl,
   spanFeet,
 } from '@/features/leads/basemap'
+import { project } from '@/features/leads/map-projection'
 
 /**
  * One roof, from above, at a zoom the rep chooses.
@@ -17,13 +19,19 @@ import {
  * want different framings, so the framing is a control rather than a decision
  * somebody else made.
  *
- * Every frame is centred on the coordinate the app has for this door, so the
- * subject is always dead centre. That is why the marker is a hairline crosshair
- * and not a pin: a pin would sit on top of the one thing the image was opened
- * to look at.
+ * Two ways of framing it, in order of preference.
  *
- * The frame is asked for as a WIDTH OF GROUND, not a zoom level, so "this much
- * of the street" means the same thing on a phone card and on a desktop panel.
+ * When the parish gave us the lot's boundary — which it does for most of East
+ * Baton Rouge — the frame is the LOT, at the lot's own size, with its outline
+ * drawn on top. That settles which house is the subject outright, and it is
+ * worth preferring for a specific reason: the coordinate we hold is the ring
+ * centroid, and on a deep wooded lot the centroid sits in the back garden. A
+ * frame centred there is a tidy picture of somebody's trees.
+ *
+ * Otherwise the frame is a fixed width of GROUND around that coordinate, which
+ * at least means the same thing on a phone card and on a desktop panel, with a
+ * hairline crosshair at centre. A crosshair rather than a pin, because a pin
+ * would sit on top of the one thing the image was opened to look at.
  */
 
 const DEFAULT_STEP = SPAN_STEPS_METRES.indexOf(HOUSE_SPAN_METRES as (typeof SPAN_STEPS_METRES)[number])
@@ -32,7 +40,17 @@ export default function RoofView({
   latitude,
   longitude,
   address,
-  height = 260,
+  /** The parish's own lot outline, when there is one. */
+  boundary,
+  /**
+   * Width-to-height of the frame, not a pixel height.
+   *
+   * A fixed height is how the card thumbnail ended up a 4.75:1 letterbox on a
+   * desktop: 70 metres across with 15 metres top to bottom, which is a strip of
+   * roof rather than a roof. Fixing the ratio keeps both dimensions about one
+   * house whatever the element is.
+   */
+  aspect = 5 / 3,
   /** Where the zoom starts, as an index into SPAN_STEPS_METRES. */
   initialStep = DEFAULT_STEP < 0 ? 2 : DEFAULT_STEP,
   onClose,
@@ -40,7 +58,8 @@ export default function RoofView({
   latitude: number
   longitude: number
   address: string
-  height?: number
+  boundary?: ReadonlyArray<readonly [number, number]> | undefined
+  aspect?: number
   initialStep?: number
   onClose?: () => void
 }) {
@@ -59,8 +78,32 @@ export default function RoofView({
     return () => observer.disconnect()
   }, [])
 
+  const height = width > 0 ? Math.round(width / aspect) : 0
+  const size = { width, height }
   const span = SPAN_STEPS_METRES[step] ?? HOUSE_SPAN_METRES
-  const url = width > 0 ? propertySpanUrl(latitude, longitude, { width, height }, span) : null
+
+  // The zoom control moves through spans either way; against a lot boundary it
+  // widens from the lot rather than from a fixed distance.
+  const zoomOut = span / HOUSE_SPAN_METRES
+  const framed = boundary && width > 0 ? parcelFrame(boundary, size, zoomOut) : null
+  const url = framed
+    ? framed.url
+    : width > 0
+      ? propertySpanUrl(latitude, longitude, size, span)
+      : null
+
+  // What the frame actually holds vertically, which is the dimension that
+  // decides whether a whole roof is on screen.
+  const tallSpan = height > 0 ? (span * height) / width : 0
+
+  const outline =
+    framed && boundary
+      ? boundary
+          .filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]))
+          .map((p) => project({ longitude: p[0], latitude: p[1] }, framed.view, size))
+          .map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+          .join(' ')
+      : null
 
   const canZoomIn = step > 0
   const canZoomOut = step < SPAN_STEPS_METRES.length - 1
@@ -78,7 +121,7 @@ export default function RoofView({
       <div
         ref={box}
         className="relative overflow-hidden rounded-2xl bg-[var(--color-surface-3)] ring-1 ring-white/8"
-        style={{ height }}
+        style={{ aspectRatio: `${aspect}` }}
       >
         {url && !failed && (
           <img
@@ -99,12 +142,27 @@ export default function RoofView({
           </div>
         )}
 
+        {/* The lot, as the parish recorded it. Drawn over the image rather than
+            baked into the request, so the outline stays crisp at any size. */}
+        {outline && !failed && (
+          <svg className="pointer-events-none absolute inset-0" width={width} height={height}>
+            <polygon
+              points={outline}
+              fill="rgba(245, 158, 11, 0.10)"
+              stroke="#f59e0b"
+              strokeWidth={2}
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+
         {/*
-          A hairline crosshair at dead centre, not a pin. The frame is centred on
-          this door's own coordinate, so the centre IS the house — and a pin
-          would cover the roof, which is the whole reason anyone opened this.
+          A hairline crosshair at dead centre, not a pin — only when there is no
+          boundary to draw. The frame is centred on this door's own coordinate,
+          so the centre is the best guess available, and a pin would cover the
+          roof, which is the whole reason anyone opened this.
         */}
-        {!failed && (
+        {!outline && !failed && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="relative size-14">
               <div className="absolute left-1/2 top-0 h-3.5 w-px -translate-x-1/2 bg-white/80" />
@@ -147,12 +205,15 @@ export default function RoofView({
         {/* The readout is the point of framing by distance: a rep can judge a
             roof against a number they already think in. */}
         <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-[10.5px] text-white/70 backdrop-blur-sm">
-          about {spanFeet(span)} ft across
+          {framed ? 'this lot' : `about ${spanFeet(span)} × ${spanFeet(tallSpan)} ft`}
         </div>
       </div>
 
       <p className="mt-1.5 text-[10.5px] leading-relaxed text-white/30">
-        Centred on this address. {BASEMAP_ATTRIBUTION}
+        {framed
+          ? 'Outline is the parish parcel record, not a survey.'
+          : 'Centred on this address — the parish has no lot outline for it.'}{' '}
+        {BASEMAP_ATTRIBUTION}
       </p>
     </div>
   )

@@ -3,6 +3,7 @@ import { MAX_TILE_ZOOM, metresPerPixel, zoomForGroundSpan } from '@/features/lea
 import {
   HOUSE_SPAN_METRES,
   SPAN_STEPS_METRES,
+  parcelFrame,
   propertySpanUrl,
   spanFeet,
 } from '@/features/leads/basemap'
@@ -105,5 +106,91 @@ describe('the house frame', () => {
     // from zero pixels would be a request for the whole planet.
     expect(propertySpanUrl(BR, -91.1, { width: 0, height: 200 })).toBeNull()
     expect(propertySpanUrl(BR, -91.1, { width: 480, height: 0 })).toBeNull()
+  })
+})
+
+describe('the frame has to hold a house in BOTH directions', () => {
+  /** What the frame covers top to bottom, given a width span and an element. */
+  function tallSpan(widthSpan: number, width: number, height: number): number {
+    return (widthSpan * height) / width
+  }
+
+  it('shows why a fixed pixel height was the second half of the bug', () => {
+    // The card asked for a fixed 128 px height. On a 608 px desktop card that
+    // is 4.75:1, so 70 m across came with 15 m top to bottom — a strip of roof
+    // rather than a roof. A house is roughly 15 m deep before any margin.
+    expect(tallSpan(HOUSE_SPAN_METRES, 608, 128)).toBeLessThan(16)
+  })
+
+  it('holds a whole roof once the aspect is fixed instead of the height', () => {
+    // 5:2 on the card, 5:3 in the viewer. Both leave room around a 15 m house.
+    expect(tallSpan(HOUSE_SPAN_METRES, 5, 2)).toBeGreaterThan(24)
+    expect(tallSpan(HOUSE_SPAN_METRES, 5, 3)).toBeGreaterThan(40)
+  })
+
+  it('means the same thing at every element width, which a pixel height did not', () => {
+    for (const width of [320, 608, 1200]) {
+      expect(tallSpan(HOUSE_SPAN_METRES, 5, 2)).toBeCloseTo(28, 6)
+      // The point: nothing above depends on `width` at all any more.
+      expect(width).toBeGreaterThan(0)
+    }
+  })
+})
+
+describe('framing the lot the parish recorded', () => {
+  // A deep lot: 30 m of street frontage, 120 m back. The house is at the front;
+  // the ring centroid — which is the only coordinate the app holds — is 60 m
+  // behind it, in the trees.
+  const DEEP: ReadonlyArray<readonly [number, number]> = [
+    [-91.1, 30.4],
+    [-91.09969, 30.4],
+    [-91.09969, 30.40108],
+    [-91.1, 30.40108],
+    [-91.1, 30.4],
+  ]
+
+  it('frames the lot rather than a fixed distance around its centroid', () => {
+    const framed = parcelFrame(DEEP, { width: 608, height: 243 })
+    expect(framed).not.toBeNull()
+    // The frame has to hold the whole lot, which is 120 m deep — a 70 m frame
+    // centred on the centroid would cut off both the house and the back fence.
+    const heightMetres = metresPerPixel(30.4005, framed!.view.zoom) * 243
+    expect(heightMetres).toBeGreaterThan(120)
+  })
+
+  it('sizes itself to the lot, so a narrow lot and a big block differ', () => {
+    const SMALL: ReadonlyArray<readonly [number, number]> = [
+      [-91.1, 30.4],
+      [-91.09978, 30.4],
+      [-91.09978, 30.40018],
+      [-91.1, 30.40018],
+      [-91.1, 30.4],
+    ]
+    const big = parcelFrame(DEEP, { width: 608, height: 243 })
+    const small = parcelFrame(SMALL, { width: 608, height: 243 })
+    // Tighter lot, deeper zoom. A fixed span would have shown both identically.
+    expect(small!.view.zoom).toBeGreaterThan(big!.view.zoom)
+  })
+
+  it('widens on request without losing the centre', () => {
+    const lot = parcelFrame(DEEP, { width: 608, height: 243 }, 1)
+    const wider = parcelFrame(DEEP, { width: 608, height: 243 }, 4)
+    expect(wider!.view.zoom).toBeCloseTo(lot!.view.zoom - 2, 6)
+    expect(wider!.view.center.latitude).toBeCloseTo(lot!.view.center.latitude, 9)
+    expect(wider!.view.center.longitude).toBeCloseTo(lot!.view.center.longitude, 9)
+  })
+
+  it('refuses a ring that is not a polygon rather than drawing nonsense', () => {
+    expect(parcelFrame([], { width: 608, height: 243 })).toBeNull()
+    expect(parcelFrame([[-91.1, 30.4], [-91.09, 30.41]], { width: 608, height: 243 })).toBeNull()
+    expect(parcelFrame(DEEP, { width: 0, height: 243 })).toBeNull()
+  })
+
+  it('drops points that are not coordinates instead of projecting NaN', () => {
+    const dirty = [...DEEP, [Number.NaN, 30.4] as const, [-91.1, Number.POSITIVE_INFINITY] as const]
+    const framed = parcelFrame(dirty, { width: 608, height: 243 })
+    expect(framed).not.toBeNull()
+    expect(Number.isFinite(framed!.view.zoom)).toBe(true)
+    expect(Number.isFinite(framed!.view.center.latitude)).toBe(true)
   })
 })

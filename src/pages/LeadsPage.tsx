@@ -137,6 +137,7 @@ function DoorCard({
         <RoofViewSheet
           latitude={lead.latitude}
           longitude={lead.longitude}
+          boundary={parcel?.boundary}
           address={lead.address}
           onClose={() => setRoofOpen(false)}
         />
@@ -145,6 +146,7 @@ function DoorCard({
       <PropertyThumbnail
         latitude={lead.latitude}
         longitude={lead.longitude}
+        boundary={parcel?.boundary}
         alt={`Aerial view of ${lead.address}`}
         onOpen={() => setRoofOpen(true)}
       />

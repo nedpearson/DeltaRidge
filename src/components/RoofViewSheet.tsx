@@ -11,11 +11,13 @@ export default function RoofViewSheet({
   latitude,
   longitude,
   address,
+  boundary,
   onClose,
 }: {
   latitude: number
   longitude: number
   address: string
+  boundary?: ReadonlyArray<readonly [number, number]> | undefined
   onClose: () => void
 }) {
   return (
@@ -37,7 +39,7 @@ export default function RoofViewSheet({
             latitude={latitude}
             longitude={longitude}
             address={address}
-            height={300}
+            boundary={boundary}
             onClose={onClose}
           />
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { HOUSE_SPAN_METRES, hasBasemap, propertySpanUrl } from '@/features/leads/basemap'
+import { HOUSE_SPAN_METRES, hasBasemap, parcelFrame, propertySpanUrl } from '@/features/leads/basemap'
+import { project } from '@/features/leads/map-projection'
 
 /**
  * The roof, from above, on the card.
@@ -9,12 +10,18 @@ import { HOUSE_SPAN_METRES, hasBasemap, propertySpanUrl } from '@/features/leads
  * address cannot answer that and a street map cannot either. One satellite tile
  * can, before anyone drives out there.
  *
- * It only answers it if the frame is about ONE house. This used to ask for a
- * fixed zoom at a fixed pixel size, which on a wide card covered about 120
- * metres — four or five lots — with nothing to say which roof the card was
- * about. Now the frame is asked for as a width of GROUND and the element
- * measures itself, so "one house and its neighbours" means the same thing on a
- * phone and on a desktop, and the subject is always dead centre.
+ * It only answers it if the frame is about ONE house, in BOTH directions. This
+ * used to ask for a fixed zoom at a fixed pixel height, which gave two separate
+ * problems: on a wide card the frame covered about 150 metres across — four or
+ * five lots, with nothing to say which roof the card was about — and the fixed
+ * 128-pixel height made it a 4.75:1 letterbox on a desktop, so the 70 metres
+ * across came with only 15 metres top to bottom and the roof ran off both
+ * edges.
+ *
+ * So: the frame is asked for as a width of GROUND, the element measures itself,
+ * and its aspect is fixed at 5:2 rather than its height. "One house and its
+ * neighbours" now means the same thing on a phone and on a desktop, the roof
+ * fits vertically, and the subject is always dead centre.
  *
  * Three states, all of them silent about the others:
  *
@@ -28,13 +35,16 @@ import { HOUSE_SPAN_METRES, hasBasemap, propertySpanUrl } from '@/features/leads
 export default function PropertyThumbnail({
   latitude,
   longitude,
+  boundary,
   alt,
-  className = 'h-32',
+  className = 'aspect-[5/2] max-h-56',
   /** Tapping the image opens a bigger, zoomable view of the same roof. */
   onOpen,
 }: {
   latitude: number | undefined
   longitude: number | undefined
+  /** The parish's own lot outline, when there is one. */
+  boundary?: ReadonlyArray<readonly [number, number]> | undefined
   alt: string
   className?: string
   onOpen?: () => void
@@ -56,8 +66,24 @@ export default function PropertyThumbnail({
   if (latitude === undefined || longitude === undefined) return null
   if (!hasBasemap() || failed) return null
 
-  const url =
-    size.width > 0 ? propertySpanUrl(latitude, longitude, size, HOUSE_SPAN_METRES) : null
+  // Prefer the parish's lot outline. The coordinate we hold is the ring
+  // centroid, which on a deep wooded lot sits in the back garden — a frame
+  // centred there is a tidy picture of somebody's trees.
+  const framed = boundary && size.width > 0 ? parcelFrame(boundary, size) : null
+  const url = framed
+    ? framed.url
+    : size.width > 0
+      ? propertySpanUrl(latitude, longitude, size, HOUSE_SPAN_METRES)
+      : null
+
+  const outline =
+    framed && boundary
+      ? boundary
+          .filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]))
+          .map((p) => project({ longitude: p[0], latitude: p[1] }, framed.view, size))
+          .map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+          .join(' ')
+      : null
 
   const image = (
     <div ref={box} className={`relative -mx-4 -mt-4 mb-3 overflow-hidden ${className}`}>
@@ -72,10 +98,26 @@ export default function PropertyThumbnail({
         />
       )}
 
-      {/* A hairline crosshair at dead centre. The frame is centred on this
-          door's coordinate, so the centre is the house — and a pin would cover
-          the roof, which is the one thing this image exists to show. */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      {outline && (
+        <svg className="pointer-events-none absolute inset-0" width={size.width} height={size.height}>
+          <polygon
+            points={outline}
+            fill="rgba(245, 158, 11, 0.10)"
+            stroke="#f59e0b"
+            strokeWidth={2}
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+
+      {/* A hairline crosshair at dead centre, only when there is no lot to
+          outline. A pin would cover the roof, which is the one thing this
+          image exists to show. */}
+      <div
+        className={`pointer-events-none absolute inset-0 flex items-center justify-center ${
+          outline ? 'hidden' : ''
+        }`}
+      >
         <div className="relative size-10 opacity-80">
           <div className="absolute left-1/2 top-0 h-2.5 w-px -translate-x-1/2 bg-white" />
           <div className="absolute bottom-0 left-1/2 h-2.5 w-px -translate-x-1/2 bg-white" />

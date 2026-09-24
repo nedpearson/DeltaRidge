@@ -1,5 +1,5 @@
 import { loadEnv } from '@/lib/env'
-import { zoomForGroundSpan } from './map-projection'
+import { boundsOf, padBounds, viewForBounds, zoomForGroundSpan } from './map-projection'
 import type { Size, View } from './map-projection'
 
 /**
@@ -174,6 +174,45 @@ export function propertyImageUrl(
   zoom: number = PROPERTY_ZOOM,
 ): string | null {
   return basemapUrl({ center: { latitude, longitude }, zoom }, size, 'satellite')
+}
+
+/**
+ * A frame sized to the parcel itself.
+ *
+ * The parish gives us the lot's outer ring, and it has been carried on
+ * `ParcelRecord.boundary` since the provenance work — unused until now. It is a
+ * better answer to "show me this house" than any fixed distance, for a reason
+ * the screenshots made obvious: the coordinate we centre on is the ring
+ * CENTROID, and on a deep wooded lot the centroid is in the back garden. A
+ * fixed 70-metre frame centred there is a tidy picture of somebody's trees.
+ *
+ * Framing the ring instead means the picture is the property, at the property's
+ * own size — a narrow infill lot and a two-acre block each get a frame that
+ * fits them — and the caller can draw the boundary on top, which settles which
+ * house is the subject without needing the centre to land on the roof.
+ *
+ * `zoomOut` widens the frame for the viewer's zoom control: 1 is the lot,
+ * higher numbers are more of the street.
+ */
+export function parcelFrame(
+  boundary: ReadonlyArray<readonly [number, number]>,
+  size: Size,
+  zoomOut = 1,
+): { view: View; url: string | null } | null {
+  if (size.width <= 0 || size.height <= 0) return null
+  const points = boundary
+    .filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]))
+    .map((p) => ({ longitude: p[0], latitude: p[1] }))
+  if (points.length < 3) return null
+
+  const bounds = boundsOf(points)
+  if (!bounds) return null
+
+  // A little air around the lot so the boundary is not flush with the edge,
+  // then whatever the zoom control has asked for on top.
+  const view = viewForBounds(padBounds(bounds, 0.18), size)
+  const widened: View = { center: view.center, zoom: view.zoom - Math.log2(Math.max(1, zoomOut)) }
+  return { view: widened, url: basemapUrl(widened, size, 'satellite') }
 }
 
 /** How wide the frame is in feet, for a readout a roofer can use. */
