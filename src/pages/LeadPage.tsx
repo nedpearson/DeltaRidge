@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import LeadNotePanel from '@/components/LeadNotePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
 import { mayCallAt } from '@/features/compliance/engine'
@@ -8,8 +8,13 @@ import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/component
 import ContactActions from '@/components/ContactActions'
 import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
 import IntegrityPanel from '@/features/leads/IntegrityPanel'
+import LeadPropertyIntelligence from '@/features/leads/LeadPropertyIntelligence'
+import LeadContactIdentityPanel from '@/features/contacts/LeadContactIdentityPanel'
+import LeadTimeline from '@/features/leads/LeadTimeline'
+import LeadSectionNav from '@/features/leads/LeadSectionNav'
 import { readLink } from '@/features/integrations/roofr/store'
 import { pendingWork } from '@/lib/sync'
+import { materializeLeadFromServer } from '@/lib/sync/pull'
 import {
   addEvent,
   listAttachments,
@@ -22,7 +27,6 @@ import {
 import {
   applyOutcome,
   CHANNEL_LABEL,
-  CONTACT_KIND_LABEL,
   CONTACT_SOURCE_LABEL,
   contactSourceOf,
   dueLabel,
@@ -41,6 +45,10 @@ import {
   type ManagedLead,
 } from '@/features/leads/pipeline'
 import { newId, saveInspection, type LocalInspection } from '@/lib/db'
+import { useSession } from '@/features/auth/session'
+import DataHealthPanel from '@/features/leads/DataHealthPanel'
+import { readLeadDataHealth } from '@/features/leads/data-health-store'
+import type { DataHealthIssue, FixTarget } from '@/features/leads/data-health'
 
 /**
  * One lead, everything said to it, and what to do next.
@@ -73,6 +81,17 @@ const NUMBER_SOURCES: readonly ContactSource[] = [
 
 const CHANNELS: ContactChannel[] = ['call', 'sms', 'email']
 
+const LEAD_SECTIONS = [
+  { id: 'lead-overview', label: 'Overview' },
+  { id: 'lead-contact-identity', label: 'Contact' },
+  { id: 'lead-property-intelligence', label: 'Property' },
+  { id: 'lead-permission', label: 'Permission' },
+  { id: 'lead-field-activity', label: 'Activity' },
+  { id: 'lead-timeline', label: 'Timeline' },
+  { id: 'lead-data-health', label: 'Health' },
+  { id: 'lead-roofr', label: 'Roofr' },
+] as const
+
 function when(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
     month: 'short',
@@ -88,49 +107,11 @@ function toIso(local: string): string | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
 }
 
-/**
- * Plays back what the rep captured, from the blob on this device.
- *
- * Object URLs are revoked when the entry unmounts. A lead with twenty photos
- * on it otherwise holds every one of them in memory for as long as the page is
- * open, which on a three-year-old Android is the difference between a working
- * app and a tab the system kills.
- */
-function Attachment({ item }: { item: LeadAttachment }) {
-  const [url, setUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    const blob = item.kind === 'photo' ? (item.thumbnail ?? item.blob) : item.blob
-    const made = URL.createObjectURL(blob)
-    setUrl(made)
-    return () => URL.revokeObjectURL(made)
-  }, [item])
-
-  if (!url) return null
-
-  if (item.kind === 'photo') {
-    return (
-      <img
-        src={url}
-        alt="Captured on this lead"
-        className="mt-1.5 h-28 w-full rounded-lg object-cover ring-1 ring-white/10"
-      />
-    )
-  }
-
-  return (
-    <div className="mt-1.5">
-      <audio controls src={url} className="h-9 w-full" />
-      <p className="mt-0.5 text-[10.5px] text-white/25">
-        {item.durationSeconds}s recording. Not transcribed — this is the audio itself.
-      </p>
-    </div>
-  )
-}
-
 export default function LeadPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { session, membership } = useSession()
   const [lead, setLead] = useState<ManagedLead | null>(null)
   const [editingNumber, setEditingNumber] = useState(false)
   const [newNumber, setNewNumber] = useState('')
@@ -147,10 +128,21 @@ export default function LeadPage() {
   const [roofrJobId, setRoofrJobId] = useState<string | null>(null)
   const [roofrLastEventAt, setRoofrLastEventAt] = useState<string | null>(null)
   const [queued, setQueued] = useState<{ total: number; stalled: number }>({ total: 0, stalled: 0 })
+  const [healthIssues, setHealthIssues] = useState<DataHealthIssue[]>([])
 
   const load = useCallback(async (leadId: string) => {
-    const [found, events, files] = await Promise.all([
-      readLead(leadId),
+    let found = await readLead(leadId)
+
+    if (!found) {
+      const materialized = await materializeLeadFromServer({
+        orgId: membership?.organizationId ?? null,
+        userId: session?.user.id ?? null,
+        leadClientId: leadId,
+      })
+      found = materialized.lead
+    }
+
+    const [events, files] = await Promise.all([
       readHistory(leadId),
       listAttachments(leadId),
     ])
@@ -159,22 +151,78 @@ export default function LeadPage() {
     setAttachments(files)
     setLoading(false)
 
-    // After the screen is usable, not before. Both of these can fail quietly;
-    // the panel reads their absence as "not sent to Roofr" and "nothing queued",
-    // which is what absence actually means here.
-    void readLink(leadId).then((link) => {
-      setRoofrJobId(link?.roofrJobId ?? null)
-      setRoofrLastEventAt(link?.lastEventAt ?? null)
-    })
+    const orgId = membership?.organizationId ?? null
+    if (orgId) {
+      void readLink(orgId, leadId).then((link) => {
+        setRoofrJobId(link?.roofrJobId ?? null)
+        setRoofrLastEventAt(link?.lastEventAt ?? null)
+      })
+    } else {
+      setRoofrJobId(null)
+      setRoofrLastEventAt(null)
+    }
+
     void pendingWork().then((work) =>
       setQueued({ total: work.total, stalled: work.stalled }),
     )
-  }, [])
+  }, [membership?.organizationId, session?.user.id])
 
   useEffect(() => {
     if (id) void load(id)
     else setLoading(false)
   }, [id, load])
+
+  useEffect(() => {
+    if (!lead) {
+      setHealthIssues([])
+      return
+    }
+    let cancelled = false
+    void readLeadDataHealth({
+      lead,
+      organizationId: membership?.organizationId ?? null,
+      roofrJobId,
+      roofrLastEventAt,
+      pendingSyncItems: queued.total,
+      failedSyncItems: queued.stalled,
+    }).then((result) => {
+      if (!cancelled) setHealthIssues(result)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [
+    lead,
+    membership?.organizationId,
+    queued.stalled,
+    queued.total,
+    roofrJobId,
+    roofrLastEventAt,
+  ])
+
+  const fixHealthIssue = useCallback(
+    (target: FixTarget) => {
+      if (target === 'sync') {
+        navigate('/diagnostics')
+        return
+      }
+      const ids: Record<Exclude<FixTarget, 'sync'>, string> = {
+        contact: 'lead-contact-identity',
+        property: 'lead-property-intelligence',
+        permission: 'lead-permission',
+        timeline: 'lead-timeline',
+        roofr: 'lead-roofr',
+      }
+      const sectionId = ids[target]
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      globalThis.window.history.replaceState(
+        globalThis.window.history.state,
+        '',
+        `${globalThis.window.location.pathname}${globalThis.window.location.search}#${sectionId}`,
+      )
+    },
+    [navigate],
+  )
 
   const record = useCallback(
     async (outcome: DoorOutcome) => {
@@ -354,6 +402,11 @@ export default function LeadPage() {
       ? smsBlock.reason
       : null
 
+  const returnTo =
+    typeof (location.state as { returnTo?: unknown } | null)?.returnTo === 'string'
+      ? ((location.state as { returnTo: string }).returnTo)
+      : '/leads'
+
   return (
     <div>
       {/*
@@ -363,6 +416,9 @@ export default function LeadPage() {
         The compliance gates are the same ones as before — this moved the
         buttons, it did not loosen them.
       */}
+      <LeadSectionNav sections={LEAD_SECTIONS} />
+
+      <div id="lead-overview" className="scroll-mt-16">
       <ContactActions
         phone={lead.contactPhone ?? null}
         phoneNote={phoneSource === null ? null : CONTACT_SOURCE_LABEL[phoneSource]}
@@ -414,6 +470,15 @@ export default function LeadPage() {
             Inspect this roof
           </Button>
         </div>
+      </div>
+      </div>
+
+      <div id="lead-contact-identity" className="scroll-mt-16">
+        <LeadContactIdentityPanel lead={lead} />
+      </div>
+
+      <div id="lead-property-intelligence" className="scroll-mt-16">
+        <LeadPropertyIntelligence lead={lead} />
       </div>
 
       <SectionTitle>REACH THEM</SectionTitle>
@@ -538,6 +603,7 @@ export default function LeadPage() {
         )}
       </Card>
 
+      <div id="lead-permission" className="scroll-mt-16">
       <SectionTitle>PERMISSION</SectionTitle>
       <Card>
         {lead.optedOutAt ? (
@@ -583,6 +649,8 @@ export default function LeadPage() {
         )}
       </Card>
 
+      </div>
+      <div id="lead-field-activity" className="scroll-mt-16">
       <SectionTitle>WHAT HAPPENED</SectionTitle>
       <Card className="grid grid-cols-2 gap-2">
         {QUICK.map((outcome) => (
@@ -597,6 +665,7 @@ export default function LeadPage() {
           Do not knock
         </Button>
       </Card>
+      </div>
 
       <SectionTitle>NEXT VISIT</SectionTitle>
       <Card>
@@ -621,36 +690,13 @@ export default function LeadPage() {
       <SectionTitle>NOTES</SectionTitle>
       <LeadNotePanel leadId={lead.id} onSaved={addNote} />
 
-      <SectionTitle hint={`${history.length} entries`}>HISTORY</SectionTitle>
-      {history.length === 0 ? (
-        <Empty
-          title="Nothing recorded yet"
-          body="Every knock, call, text and note lands here in order, so whoever picks this up next can see what was actually said."
-        />
-      ) : (
-        <Card>
-          <ol className="space-y-3">
-            {history.map((event) => (
-              <li key={event.id} className="border-l-2 border-white/10 pl-3">
-                <p className="text-[12.5px] font-semibold text-white/80">
-                  {event.outcome ? OUTCOME_LABEL[event.outcome] : CONTACT_KIND_LABEL[event.kind]}
-                </p>
-                <p className="text-[10.5px] text-white/30">
-                  {when(event.at)} · {CONTACT_KIND_LABEL[event.kind]}
-                </p>
-                {event.note && (
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-white/60">{event.note}</p>
-                )}
-                {attachments
-                  .filter((a) => a.eventId === event.id)
-                  .map((a) => (
-                    <Attachment key={a.id} item={a} />
-                  ))}
-              </li>
-            ))}
-          </ol>
-        </Card>
-      )}
+      <div id="lead-timeline" className="scroll-mt-16">
+        <LeadTimeline leadId={lead.id} history={history} attachments={attachments} />
+      </div>
+
+      <div id="lead-data-health" className="scroll-mt-16">
+        <DataHealthPanel issues={healthIssues} onFix={fixHealthIssue} />
+      </div>
 
       <IntegrityPanel
         evidence={{
@@ -679,7 +725,9 @@ export default function LeadPage() {
         }}
       />
 
-      <RoofrPanel leadId={lead.id} />
+      <div id="lead-roofr" className="scroll-mt-16">
+        <RoofrPanel leadId={lead.id} />
+      </div>
 
       <SectionTitle>WHY IT WAS ON THE LIST</SectionTitle>
       <Card>
@@ -697,8 +745,8 @@ export default function LeadPage() {
         </p>
       </Card>
 
-      <Button variant="ghost" full className="mt-6" onClick={() => navigate('/leads')}>
-        Back to the list
+      <Button variant="ghost" full className="mt-6" onClick={() => navigate(returnTo)}>
+        Back
       </Button>
     </div>
   )

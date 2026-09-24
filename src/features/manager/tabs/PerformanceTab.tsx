@@ -4,6 +4,7 @@ import { Figure, Nothing, Stat, duration, pct } from './shared'
 import { performanceFor, pooled, type AssignedLead, type RepPerformance } from '../performance'
 import { MISSING_SEGMENTS, byScoreBand, bySubdivision, standout } from '../segments'
 import type { ActivityRow, BandRate, RouteRow } from '../metrics'
+import ManagerLeadEvidence from '@/features/manager/ManagerLeadEvidence'
 
 /**
  * One rep's record, and the team's, with the arithmetic in view.
@@ -24,6 +25,7 @@ export default function PerformanceTab({
   nameOf,
   windowFrom,
   windowTo,
+  onOpenLead,
 }: {
   team: readonly { userId: string; role: string; isActive: boolean }[]
   activity: readonly ActivityRow[]
@@ -33,6 +35,7 @@ export default function PerformanceTab({
   nameOf: (id: string | null) => string
   windowFrom: string
   windowTo: string
+  onOpenLead: (leadId: string) => void
 }) {
   const reps = useMemo(
     () => team.filter((m) => m.isActive && m.role !== 'office').map((m) => m.userId),
@@ -135,7 +138,16 @@ export default function PerformanceTab({
           ))}
       </div>
 
-      {chosen && <RepDetail rep={chosen} nameOf={nameOf} assignments={assignments} teamRates={teamRates} />}
+      {chosen && (
+        <RepDetail
+          rep={chosen}
+          nameOf={nameOf}
+          assignments={assignments}
+          activity={activity}
+          teamRates={teamRates}
+          onOpenLead={onOpenLead}
+        />
+      )}
     </div>
   )
 }
@@ -144,11 +156,15 @@ function RepDetail({
   rep,
   nameOf,
   assignments,
+  activity,
   teamRates,
+  onOpenLead,
 }: {
   rep: RepPerformance
   nameOf: (id: string | null) => string
   assignments: readonly AssignedLead[]
+  activity: readonly ActivityRow[]
+  onOpenLead: (leadId: string) => void
   teamRates: {
     contact: { value: number | null; unavailable: string | null }
     appointment: { value: number | null; unavailable: string | null }
@@ -158,6 +174,12 @@ function RepDetail({
   }
 }) {
   const mine = assignments.filter((a) => a.repId === rep.repId)
+  const myActivity = activity.filter(
+    (row) => row.userId === rep.repId && row.occurredAt >= rep.from && row.occurredAt <= rep.to,
+  )
+  const [evidence, setEvidence] = useState<
+    'all' | 'knocked' | 'appointments' | 'inspections' | 'sold' | 'overdue' | null
+  >(null)
   const bands = byScoreBand(mine)
   const areas = bySubdivision(mine)
   const best = standout([...bands, ...areas])
@@ -245,6 +267,91 @@ function RepDetail({
           call.
         </p>
       </Card>
+
+      <Card>
+        <p className="text-[12px] font-semibold text-white/70">SUPPORTING RECORDS</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-white/30">
+          Every performance figure below can be checked against the actual lead records. These buttons
+          filter records; they do not recalculate the metric.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {[
+            ['all', `All assigned · ${mine.length}`],
+            ['knocked', `Knocked · ${rep.doors.knocked}`],
+            ['appointments', `Appointments · ${rep.doors.appointments}`],
+            ['inspections', `Inspected · ${rep.sales.inspections}`],
+            ['sold', `Sold · ${rep.sales.contracts}`],
+            ['overdue', `Overdue · ${rep.followUp.overdue}`],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() =>
+                setEvidence(evidence === key ? null : (key as typeof evidence))
+              }
+              className={`rounded-xl px-3 py-2 text-left text-[11.5px] ring-1 ${
+                evidence === key
+                  ? 'bg-gold-500/15 text-gold-200 ring-gold-400/30'
+                  : 'bg-white/4 text-white/55 ring-white/8'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {evidence && (
+        <ManagerLeadEvidence
+          title={`${nameOf(rep.repId)} · ${evidence}`}
+          leads={(() => {
+            const addressByLead = new Map(myActivity.map((row) => [row.leadClientId, row.address]))
+            const now = Date.now()
+
+            if (evidence === 'knocked') {
+              return myActivity
+                .filter((row) => row.activityType === 'door_knock')
+                .map((row) => ({
+                  leadId: row.leadClientId,
+                  address: row.address,
+                  detail: `Knocked ${new Date(row.occurredAt).toLocaleString()} · ${row.outcome ?? 'outcome not recorded'}`,
+                }))
+            }
+
+            const filtered = mine.filter((lead) => {
+              if (evidence === 'all') return true
+              if (evidence === 'appointments') {
+                return lead.status === 'appointment' || lead.status === 'inspected' || lead.status === 'proposal_pending' || lead.status === 'sold'
+              }
+              if (evidence === 'inspections') {
+                return lead.status === 'inspected' || lead.status === 'proposal_pending' || lead.status === 'sold'
+              }
+              if (evidence === 'sold') return lead.status === 'sold'
+              if (evidence === 'overdue') {
+                if (!lead.nextActionAt) return false
+                const due = Date.parse(lead.nextActionAt)
+                const last = lead.lastActivityAt ? Date.parse(lead.lastActivityAt) : Number.NaN
+                return Number.isFinite(due) && due <= now && (!Number.isFinite(last) || last < due)
+              }
+              return false
+            })
+
+            return filtered.map((lead) => ({
+              leadId: lead.leadClientId,
+              address: addressByLead.get(lead.leadClientId) ?? 'Address available in Lead 360',
+              detail: [
+                lead.status.replaceAll('_', ' '),
+                `assigned score ${lead.scoreAtAssignment}`,
+                lead.nextActionAt ? `next action ${new Date(lead.nextActionAt).toLocaleString()}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · '),
+            }))
+          })()}
+          onOpenLead={onOpenLead}
+          onClose={() => setEvidence(null)}
+        />
+      )}
 
       <Card>
         <p className="text-[12px] font-semibold text-white/70">THE DOORS THEY WERE GIVEN</p>

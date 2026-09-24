@@ -14,6 +14,7 @@ import {
 import { performanceFor, pooled, type AssignedLead } from '../performance'
 import { findGrade, readGrades, saveComputedGrade, saveManagerGrade, type GradeRow } from '../grade-store'
 import type { ActivityRow, BandRate, RouteRow } from '../metrics'
+import ManagerLeadEvidence from '@/features/manager/ManagerLeadEvidence'
 
 /**
  * Grading a rep, in whichever of the three modes the business chose.
@@ -48,6 +49,7 @@ export default function GradesTab({
   userId,
   canManage,
   nameOf,
+  onOpenLead,
 }: {
   team: readonly { userId: string; role: string; isActive: boolean }[]
   activity: readonly ActivityRow[]
@@ -59,6 +61,7 @@ export default function GradesTab({
   userId: string | null
   canManage: boolean
   nameOf: (id: string | null) => string
+  onOpenLead: (leadId: string) => void
 }) {
   const period = useMemo(() => monthWindow(), [])
   const [stored, setStored] = useState<GradeRow[]>([])
@@ -236,6 +239,11 @@ export default function GradesTab({
               <Review
                 repId={repId}
                 computed={live.computed ?? computed}
+                activity={activity}
+                assignments={assignments}
+                periodStart={period.start}
+                periodEnd={period.end}
+                onOpenLead={onOpenLead}
                 filed={filed}
                 config={config}
                 canManage={canManage}
@@ -286,26 +294,38 @@ export default function GradesTab({
 }
 
 function Review({
+  repId,
   computed,
+  activity,
+  assignments,
+  periodStart,
+  periodEnd,
   filed,
   config,
   canManage,
   busy,
+  onOpenLead,
   onCompute,
   onGrade,
 }: {
   repId: string
   computed: ComputedGrade
+  activity: readonly ActivityRow[]
+  assignments: readonly AssignedLead[]
+  periodStart: string
+  periodEnd: string
   filed: GradeRow | null
   config: GradingConfig
   canManage: boolean
   busy: boolean
+  onOpenLead: (leadId: string) => void
   onCompute: () => Promise<void>
   onGrade: (letter: string, comment: string | null, reason: string | null) => Promise<void>
 }) {
   const [letter, setLetter] = useState(filed?.managerLetter ?? computed.letter ?? 'B')
   const [comment, setComment] = useState(filed?.managerComment ?? '')
   const [reason, setReason] = useState(filed?.managerOverrideReason ?? '')
+  const [showEvidence, setShowEvidence] = useState(false)
 
   const differs = computed.letter !== null && letter !== computed.letter
   const canSubmit = canManage && !busy && (!differs || reason.trim() !== '')
@@ -332,6 +352,42 @@ function Review({
           A category with too thin a sample is dropped and its weight removed from the denominator, never
           filled in with an assumption. {pct(computed.coverage)} of the rubric was scorable here.
         </p>
+      </div>
+
+      <div>
+        <Button variant="ghost" full onClick={() => setShowEvidence((open) => !open)}>
+          {showEvidence ? 'Hide supporting lead records' : 'Open supporting lead records'}
+        </Button>
+        {showEvidence && (
+          <div className="mt-3">
+            <ManagerLeadEvidence
+              title="Records behind this review"
+              hint="Activity and assignments in this grading period"
+              leads={[
+                ...activity
+                  .filter(
+                    (row) =>
+                      row.userId === repId &&
+                      row.occurredAt >= periodStart &&
+                      row.occurredAt < periodEnd,
+                  )
+                  .map((row) => ({
+                    leadId: row.leadClientId,
+                    address: row.address,
+                    detail: `${row.activityType.replaceAll('_', ' ')} · ${new Date(row.occurredAt).toLocaleString()}`,
+                  })),
+                ...assignments
+                  .filter((lead) => lead.repId === repId)
+                  .map((lead) => ({
+                    leadId: lead.leadClientId,
+                    address: 'Open Lead 360 for property address',
+                    detail: `${lead.status.replaceAll('_', ' ')} · assigned score ${lead.scoreAtAssignment}`,
+                  })),
+              ]}
+              onOpenLead={onOpenLead}
+            />
+          </div>
+        )}
       </div>
 
       {computed.strengths.length > 0 && (

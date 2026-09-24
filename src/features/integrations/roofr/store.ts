@@ -152,9 +152,31 @@ export async function saveSettings(
   return error ? { ok: false, error: error.message } : { ok: true }
 }
 
-export async function readLink(leadId: string): Promise<RoofrLink | null> {
+async function remoteLeadIdForClientId(
+  organizationId: string,
+  leadClientId: string,
+): Promise<string | null> {
   const supabase = getSupabase()
   if (!supabase) return null
+  const { data, error } = await supabase
+    .from('leads')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('client_id', leadClientId)
+    .is('deleted_at', null)
+    .maybeSingle()
+  if (error || !data) return null
+  return (data.id as string | null) ?? null
+}
+
+export async function readLink(
+  organizationId: string,
+  leadClientId: string,
+): Promise<RoofrLink | null> {
+  const supabase = getSupabase()
+  if (!supabase) return null
+  const leadId = await remoteLeadIdForClientId(organizationId, leadClientId)
+  if (!leadId) return null
   const { data } = await supabase
     .from('roofr_links')
     .select(
@@ -220,9 +242,14 @@ export type PushOutcome =
  * job exists when Roofr says it does, which arrives back through the inbound
  * webhook and is what turns the panel green.
  */
-export async function pushLeadToRoofr(leadId: string): Promise<PushOutcome> {
+export async function pushLeadToRoofr(
+  organizationId: string,
+  leadClientId: string,
+): Promise<PushOutcome> {
   const supabase = getSupabase()
   if (!supabase) return { ok: false, error: 'No connection to the server.' }
+  const leadId = await remoteLeadIdForClientId(organizationId, leadClientId)
+  if (!leadId) return { ok: false, error: 'This lead has not reached the server yet.' }
 
   const { data: session } = await supabase.auth.getSession()
   const token = session.session?.access_token

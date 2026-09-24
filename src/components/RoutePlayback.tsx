@@ -48,10 +48,12 @@ export default function RoutePlayback({
   session,
   points,
   activities,
+  onOpenLead,
 }: {
   session: RouteSession
   points: readonly RoutePoint[]
   activities: readonly TimelineActivity[]
+  onOpenLead?: (leadId: string) => void
 }) {
   const [style, setStyle] = useState<MapStyleKey>('streets')
   const [playing, setPlaying] = useState(false)
@@ -193,7 +195,13 @@ export default function RoutePlayback({
           const isLatest =
             reached && (index === timeline.length - 1 || Date.parse(timeline[index + 1]?.at ?? '') > startMs + offset)
           return (
-            <TimelineRow key={`${entry.at}-${entry.kind}-${index}`} entry={entry} reached={reached} active={isLatest} />
+            <TimelineRow
+              key={`${entry.at}-${entry.kind}-${index}`}
+              entry={entry}
+              reached={reached}
+              active={isLatest}
+              {...(onOpenLead ? { onOpenLead } : {})}
+            />
           )
         })}
       </div>
@@ -205,10 +213,12 @@ function TimelineRow({
   entry,
   reached,
   active,
+  onOpenLead,
 }: {
   entry: TimelineEntry
   reached: boolean
   active: boolean
+  onOpenLead?: (leadId: string) => void
 }) {
   return (
     <div
@@ -224,10 +234,19 @@ function TimelineRow({
         className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
         style={{ backgroundColor: KIND_COLOUR[entry.kind] ?? '#64748b' }}
       />
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-medium">{entry.title}</p>
         {entry.detail && (
           <p className="mt-0.5 text-[11.5px] leading-relaxed text-white/45">{entry.detail}</p>
+        )}
+        {entry.leadId && onOpenLead && (
+          <button
+            type="button"
+            className="mt-1 text-[10.5px] font-medium text-gold-300 underline decoration-gold-300/30 underline-offset-2"
+            onClick={() => onOpenLead(entry.leadId as string)}
+          >
+            Open supporting Lead 360
+          </button>
         )}
       </div>
     </div>

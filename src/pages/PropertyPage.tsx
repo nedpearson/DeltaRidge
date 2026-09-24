@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { OwnerLine, occupancyEvidence } from '@/components/OwnerLine'
 import RoofView from '@/components/RoofView'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
@@ -58,6 +58,7 @@ const STORM_RADIUS_MILES = 5
 export default function PropertyPage() {
   const { addressKey = '' } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [run, setRun] = useState<LeadRun | null>(null)
   const [permits, setPermits] = useState<PermitRecord[] | null>(null)
   const [permitError, setPermitError] = useState(false)
@@ -140,10 +141,14 @@ export default function PropertyPage() {
   return (
     <div>
       <button
-        onClick={() => navigate('/leads')}
+        onClick={() => {
+          const state = location.state as { returnTo?: unknown } | null
+          const returnTo = typeof state?.returnTo === 'string' ? state.returnTo : '/leads'
+          navigate(returnTo)
+        }}
         className="!min-h-0 py-1 text-[12px] text-white/40"
       >
-        ← Doors
+        ← Back
       </button>
 
       <Card className="mt-2">

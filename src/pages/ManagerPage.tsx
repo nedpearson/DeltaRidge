@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import { useSession } from '@/features/auth/session'
 import { readCachedRun } from '@/features/leads/engine'
@@ -21,6 +22,7 @@ import SettingsTab from '@/features/manager/tabs/SettingsTab'
 import RoofrTab from '@/features/integrations/roofr/RoofrTab'
 import ContactProviderTab from '@/features/contacts/ContactProviderTab'
 import HealthTab from '@/features/integrations/health/HealthTab'
+import ManagerLeadEvidence from '@/features/manager/ManagerLeadEvidence'
 import { readGradingConfig } from '@/features/manager/grade-store'
 import { DEFAULT_CONFIG, type GradingConfig } from '@/features/manager/grading'
 import { DEFAULT_WINDOW_DAYS } from '@/features/manager/read'
@@ -113,7 +115,13 @@ function Nothing({ title, body }: { title: string; body: string }) {
 
 export default function ManagerPage() {
   const { session, membership } = useSession()
-  const [tab, setTab] = useState<Tab>('team')
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedTab = searchParams.get('tab')
+  const initialTab: Tab = TABS.some((item) => item.id === requestedTab)
+    ? (requestedTab as Tab)
+    : 'team'
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [snapshot, setSnapshot] = useState<ManagerSnapshot>(EMPTY_SNAPSHOT)
   const [doors, setDoors] = useState<ScoredLead[]>([])
   const [loading, setLoading] = useState(true)
@@ -144,6 +152,13 @@ export default function ManagerPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (searchParams.get('tab') === tab) return
+    const next = new URLSearchParams(searchParams)
+    next.set('tab', tab)
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams, tab])
 
   const names = useMemo(() => {
     const map = new Map<string, string>()
@@ -253,9 +268,13 @@ export default function ManagerPage() {
           repActivity={repActivity}
           outcomes={outcomes}
           baseline={baseline}
+          activity={snapshot.activity}
           nameOf={nameOf}
           openByRep={openByRep}
           loading={loading}
+          onOpenLead={(leadId) =>
+            navigate(`/lead/${leadId}`, { state: { returnTo: '/manager?tab=team' } })
+          }
         />
       )}
 
@@ -268,6 +287,9 @@ export default function ManagerPage() {
           orgId={orgId}
           nameOf={nameOf}
           loading={loading}
+          onOpenLead={(leadId) =>
+            navigate(`/lead/${leadId}`, { state: { returnTo: '/manager?tab=routes' } })
+          }
         />
       )}
 
@@ -281,6 +303,9 @@ export default function ManagerPage() {
           nameOf={nameOf}
           windowFrom={windowFrom}
           windowTo={windowTo}
+          onOpenLead={(leadId) =>
+            navigate(`/lead/${leadId}`, { state: { returnTo: '/manager?tab=performance' } })
+          }
         />
       )}
 
@@ -296,6 +321,9 @@ export default function ManagerPage() {
           userId={session.user.id}
           canManage={canManage}
           nameOf={nameOf}
+          onOpenLead={(leadId) =>
+            navigate(`/lead/${leadId}`, { state: { returnTo: '/manager?tab=grades' } })
+          }
         />
       )}
 
@@ -330,6 +358,9 @@ export default function ManagerPage() {
           nameOf={nameOf}
           canManage={canManage}
           busy={busy}
+          onOpenLead={(leadId) =>
+            navigate(`/lead/${leadId}`, { state: { returnTo: '/manager?tab=leads' } })
+          }
           onUnassign={async (id) => {
             setBusy(id)
             await unassignLead(id)
@@ -353,7 +384,16 @@ export default function ManagerPage() {
         />
       )}
 
-      {tab === 'territory' && <TerritoryTab coverage={coverage} hasDoors={doors.length > 0} />}
+      {tab === 'territory' && (
+        <TerritoryTab
+          coverage={coverage}
+          activity={snapshot.activity}
+          hasDoors={doors.length > 0}
+          onOpenLead={(leadId) =>
+            navigate(`/lead/${leadId}`, { state: { returnTo: '/manager?tab=territory' } })
+          }
+        />
+      )}
 
       {tab === 'log' && <LogTab rows={snapshot.audit} nameOf={nameOf} loading={loading} />}
     </div>
@@ -366,18 +406,23 @@ function TeamTab({
   repActivity,
   outcomes,
   baseline,
+  activity,
   nameOf,
   openByRep,
   loading,
+  onOpenLead,
 }: {
   repActivity: ReturnType<typeof rollUpActivity>
   outcomes: ReturnType<typeof outcomesFrom>
   baseline: ReturnType<typeof orgBaseline>
+  activity: ManagerSnapshot['activity']
   nameOf: (id: string | null) => string
   openByRep: Map<string, number>
   loading: boolean
+  onOpenLead: (leadId: string) => void
 }) {
   const [open, setOpen] = useState<string | null>(null)
+  const [evidenceRep, setEvidenceRep] = useState<string | null>(null)
 
   if (loading) return <Card><p className="text-[13px] text-white/45">Reading the server…</p></Card>
   if (repActivity.length === 0) {
@@ -467,6 +512,31 @@ function TeamTab({
                 </>
               )}
             </div>
+
+            <Button
+              variant="ghost"
+              full
+              className="mt-3"
+              onClick={() => setEvidenceRep(evidenceRep === rep.repId ? null : rep.repId)}
+            >
+              {evidenceRep === rep.repId ? 'Hide supporting doors' : 'Show supporting doors'}
+            </Button>
+
+            {evidenceRep === rep.repId && (
+              <div className="mt-3 border-t border-white/8 pt-3">
+                <ManagerLeadEvidence
+                  title={`${nameOf(rep.repId)} · supporting records`}
+                  leads={activity
+                    .filter((row) => row.userId === rep.repId)
+                    .map((row) => ({
+                      leadId: row.leadClientId,
+                      address: row.address,
+                      detail: `${row.activityType.replaceAll('_', ' ')} · ${new Date(row.occurredAt).toLocaleString()}`,
+                    }))}
+                  onOpenLead={onOpenLead}
+                />
+              </div>
+            )}
           </Card>
         )
       })}
@@ -551,6 +621,7 @@ function AssignTab({
   nameOf,
   canManage,
   busy,
+  onOpenLead,
   onUnassign,
   onAssign,
 }: {
@@ -560,6 +631,7 @@ function AssignTab({
   nameOf: (id: string | null) => string
   canManage: boolean
   busy: string | null
+  onOpenLead: (leadId: string) => void
   onUnassign: (id: string) => Promise<void>
   onAssign: (door: ScoredLead, repId: string, reason: string) => Promise<string | null>
 }) {
@@ -596,6 +668,14 @@ function AssignTab({
                 {nameOf(a.assignedTo)} · {ago(a.assignedAt)} · {a.leadStatus.replace(/_/g, ' ')}
               </p>
               {a.reason && <p className="mt-1 text-[11.5px] text-white/35">{a.reason}</p>}
+              <Button
+                variant="ghost"
+                full
+                className="mt-3"
+                onClick={() => onOpenLead(a.leadClientId)}
+              >
+                Open Lead 360
+              </Button>
               {canManage && (
                 <Button
                   variant="secondary"
@@ -724,11 +804,17 @@ function AssignTab({
 
 function TerritoryTab({
   coverage,
+  activity,
   hasDoors,
+  onOpenLead,
 }: {
   coverage: ReturnType<typeof territoryCoverage>
+  activity: ManagerSnapshot['activity']
   hasDoors: boolean
+  onOpenLead: (leadId: string) => void
 }) {
+  const [openSubdivision, setOpenSubdivision] = useState<string | null>(null)
+
   if (coverage.length === 0) {
     return (
       <Nothing
@@ -768,6 +854,37 @@ function TerritoryTab({
               <div
                 className="h-full rounded-full bg-gold-400"
                 style={{ width: `${Math.round(row.share * 100)}%` }}
+              />
+            </div>
+          )}
+
+          <Button
+            variant="ghost"
+            full
+            className="mt-2"
+            onClick={() =>
+              setOpenSubdivision(openSubdivision === row.subdivision ? null : row.subdivision)
+            }
+          >
+            {openSubdivision === row.subdivision ? 'Hide supporting doors' : 'Show knocked doors'}
+          </Button>
+
+          {openSubdivision === row.subdivision && (
+            <div className="mt-3 border-t border-white/8 pt-3">
+              <ManagerLeadEvidence
+                title={`${row.subdivision} · knocked doors`}
+                leads={activity
+                  .filter(
+                    (event) =>
+                      event.activityType === 'door_knock' &&
+                      (event.subdivision ?? 'Unnamed') === row.subdivision,
+                  )
+                  .map((event) => ({
+                    leadId: event.leadClientId,
+                    address: event.address,
+                    detail: new Date(event.occurredAt).toLocaleString(),
+                  }))}
+                onOpenLead={onOpenLead}
               />
             </div>
           )}

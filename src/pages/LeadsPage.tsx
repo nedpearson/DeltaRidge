@@ -43,6 +43,7 @@ import { WINDOW_OPTIONS, type StormWindowKey } from '@/features/leads/window'
 import type { StormEvent } from '@/integrations/storm'
 import { newId, saveInspection, type LocalInspection } from '@/lib/db'
 import { currentPosition } from '@/lib/image'
+import { readLeadListContext, writeLeadListContext } from '@/features/navigation/lead-list-context'
 
 /**
  * Custom ranges are deliberately absent until there is a date picker to set
@@ -201,7 +202,11 @@ function DoorCard({
         </a>
         <Button
           variant="secondary"
-          onClick={() => navigate(`/property/${encodeURIComponent(lead.addressKey)}`)}
+          onClick={() =>
+            navigate(`/property/${encodeURIComponent(lead.addressKey)}`, {
+              state: { returnTo: '/leads' },
+            })
+          }
         >
           Property
         </Button>
@@ -364,8 +369,7 @@ function ScoreBreakdown({ lead }: { lead: ScoredLead }) {
 }
 
 /** A door that has become somebody. */
-function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
-  const navigate = useNavigate()
+function PipelineCard({ lead, now, onOpen }: { lead: ManagedLead; now: string; onOpen: (leadId: string) => void }) {
   const due = dueLabel(lead, now)
   const overdue = isDue(lead, now)
 
@@ -439,7 +443,7 @@ function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
         >
           <Button variant="secondary">Navigate</Button>
         </a>
-        <Button variant="gold" onClick={() => navigate(`/lead/${lead.id}`)}>
+        <Button variant="gold" onClick={() => onOpen(lead.id)}>
           Open lead
         </Button>
       </div>
@@ -574,13 +578,14 @@ export default function LeadsPage() {
   const [run, setRun] = useState<LeadRun | null>(null)
   const [managed, setManaged] = useState<ManagedLead[]>([])
   const [settings, setSettings] = useState<LeadRunSettings>(DEFAULT_SETTINGS)
-  const [tab, setTab] = useState<Tab>('new')
+  const restored = readLeadListContext()
+  const [tab, setTab] = useState<Tab>(restored.tab)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [knocking, setKnocking] = useState<ScoredLead | null>(null)
-  const [showCompetitors, setShowCompetitors] = useState(false)
-  const [routeName, setRouteName] = useState<string | null>(null)
-  const [ownerOccupiedOnly, setOwnerOccupiedOnly] = useState(false)
+  const [showCompetitors, setShowCompetitors] = useState(restored.showCompetitors)
+  const [routeName, setRouteName] = useState<string | null>(restored.routeName)
+  const [ownerOccupiedOnly, setOwnerOccupiedOnly] = useState(restored.ownerOccupiedOnly)
   const [here, setHere] = useState<{ latitude: number; longitude: number } | null>(null)
 
   const busyRef = useRef(false)
@@ -616,6 +621,58 @@ export default function LeadsPage() {
       setBusy(false)
     }
   }, [])
+
+  useEffect(() => {
+    writeLeadListContext({
+      tab,
+      routeName,
+      ownerOccupiedOnly,
+      showCompetitors,
+      scrollY: window.scrollY,
+    })
+  }, [tab, routeName, ownerOccupiedOnly, showCompetitors])
+
+  useEffect(() => {
+    let raf = 0
+    const save = () => {
+      window.cancelAnimationFrame(raf)
+      raf = window.requestAnimationFrame(() => {
+        writeLeadListContext({
+          tab,
+          routeName,
+          ownerOccupiedOnly,
+          showCompetitors,
+          scrollY: window.scrollY,
+        })
+      })
+    }
+    window.addEventListener('scroll', save, { passive: true })
+    return () => {
+      window.cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', save)
+    }
+  }, [tab, routeName, ownerOccupiedOnly, showCompetitors])
+
+  useEffect(() => {
+    const y = readLeadListContext().scrollY
+    if (y <= 0) return
+    const timer = window.setTimeout(() => window.scrollTo({ top: y, behavior: 'auto' }), 0)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  const openLead = useCallback(
+    (leadId: string) => {
+      writeLeadListContext({
+        tab,
+        routeName,
+        ownerOccupiedOnly,
+        showCompetitors,
+        scrollY: window.scrollY,
+      })
+      navigate(`/lead/${leadId}`, { state: { returnTo: '/leads' } })
+    },
+    [navigate, ownerOccupiedOnly, routeName, showCompetitors, tab],
+  )
 
   useEffect(() => {
     void readCachedRun().then((cached) => {
@@ -849,7 +906,7 @@ export default function LeadsPage() {
           ) : (
             <div className="space-y-2">
               {pipeline.map((lead) => (
-                <PipelineCard key={lead.id} lead={lead} now={now} />
+                <PipelineCard key={lead.id} lead={lead} now={now} onOpen={openLead} />
               ))}
             </div>
           )}
@@ -932,7 +989,7 @@ export default function LeadsPage() {
                 doors={visibleDoors}
                 leads={managed}
                 storms={run.stormEvents}
-                onOpenLead={(leadId) => navigate(`/lead/${leadId}`)}
+                onOpenLead={openLead}
               />
 
               <SectionTitle hint={busy ? 'updating…' : `built ${relativeTime(run.ranAt)}`}>
