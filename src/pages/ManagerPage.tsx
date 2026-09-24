@@ -321,6 +321,9 @@ export default function ManagerPage() {
           userId={session.user.id}
           canManage={canManage}
           nameOf={nameOf}
+          onOpenLead={(leadId) =>
+            navigate(`/lead/${leadId}`, { state: { returnTo: '/manager?tab=grades' } })
+          }
         />
       )}
 
