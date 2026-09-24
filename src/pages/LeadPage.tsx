@@ -8,6 +8,7 @@ import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/component
 import ContactActions from '@/components/ContactActions'
 import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
 import IntegrityPanel from '@/features/leads/IntegrityPanel'
+import LeadPropertyIntelligence from '@/features/leads/LeadPropertyIntelligence'
 import { readLink } from '@/features/integrations/roofr/store'
 import { pendingWork } from '@/lib/sync'
 import {
@@ -415,6 +416,8 @@ export default function LeadPage() {
           </Button>
         </div>
       </div>
+
+      <LeadPropertyIntelligence lead={lead} />
 
       <SectionTitle>REACH THEM</SectionTitle>
       <Card>
