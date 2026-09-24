@@ -14,6 +14,7 @@ import LeadTimeline from '@/features/leads/LeadTimeline'
 import LeadSectionNav from '@/features/leads/LeadSectionNav'
 import { readLink } from '@/features/integrations/roofr/store'
 import { pendingWork } from '@/lib/sync'
+import { materializeLeadFromServer } from '@/lib/sync/pull'
 import {
   addEvent,
   listAttachments,
@@ -110,7 +111,7 @@ export default function LeadPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { membership } = useSession()
+  const { session, membership } = useSession()
   const [lead, setLead] = useState<ManagedLead | null>(null)
   const [editingNumber, setEditingNumber] = useState(false)
   const [newNumber, setNewNumber] = useState('')
@@ -130,8 +131,18 @@ export default function LeadPage() {
   const [healthIssues, setHealthIssues] = useState<DataHealthIssue[]>([])
 
   const load = useCallback(async (leadId: string) => {
-    const [found, events, files] = await Promise.all([
-      readLead(leadId),
+    let found = await readLead(leadId)
+
+    if (!found) {
+      const materialized = await materializeLeadFromServer({
+        orgId: membership?.organizationId ?? null,
+        userId: session?.user.id ?? null,
+        leadClientId: leadId,
+      })
+      found = materialized.lead
+    }
+
+    const [events, files] = await Promise.all([
       readHistory(leadId),
       listAttachments(leadId),
     ])
@@ -140,17 +151,21 @@ export default function LeadPage() {
     setAttachments(files)
     setLoading(false)
 
-    // After the screen is usable, not before. Both of these can fail quietly;
-    // the panel reads their absence as "not sent to Roofr" and "nothing queued",
-    // which is what absence actually means here.
-    void readLink(leadId).then((link) => {
-      setRoofrJobId(link?.roofrJobId ?? null)
-      setRoofrLastEventAt(link?.lastEventAt ?? null)
-    })
+    const orgId = membership?.organizationId ?? null
+    if (orgId) {
+      void readLink(orgId, leadId).then((link) => {
+        setRoofrJobId(link?.roofrJobId ?? null)
+        setRoofrLastEventAt(link?.lastEventAt ?? null)
+      })
+    } else {
+      setRoofrJobId(null)
+      setRoofrLastEventAt(null)
+    }
+
     void pendingWork().then((work) =>
       setQueued({ total: work.total, stalled: work.stalled }),
     )
-  }, [])
+  }, [membership?.organizationId, session?.user.id])
 
   useEffect(() => {
     if (id) void load(id)
