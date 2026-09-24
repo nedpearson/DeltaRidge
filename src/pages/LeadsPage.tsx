@@ -9,6 +9,7 @@ import RoofViewSheet from '@/components/RoofViewSheet'
 import { Button, Card, Empty, Field, SectionTitle, Select } from '@/components/ui'
 import RoutePanel from '@/components/RoutePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
+import { openSessionId } from '@/features/routes/route-store'
 import { observationOf, type StormCoverage } from '@/features/leads/coverage'
 import {
   DEFAULT_SETTINGS,
@@ -792,11 +793,14 @@ export default function LeadsPage() {
       // second ceiling, and a failure is recorded as "no fix" rather than
       // holding up the knock.
       const gps = await evidenceFor(door)
+      // Which route this happened on, asked now rather than reconstructed later.
+      const routeSessionId = await openSessionId()
 
       const { lead, event } = applyOutcome(base, outcome, at, {
         ...options,
         gps,
         ...(inspectionId !== undefined ? { inspectionId } : {}),
+        ...(routeSessionId !== undefined ? { routeSessionId } : {}),
       })
       await saveOutcome(lead, event)
       setManaged(await readLeads())

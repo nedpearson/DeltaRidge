@@ -441,6 +441,17 @@ export interface ContactEvent {
   note?: string
   /** Absent on events that are not a visit — a call, a note typed at a desk. */
   gps?: KnockVerificationRecord
+  /**
+   * The route that was running when this was recorded.
+   *
+   * Stamped once, at the moment of capture, from the open session. Absent means
+   * no route was running, which is an ordinary thing — a phone call from the
+   * truck, a follow-up typed at a desk — and never something to repair later by
+   * matching timestamps against sessions. That guess is what this field exists
+   * to replace: it is wrong for an activity synced hours after a dead spot, and
+   * wrong for every activity on a day the rep forgot to end their route.
+   */
+  routeSessionId?: string
 }
 
 interface OutcomeRule {
@@ -545,6 +556,8 @@ export interface ApplyOptions {
   contactPhone?: string
   /** What the phone could say about being at this property, if anything. */
   gps?: KnockVerificationRecord
+  /** The open route, if one is running. See ContactEvent.routeSessionId. */
+  routeSessionId?: string
 }
 
 /**
@@ -622,6 +635,11 @@ export function applyOutcome(
     outcome,
     ...(options.note !== undefined && options.note !== '' ? { note: options.note } : {}),
     ...(options.gps !== undefined ? { gps: options.gps } : {}),
+    // Stamped here, at capture, or not at all. Recording it later from the
+    // clock is the guess this replaces.
+    ...(options.routeSessionId !== undefined
+      ? { routeSessionId: options.routeSessionId }
+      : {}),
   }
 
   return { lead: next, event }

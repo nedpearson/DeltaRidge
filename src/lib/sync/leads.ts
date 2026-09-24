@@ -5,6 +5,7 @@ import { getSupabase } from '../supabase'
 import { getRemoteId, setRemoteId } from '../sync-store'
 import { TERMINAL_REMOTE_STATUSES } from './pull'
 import { ensurePropertyFor, pointOrNull } from './resolve'
+import { pushRouteSession } from './routes'
 
 /**
  * Pushing the pipeline to the office.
@@ -254,6 +255,14 @@ export async function pushLeadActivity(localId: string, orgId: string, userId: s
   const lead = await readLead(event.leadId)
   const propertyId = await getRemoteId('property', event.leadId)
 
+  // Same resolve-don't-trust-ordering rule as the lead above. An activity can
+  // reach the front of the queue before the route it happened on, most often
+  // after a dead spot where both were written offline.
+  const routeSessionId = event.routeSessionId
+    ? ((await getRemoteId('routeSession', event.routeSessionId)) ??
+      (await pushRouteSession(event.routeSessionId, orgId, userId)))
+    : null
+
   const { data, error } = await supabase
     .from('activities')
     .upsert(
@@ -273,6 +282,11 @@ export async function pushLeadActivity(localId: string, orgId: string, userId: s
         gps_verification: event.gps?.verification ?? null,
         gps_distance_m: event.gps?.distanceMeters ?? null,
         gps_accuracy_m: event.gps?.accuracyMeters ?? null,
+        // Resolved the same way the lead above is, and for the same reason: an
+        // activity queued while its route was still unsynced must not arrive
+        // attached to nothing. Null stays null - no route was running, and the
+        // server must never infer one from the timestamp.
+        route_session_id: routeSessionId,
       },
       { onConflict: 'organization_id,client_id' },
     )

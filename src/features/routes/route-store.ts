@@ -216,6 +216,32 @@ export async function listSessions(limit = 30): Promise<RouteSession[]> {
 }
 
 /**
+ * The id to stamp on work recorded right now, or undefined if no route is open.
+ *
+ * Deliberately cheap and deliberately unable to fail. It is called on the path
+ * a rep takes fifty times a day, standing in a driveway, and a knock must never
+ * be lost or delayed because an IndexedDB read went wrong. No route, or a
+ * broken read, both mean the same thing to the record: this activity is not
+ * attributed to a route. That is an honest absence, and far better than the
+ * alternative of reconstructing it later from timestamps.
+ *
+ * A PAUSED route still returns its id. The pause suspends LOCATION RECORDING,
+ * which is a promise about surveillance; it is not a claim that the rep stopped
+ * working. If somebody pauses for lunch and knocks a door on the way back to
+ * the truck, that knock happened on this route and belongs to it. The trail
+ * will simply have a gap where it sits, and route-stats already reports paused
+ * time and gap time separately rather than blending them.
+ */
+export async function openSessionId(): Promise<string | undefined> {
+  try {
+    const session = await openSession()
+    return session?.id
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * The minimum a point must move, and the minimum time between points, before
  * one is kept.
  *

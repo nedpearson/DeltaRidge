@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import LeadNotePanel from '@/components/LeadNotePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
+import { openSessionId } from '@/features/routes/route-store'
 import { mayCallAt } from '@/features/compliance/engine'
 import { ALL_SOLICITATION_RULES } from '@/features/compliance/solicitation'
 import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/components/ui'
@@ -181,7 +182,12 @@ export default function LeadPage() {
       if (!lead) return
       const at = new Date().toISOString()
       const gps = await evidenceFor(lead)
-      const { lead: next, event } = applyOutcome(lead, outcome, at, { gps })
+      // Which route this happened on, asked now rather than reconstructed later.
+      const routeSessionId = await openSessionId()
+      const { lead: next, event } = applyOutcome(lead, outcome, at, {
+        gps,
+        ...(routeSessionId !== undefined ? { routeSessionId } : {}),
+      })
       await saveOutcome(next, event)
       await load(lead.id)
     },
@@ -307,8 +313,10 @@ export default function LeadPage() {
       ...(lead.contactPhone ? { customerPhone: lead.contactPhone } : {}),
     }
     await saveInspection(inspection)
+    const routeSessionId = await openSessionId()
     const { lead: next, event } = applyOutcome(lead, 'inspect_now', at, {
       inspectionId: inspection.id,
+      ...(routeSessionId !== undefined ? { routeSessionId } : {}),
     })
     await saveOutcome(next, event)
     navigate(`/inspection/${inspection.id}`)
