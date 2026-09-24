@@ -151,6 +151,7 @@ describe('rollUpActivity', () => {
       gpsVerification: 'verified',
       occurredAt: '2026-09-23T15:00:00.000Z',
       subdivision: 'Santa Maria',
+      address: '18818 BELLA VISTA CT',
       leadClientId: 'lead-1',
       ...over,
     }
@@ -202,6 +203,7 @@ describe('territoryCoverage', () => {
       gpsVerification: 'verified',
       occurredAt: '2026-09-23T15:00:00.000Z',
       subdivision,
+      address: `${leadClientId} ${subdivision}`,
       leadClientId,
     }
   }
@@ -295,7 +297,9 @@ describe('the live field view', () => {
       startedAt: '2026-09-23T14:00:00.000Z',
       endedAt: null,
       pointCount: 10,
+      firstFixAt: '2026-09-23T14:00:00.000Z',
       lastFixAt: '2026-09-23T15:00:00.000Z',
+      pauses: [],
       latitude: 30.45,
       longitude: -91.18,
       accuracyM: 12,

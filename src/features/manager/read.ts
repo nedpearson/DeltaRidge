@@ -128,6 +128,7 @@ export async function readManagerSnapshot(
       gpsVerification: (r.gps_verification as string | null) ?? null,
       occurredAt: r.occurred_at as string,
       subdivision: (r.subdivision as string | null) ?? null,
+      address: (r.address_line1 as string | null) ?? 'A door',
       leadClientId: r.lead_client_id as string,
     })),
     routes: (routes.data ?? []).map((r) => ({
@@ -139,6 +140,7 @@ export async function readManagerSnapshot(
       pointCount: Number(r.point_count ?? 0),
       firstFixAt: (r.first_fix_at as string | null) ?? null,
       lastFixAt: (r.last_fix_at as string | null) ?? null,
+      pauses: Array.isArray(r.pauses) ? (r.pauses as { at: string; until?: string }[]) : [],
       latitude: (r.latitude as number | null) ?? null,
       longitude: (r.longitude as number | null) ?? null,
       accuracyM: (r.accuracy_m as number | null) ?? null,

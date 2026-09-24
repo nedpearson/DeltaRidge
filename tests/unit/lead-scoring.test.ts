@@ -12,7 +12,17 @@ import type { StormEvent } from '@/integrations/storm/types'
 
 const NOW = new Date('2026-09-19T12:00:00.000Z')
 
-function permit(over: Partial<PermitRecord> = {}): PermitRecord {
+/**
+ * A Partial that also accepts an explicit `undefined`.
+ *
+ * These builders spread their overrides, so `{ parcel: undefined }` is how a
+ * test says "there is no parcel". `exactOptionalPropertyTypes` rejects that
+ * against a plain `Partial<T>`, which is correct for application code and
+ * wrong for a fixture whose whole job is to remove a field.
+ */
+type Absent<T> = { [K in keyof T]?: T[K] | undefined }
+
+function permit(over: Absent<PermitRecord> = {}): PermitRecord {
   return {
     externalId: 'p1',
     provider: 'ebr',
@@ -24,7 +34,7 @@ function permit(over: Partial<PermitRecord> = {}): PermitRecord {
     latitude: 30.35,
     longitude: -91.05,
     ...over,
-  }
+  } as PermitRecord
 }
 
 function candidate(over: Partial<LeadCandidate> = {}): LeadCandidate {

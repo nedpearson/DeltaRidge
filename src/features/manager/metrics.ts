@@ -231,6 +231,8 @@ export interface ActivityRow {
   gpsVerification: string | null
   occurredAt: string
   subdivision: string | null
+  /** The street address, so a timeline can name the door rather than the estate. */
+  address: string
   leadClientId: string
 }
 
@@ -486,6 +488,8 @@ export interface RouteRow {
   pointCount: number
   firstFixAt: string | null
   lastFixAt: string | null
+  /** Breaks the rep declared. Carried so a manager sees the same route the rep did. */
+  pauses: { at: string; until?: string }[]
   latitude: number | null
   longitude: number | null
   accuracyM: number | null

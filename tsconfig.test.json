@@ -1,0 +1,18 @@
+{
+  /*
+   * The tests are TypeScript too, and until now nothing checked them.
+   *
+   * `tsconfig.app.json` includes only `src`, so a test could construct a row
+   * with a missing field, or call a function with the wrong shape, and the
+   * build stayed green. That is a smaller version of the bug that made
+   * `npm run typecheck` a no-op for the first fortnight of this project: a
+   * check that passes because it is looking at nothing.
+   */
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./tsconfig.test.tsbuildinfo",
+    "types": ["vite/client", "vite-plugin-pwa/client", "vitest/globals"]
+  },
+  "include": ["tests", "src"]
+}

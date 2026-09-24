@@ -5,7 +5,17 @@ import type { PermitRecord } from '@/integrations/permits/types'
 
 const NOW = new Date('2026-09-23T12:00:00.000Z')
 
-function parcel(over: Partial<ParcelRecord> = {}): ParcelRecord {
+/**
+ * A Partial that also accepts an explicit `undefined`.
+ *
+ * These builders spread their overrides, so `{ parcel: undefined }` is how a
+ * test says "there is no parcel". `exactOptionalPropertyTypes` rejects that
+ * against a plain `Partial<T>`, which is correct for application code and
+ * wrong for a fixture whose whole job is to remove a field.
+ */
+type Absent<T> = { [K in keyof T]?: T[K] | undefined }
+
+function parcel(over: Absent<ParcelRecord> = {}): ParcelRecord {
   return {
     externalId: 'ebr:009-8202-4',
     provider: 'ebr',
@@ -27,7 +37,7 @@ function parcel(over: Partial<ParcelRecord> = {}): ParcelRecord {
     landValue: 10000,
     retrievedAt: '2026-09-23T11:00:00.000Z',
     ...over,
-  }
+  } as ParcelRecord
 }
 
 function permit(over: Partial<PermitRecord> = {}): PermitRecord {
@@ -43,7 +53,7 @@ function permit(over: Partial<PermitRecord> = {}): PermitRecord {
   }
 }
 
-function build(over: Parameters<typeof buildPropertyProfile>[0] extends infer T ? Partial<T> : never = {}) {
+function build(over: Absent<Parameters<typeof buildPropertyProfile>[0]> = {}) {
   return buildPropertyProfile({
     address: '18834 SANTA MARIA PKWY',
     addressKey: '18834 santa maria pkwy',
@@ -52,7 +62,7 @@ function build(over: Parameters<typeof buildPropertyProfile>[0] extends infer T 
     storms: [],
     now: NOW,
     ...over,
-  })
+  } as Parameters<typeof buildPropertyProfile>[0])
 }
 
 describe('owner', () => {

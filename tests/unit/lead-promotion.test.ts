@@ -25,7 +25,17 @@ const STORM = {
   longitude: -91.05,
 } as StormEvent
 
-function door(overrides: Partial<ScoredLead> = {}): ScoredLead {
+/**
+ * A Partial that also accepts an explicit `undefined`.
+ *
+ * These builders spread their overrides, so `{ parcel: undefined }` is how a
+ * test says "there is no parcel". `exactOptionalPropertyTypes` rejects that
+ * against a plain `Partial<T>`, which is correct for application code and
+ * wrong for a fixture whose whole job is to remove a field.
+ */
+type Absent<T> = { [K in keyof T]?: T[K] | undefined }
+
+function door(overrides: Absent<ScoredLead> = {}): ScoredLead {
   return {
     addressKey: '19615 fairway oaks ave|70809',
     address: '19615 FAIRWAY OAKS AVE BATON ROUGE LA 70809',
@@ -40,7 +50,7 @@ function door(overrides: Partial<ScoredLead> = {}): ScoredLead {
     storm: STORM,
     reasons: ['1.75" hail reported 0.6 mi away on Mar 31, 2025'],
     ...overrides,
-  }
+  } as ScoredLead
 }
 
 function managed(overrides: Partial<ManagedLead> = {}): ManagedLead {

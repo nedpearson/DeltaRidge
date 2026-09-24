@@ -42,6 +42,7 @@ function activity(n: number, opts: Partial<ActivityRow> = {}): ActivityRow[] {
     gpsVerification: 'verified',
     occurredAt: new Date(Date.parse('2026-09-01T14:00:00Z') + i * 60_000).toISOString(),
     subdivision: 'SANTA MARIA',
+    address: `${18800 + i} SANTA MARIA DR`,
     leadClientId: `lead-${i}`,
     ...opts,
   }))
@@ -56,7 +57,9 @@ function route(hours: number, index = 0): RouteRow {
     startedAt: new Date(start).toISOString(),
     endedAt: new Date(start + hours * 3_600_000).toISOString(),
     pointCount: 120,
+    firstFixAt: new Date(start).toISOString(),
     lastFixAt: new Date(start + hours * 3_600_000).toISOString(),
+    pauses: [],
     latitude: 30.4,
     longitude: -91.1,
     accuracyM: 8,

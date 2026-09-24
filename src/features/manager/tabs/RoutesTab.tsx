@@ -130,6 +130,10 @@ function OneRoute({
     startedAt: route.startedAt,
     ...(route.endedAt ? { endedAt: route.endedAt } : {}),
     ...(route.label ? { label: route.label } : {}),
+    // Carried through so a declared break shows on the manager's timeline as
+    // the same break the rep took. Without it the route reads as continuous
+    // work, which is the opposite of what pausing was for.
+    ...(route.pauses.length > 0 ? { pauses: route.pauses } : {}),
     deviceId: '',
   }
 
@@ -147,7 +151,7 @@ function OneRoute({
     activityType: a.activityType,
     outcome: a.outcome,
     gpsVerification: a.gpsVerification,
-    address: a.subdivision ?? 'A door',
+    address: a.address,
   }))
 
   const stats = routeStats(session, points, events)

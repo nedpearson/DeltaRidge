@@ -60,9 +60,13 @@ describe('appointment identity', () => {
       appointmentAt: '2026-09-25T14:00:00.000Z',
     })
     for (const outcome of ['not_interested', 'do_not_knock'] as const) {
+      // `.lead`, not the result object. Until the tests were brought under
+      // the typechecker this read `after.appointmentAt` — a property that does
+      // not exist on `{ lead, event }` — so it compared undefined to undefined
+      // and would have passed however badly applyOutcome behaved.
       const after = applyOutcome(booked.lead, outcome, '2026-09-24T15:00:00.000Z')
-      expect(after.appointmentAt, outcome).toBeUndefined()
-      expect(after.appointmentClientId, outcome).toBeUndefined()
+      expect(after.lead.appointmentAt, outcome).toBeUndefined()
+      expect(after.lead.appointmentClientId, outcome).toBeUndefined()
     }
   })
 

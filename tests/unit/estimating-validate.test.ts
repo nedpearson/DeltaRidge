@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { canPresent, validateEstimate } from '@/features/estimating/validate'
-import { dollarsToCents, percentToBps } from '@/features/estimating/money'
+import { dollarsToCents, percentToBps, type Cents } from '@/features/estimating/money'
 import { priceFromMargin, type MarginPolicy } from '@/features/estimating/margin'
 import type { EstimateLine, EstimateVersion } from '@/features/estimating/estimate'
 import type { InspectionFacts } from '@/features/estimating/scope'
@@ -91,7 +91,10 @@ const complete: readonly EstimateLine[] = [
 function run(
   lines: readonly EstimateLine[],
   f: InspectionFacts = facts(),
-  price = priceFromMargin(JOB_COST, percentToBps(38)),
+  // `Cents | null`, matching the field. The helper's type used to be inferred
+  // from its default, so passing the null the validator actually checks for was
+  // a type error nobody saw — the tests were not being typechecked.
+  price: Cents | null = priceFromMargin(JOB_COST, percentToBps(38)),
 ) {
   return validateEstimate({
     version: version(lines),
