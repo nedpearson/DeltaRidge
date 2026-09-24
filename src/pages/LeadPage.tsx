@@ -10,6 +10,7 @@ import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
 import IntegrityPanel from '@/features/leads/IntegrityPanel'
 import LeadPropertyIntelligence from '@/features/leads/LeadPropertyIntelligence'
 import LeadContactIdentityPanel from '@/features/contacts/LeadContactIdentityPanel'
+import LeadTimeline from '@/features/leads/LeadTimeline'
 import { readLink } from '@/features/integrations/roofr/store'
 import { pendingWork } from '@/lib/sync'
 import {
@@ -24,7 +25,6 @@ import {
 import {
   applyOutcome,
   CHANNEL_LABEL,
-  CONTACT_KIND_LABEL,
   CONTACT_SOURCE_LABEL,
   contactSourceOf,
   dueLabel,
@@ -88,46 +88,6 @@ function toIso(local: string): string | undefined {
   if (local === '') return undefined
   const d = new Date(local)
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
-}
-
-/**
- * Plays back what the rep captured, from the blob on this device.
- *
- * Object URLs are revoked when the entry unmounts. A lead with twenty photos
- * on it otherwise holds every one of them in memory for as long as the page is
- * open, which on a three-year-old Android is the difference between a working
- * app and a tab the system kills.
- */
-function Attachment({ item }: { item: LeadAttachment }) {
-  const [url, setUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    const blob = item.kind === 'photo' ? (item.thumbnail ?? item.blob) : item.blob
-    const made = URL.createObjectURL(blob)
-    setUrl(made)
-    return () => URL.revokeObjectURL(made)
-  }, [item])
-
-  if (!url) return null
-
-  if (item.kind === 'photo') {
-    return (
-      <img
-        src={url}
-        alt="Captured on this lead"
-        className="mt-1.5 h-28 w-full rounded-lg object-cover ring-1 ring-white/10"
-      />
-    )
-  }
-
-  return (
-    <div className="mt-1.5">
-      <audio controls src={url} className="h-9 w-full" />
-      <p className="mt-0.5 text-[10.5px] text-white/25">
-        {item.durationSeconds}s recording. Not transcribed — this is the audio itself.
-      </p>
-    </div>
-  )
 }
 
 export default function LeadPage() {
@@ -627,36 +587,7 @@ export default function LeadPage() {
       <SectionTitle>NOTES</SectionTitle>
       <LeadNotePanel leadId={lead.id} onSaved={addNote} />
 
-      <SectionTitle hint={`${history.length} entries`}>HISTORY</SectionTitle>
-      {history.length === 0 ? (
-        <Empty
-          title="Nothing recorded yet"
-          body="Every knock, call, text and note lands here in order, so whoever picks this up next can see what was actually said."
-        />
-      ) : (
-        <Card>
-          <ol className="space-y-3">
-            {history.map((event) => (
-              <li key={event.id} className="border-l-2 border-white/10 pl-3">
-                <p className="text-[12.5px] font-semibold text-white/80">
-                  {event.outcome ? OUTCOME_LABEL[event.outcome] : CONTACT_KIND_LABEL[event.kind]}
-                </p>
-                <p className="text-[10.5px] text-white/30">
-                  {when(event.at)} · {CONTACT_KIND_LABEL[event.kind]}
-                </p>
-                {event.note && (
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-white/60">{event.note}</p>
-                )}
-                {attachments
-                  .filter((a) => a.eventId === event.id)
-                  .map((a) => (
-                    <Attachment key={a.id} item={a} />
-                  ))}
-              </li>
-            ))}
-          </ol>
-        </Card>
-      )}
+      <LeadTimeline leadId={lead.id} history={history} attachments={attachments} />
 
       <IntegrityPanel
         evidence={{
