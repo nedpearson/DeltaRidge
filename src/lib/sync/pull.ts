@@ -225,7 +225,13 @@ function toManagedLead(row: LeadRow, existing: ManagedLead | null): ManagedLead 
   if (row.subdivision) lead.subdivision = row.subdivision
   else if (existing?.subdivision) lead.subdivision = existing.subdivision
   if (row.contact_name) lead.contactName = row.contact_name
-  if (row.contact_phone) lead.contactPhone = row.contact_phone
+  if (row.contact_phone) {
+    lead.contactPhone = row.contact_phone
+    // A phone pulled from the server is not evidence that THIS device witnessed
+    // the homeowner giving it. Preserve an existing source if one is known;
+    // otherwise mark it unknown so the contact gate stays conservative.
+    lead.contactSource = existing?.contactSource ?? 'unknown'
+  }
   if (row.next_action_at) lead.nextActionAt = row.next_action_at
   // Consent and opt-out live only on the device today. Dropping them on a pull
   // would quietly re-open a channel someone asked to be left off, so whatever
@@ -236,6 +242,110 @@ function toManagedLead(row: LeadRow, existing: ManagedLead | null): ManagedLead 
   if (existing?.appointmentAt) lead.appointmentAt = existing.appointmentAt
   if (existing?.appointmentClientId) lead.appointmentClientId = existing.appointmentClientId
   return lead
+}
+
+export interface MaterializeLeadResult {
+  lead: ManagedLead | null
+  activities: number
+  error: string | null
+  source: 'local' | 'server' | 'unavailable'
+}
+
+/**
+ * Opens one canonical lead by its stable client id, even on a manager device
+ * that has never materialized the lead locally.
+ *
+ * Local data wins when it exists because it may contain unsent field work.
+ * Server materialization is therefore a fallback, not a blind overwrite.
+ * RLS on lead_sync_rows/activity_sync_rows remains the authorization boundary.
+ */
+export async function materializeLeadFromServer(input: {
+  orgId: string | null
+  userId: string | null
+  leadClientId: string
+}): Promise<MaterializeLeadResult> {
+  const existing = await readLead(input.leadClientId)
+  if (existing) {
+    return { lead: existing, activities: 0, error: null, source: 'local' }
+  }
+
+  const supabase = getSupabase()
+  if (!navigator.onLine) {
+    return {
+      lead: null,
+      activities: 0,
+      error: 'This lead is not on this device yet and the device is offline.',
+      source: 'unavailable',
+    }
+  }
+  if (!input.userId || !supabase) {
+    return {
+      lead: null,
+      activities: 0,
+      error: 'Sign in to load this lead from the server.',
+      source: 'unavailable',
+    }
+  }
+  if (!input.orgId) {
+    return {
+      lead: null,
+      activities: 0,
+      error: 'No organization is available for this account.',
+      source: 'unavailable',
+    }
+  }
+
+  setRemoteIdScope(input.orgId)
+
+  const { data, error } = await supabase
+    .from('lead_sync_rows')
+    .select('*')
+    .eq('organization_id', input.orgId)
+    .eq('client_id', input.leadClientId)
+    .maybeSingle()
+
+  if (error) {
+    return {
+      lead: null,
+      activities: 0,
+      error: error.message,
+      source: 'unavailable',
+    }
+  }
+  if (!data) {
+    return {
+      lead: null,
+      activities: 0,
+      error: 'The server does not have a lead with this id, or this account cannot read it.',
+      source: 'unavailable',
+    }
+  }
+
+  const row = data as LeadRow
+  try {
+    const lead = toManagedLead(row, null)
+    await saveLeadFromServer(lead)
+    await setRemoteId('lead', row.client_id, row.remote_id)
+
+    const errors: string[] = []
+    const { written, knocksByLead } = await pullActivities(input.orgId, [row.client_id], errors)
+    await reconcileKnockCounts(knocksByLead)
+    const hydrated = (await readLead(row.client_id)) ?? lead
+
+    return {
+      lead: hydrated,
+      activities: written,
+      error: errors[0] ?? null,
+      source: 'server',
+    }
+  } catch (err) {
+    return {
+      lead: null,
+      activities: 0,
+      error: err instanceof Error ? err.message : String(err),
+      source: 'unavailable',
+    }
+  }
 }
 
 export async function pullLeads(orgId: string | null, userId: string | null): Promise<PullResult> {
