@@ -22,12 +22,16 @@ export default function RoofViewSheet({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-[var(--color-surface-2)] p-4 pb-8 ring-1 ring-white/10"
+        // Same column the rest of the app lives in. A sheet is `fixed`, so it
+        // escapes AppShell's max-width unless it is told not to — and a
+        // full-bleed 1489-pixel sheet turns the 3:2 roof frame into a 3.4:1
+        // letterbox the moment the max-height bites.
+        className="max-h-[92vh] w-full max-w-screen-sm overflow-y-auto rounded-t-3xl bg-[var(--color-surface-2)] p-4 pb-8 ring-1 ring-white/10"
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
