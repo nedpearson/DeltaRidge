@@ -41,7 +41,23 @@ export interface View {
 
 export const TILE = 512
 export const MIN_ZOOM = 1
+/**
+ * The furthest the interactive map lets a rep zoom.
+ *
+ * Deliberately short of what the tiles support: past this, panning a hand-drawn
+ * overlay over a static image gets fiddly on a phone and the extra detail is
+ * not what the door list is for.
+ */
 export const MAX_ZOOM = 20
+/**
+ * What the tile source itself will actually serve.
+ *
+ * Separate from MAX_ZOOM because a single-house frame is a different question
+ * from a pannable map: framing 70 m of ground across a wide desktop panel
+ * genuinely needs zoom 20.4, and clamping that to the map's own limit would
+ * silently give back a frame 30% wider than the one that was asked for.
+ */
+export const MAX_TILE_ZOOM = 22
 
 /** The latitude past which Mercator runs to infinity. */
 const MAX_LATITUDE = 85.05112878
@@ -197,6 +213,38 @@ export function offsetCenter(view: View, dx: number, dy: number): GeoPoint {
 
 export function zoomBy(view: View, factor: number): View {
   return { center: view.center, zoom: clamp(view.zoom + factor, MIN_ZOOM, MAX_ZOOM) }
+}
+
+/**
+ * How much ground one pixel covers, in metres.
+ *
+ * Web Mercator stretches with latitude, so this is not a constant for a given
+ * zoom — a frame that shows one lot in Baton Rouge shows rather less in
+ * Anchorage. The cosine is what makes a satellite thumbnail frame the same
+ * amount of ground wherever the door is.
+ */
+export function metresPerPixel(latitude: number, zoom: number): number {
+  const EQUATOR_METRES = 40_075_017
+  return (EQUATOR_METRES * Math.cos((latitude * Math.PI) / 180)) / worldSize(zoom)
+}
+
+/**
+ * The zoom that frames a given width of ground in a given width of pixels.
+ *
+ * This is the honest way to ask for "one house". A fixed zoom frames a fixed
+ * number of PIXELS of ground, so the same zoom that neatly holds one lot on a
+ * phone card holds four on a wide screen, and the house the card is about ends
+ * up as one roof among several with nothing to say which. Asking for a distance
+ * instead makes the framing mean the same thing everywhere.
+ *
+ * Not clamped to whole zooms: Mapbox's static endpoint takes fractional zoom,
+ * and rounding to an integer is a factor-of-two error in framing.
+ */
+export function zoomForGroundSpan(metres: number, pixels: number, latitude: number): number {
+  if (!(metres > 0) || !(pixels > 0)) return MAX_TILE_ZOOM
+  const EQUATOR_METRES = 40_075_017
+  const zoom = Math.log2((EQUATOR_METRES * Math.cos((latitude * Math.PI) / 180) * pixels) / (TILE * metres))
+  return clamp(zoom, MIN_ZOOM, MAX_TILE_ZOOM)
 }
 
 /** Roughly how far across the view is, for the scale readout. */

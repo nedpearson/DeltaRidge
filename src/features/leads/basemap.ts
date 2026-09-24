@@ -1,4 +1,5 @@
 import { loadEnv } from '@/lib/env'
+import { zoomForGroundSpan } from './map-projection'
 import type { Size, View } from './map-projection'
 
 /**
@@ -119,9 +120,50 @@ export const BASEMAP_ATTRIBUTION = '© Mapbox © OpenStreetMap'
  * forbids using the imagery to improve other imagery.
  *
  * So: show it in the app, let the device cache it, and never move it anywhere.
+ */
+
+/**
+ * How much ground a house thumbnail frames, in metres.
  *
- * Zoom 18 frames a suburban lot and its immediate neighbours — close enough to
- * count roof planes and see the driveway, wide enough to recognise the street.
+ * Asked for as a DISTANCE, not a zoom. A fixed zoom frames a fixed number of
+ * pixels of ground, so the zoom that neatly holds one lot on a phone card holds
+ * four on a wide screen — which is how a card meant to show "this roof" ends up
+ * showing five roofs with nothing to say which one it is about.
+ *
+ * 70 m ≈ 230 ft: a suburban lot is 20–30 m wide, so this holds the house, its
+ * driveway, its back garden and just enough of the neighbours to recognise the
+ * street. Tighter and a big roof runs off the edge; wider and the subject stops
+ * being obvious.
+ */
+export const HOUSE_SPAN_METRES = 70
+
+/** The range the viewer's zoom buttons move through, tightest first. */
+export const SPAN_STEPS_METRES = [25, 40, 70, 120, 200, 340] as const
+
+/**
+ * A satellite frame that covers `spanMetres` of ground across, whatever size
+ * the element is.
+ *
+ * The house sits at the exact centre of every frame this returns, because the
+ * centre is the coordinate that was asked for. That is what lets the viewer
+ * draw a crosshair rather than a pin: a pin would cover the one thing a roofer
+ * opened the image to look at.
+ */
+export function propertySpanUrl(
+  latitude: number,
+  longitude: number,
+  size: Size,
+  spanMetres: number = HOUSE_SPAN_METRES,
+): string | null {
+  if (size.width <= 0 || size.height <= 0) return null
+  const zoom = zoomForGroundSpan(spanMetres, size.width, latitude)
+  return basemapUrl({ center: { latitude, longitude }, zoom }, size, 'satellite')
+}
+
+/**
+ * Zoom 18 frames a suburban lot and its immediate neighbours at roughly card
+ * width. Kept for callers that want a fixed zoom; `propertySpanUrl` is the one
+ * to reach for, because it means the same thing at every element size.
  */
 export const PROPERTY_ZOOM = 18
 
@@ -132,4 +174,9 @@ export function propertyImageUrl(
   zoom: number = PROPERTY_ZOOM,
 ): string | null {
   return basemapUrl({ center: { latitude, longitude }, zoom }, size, 'satellite')
+}
+
+/** How wide the frame is in feet, for a readout a roofer can use. */
+export function spanFeet(spanMetres: number): number {
+  return Math.round(spanMetres * 3.28084)
 }

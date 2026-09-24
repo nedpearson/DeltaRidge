@@ -5,6 +5,7 @@ import LeadMap from '@/components/LeadMap'
 import MessagingReadiness from '@/components/MessagingReadiness'
 import { OwnerLine } from '@/components/OwnerLine'
 import PropertyThumbnail from '@/components/PropertyThumbnail'
+import RoofViewSheet from '@/components/RoofViewSheet'
 import { Button, Card, Empty, Field, SectionTitle, Select } from '@/components/ui'
 import RoutePanel from '@/components/RoutePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
@@ -127,14 +128,25 @@ function DoorCard({
 }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [roofOpen, setRoofOpen] = useState(false)
   const parcel = lead.parcel
 
   return (
     <Card>
+      {roofOpen && (
+        <RoofViewSheet
+          latitude={lead.latitude}
+          longitude={lead.longitude}
+          address={lead.address}
+          onClose={() => setRoofOpen(false)}
+        />
+      )}
+
       <PropertyThumbnail
         latitude={lead.latitude}
         longitude={lead.longitude}
         alt={`Aerial view of ${lead.address}`}
+        onOpen={() => setRoofOpen(true)}
       />
 
       <div className="flex items-start justify-between gap-3">

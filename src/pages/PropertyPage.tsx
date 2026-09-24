@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { OwnerLine, occupancyEvidence } from '@/components/OwnerLine'
-import PropertyThumbnail from '@/components/PropertyThumbnail'
+import RoofView from '@/components/RoofView'
 import { Card, Empty, SectionTitle } from '@/components/ui'
 import { readCachedRun, type LeadRun } from '@/features/leads/engine'
 import { buildPropertyProfile, type PropertyProfile } from '@/features/leads/property-profile'
@@ -122,12 +122,20 @@ export default function PropertyPage() {
       </button>
 
       <Card className="mt-2">
-        <PropertyThumbnail
-          latitude={lead.latitude}
-          longitude={lead.longitude}
-          alt={`Aerial view of ${lead.address}`}
-          className="h-44"
-        />
+        {/*
+          The controls are inline here rather than behind a tap, because this is
+          the screen a rep opens when they have already decided the roof is worth
+          looking at properly. On the door list the same view is one tap away,
+          where the list itself is the thing being scanned.
+        */}
+        <div className="mb-3">
+          <RoofView
+            latitude={lead.latitude}
+            longitude={lead.longitude}
+            address={lead.address}
+            height={200}
+          />
+        </div>
         <p className="text-[17px] font-semibold leading-tight">{lead.address}</p>
         <p className="mt-0.5 text-[12px] text-white/40">
           {[lead.subdivision, lead.city].filter(Boolean).join(' · ') || 'East Baton Rouge Parish'}
