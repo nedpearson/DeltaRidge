@@ -19,6 +19,7 @@ import PerformanceTab from '@/features/manager/tabs/PerformanceTab'
 import GradesTab from '@/features/manager/tabs/GradesTab'
 import SettingsTab from '@/features/manager/tabs/SettingsTab'
 import RoofrTab from '@/features/integrations/roofr/RoofrTab'
+import ContactProviderTab from '@/features/contacts/ContactProviderTab'
 import { readGradingConfig } from '@/features/manager/grade-store'
 import { DEFAULT_CONFIG, type GradingConfig } from '@/features/manager/grading'
 import { DEFAULT_WINDOW_DAYS } from '@/features/manager/read'
@@ -62,6 +63,7 @@ type Tab =
   | 'log'
   | 'settings'
   | 'roofr'
+  | 'contacts'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'team', label: 'Team' },
@@ -74,6 +76,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'log', label: 'Log' },
   { id: 'settings', label: 'Settings' },
   { id: 'roofr', label: 'Roofr' },
+  { id: 'contacts', label: 'Contact data' },
 ]
 
 function ago(iso: string | null): string {
@@ -305,6 +308,14 @@ export default function ManagerPage() {
       )}
 
       {tab === 'roofr' && <RoofrTab organizationId={orgId} canManage={canManage} />}
+
+      {tab === 'contacts' && (
+        <ContactProviderTab
+          organizationId={orgId}
+          userId={session.user.id}
+          canManage={membership?.role === 'admin'}
+        />
+      )}
 
       {tab === 'leads' && (
         <AssignTab
