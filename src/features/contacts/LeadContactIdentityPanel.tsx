@@ -119,18 +119,10 @@ export default function LeadContactIdentityPanel({ lead }: { lead: ManagedLead }
                   </span>
                 </div>
 
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {method.status === 'confirmed' ? (
-                    <a href={`tel:${method.value}`} className="contents">
-                      <Button variant="secondary">Call</Button>
-                    </a>
-                  ) : (
-                    <Button variant="secondary" disabled>
-                      Call
-                    </Button>
-                  )}
+                <div className="mt-2">
                   <Button
                     variant="ghost"
+                    full
                     disabled={busy === method.id || method.status === 'do_not_contact'}
                     onClick={() =>
                       void setStatus(
@@ -142,6 +134,10 @@ export default function LeadContactIdentityPanel({ lead }: { lead: ManagedLead }
                     {method.status === 'confirmed' ? 'Mark unconfirmed' : 'Confirm owner'}
                   </Button>
                 </div>
+                <p className="mt-1.5 text-[10px] leading-relaxed text-white/25">
+                  Calling stays in the gated Reach Them controls above. Confirmed identity alone is
+                  not consent to call.
+                </p>
 
                 {method.status !== 'do_not_contact' && (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -183,18 +179,10 @@ export default function LeadContactIdentityPanel({ lead }: { lead: ManagedLead }
                     {STATUS_LABEL[method.status]}
                   </p>
                   <p className="mt-1 break-words text-[10.5px] text-white/30">{sourceLine(method)}</p>
-                  {method.status === 'confirmed' ? (
-                    <a
-                      href={`mailto:${method.value}`}
-                      className="mt-2 flex min-h-11 items-center justify-center rounded-xl bg-white/6 px-3 text-[12px] font-medium text-white/75 ring-1 ring-white/10"
-                    >
-                      Email
-                    </a>
-                  ) : (
-                    <p className="mt-2 text-[10.5px] leading-relaxed text-white/30">
-                      Email action stays off until a person confirms this belongs to the homeowner.
-                    </p>
-                  )}
+                  <p className="mt-2 text-[10.5px] leading-relaxed text-white/30">
+                    Email sending is not enabled from lookup data here. Ownership and channel
+                    permission must be established first.
+                  </p>
                 </div>
               ))}
             </div>
