@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import { useSession } from '@/features/auth/session'
 import { readCachedRun } from '@/features/leads/engine'
@@ -113,7 +114,13 @@ function Nothing({ title, body }: { title: string; body: string }) {
 
 export default function ManagerPage() {
   const { session, membership } = useSession()
-  const [tab, setTab] = useState<Tab>('team')
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedTab = searchParams.get('tab')
+  const initialTab: Tab = TABS.some((item) => item.id === requestedTab)
+    ? (requestedTab as Tab)
+    : 'team'
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [snapshot, setSnapshot] = useState<ManagerSnapshot>(EMPTY_SNAPSHOT)
   const [doors, setDoors] = useState<ScoredLead[]>([])
   const [loading, setLoading] = useState(true)
@@ -144,6 +151,13 @@ export default function ManagerPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (searchParams.get('tab') === tab) return
+    const next = new URLSearchParams(searchParams)
+    next.set('tab', tab)
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams, tab])
 
   const names = useMemo(() => {
     const map = new Map<string, string>()
@@ -330,6 +344,9 @@ export default function ManagerPage() {
           nameOf={nameOf}
           canManage={canManage}
           busy={busy}
+          onOpenLead={(leadId) =>
+            navigate(`/lead/${leadId}`, { state: { returnTo: '/manager?tab=leads' } })
+          }
           onUnassign={async (id) => {
             setBusy(id)
             await unassignLead(id)
@@ -551,6 +568,7 @@ function AssignTab({
   nameOf,
   canManage,
   busy,
+  onOpenLead,
   onUnassign,
   onAssign,
 }: {
@@ -560,6 +578,7 @@ function AssignTab({
   nameOf: (id: string | null) => string
   canManage: boolean
   busy: string | null
+  onOpenLead: (leadId: string) => void
   onUnassign: (id: string) => Promise<void>
   onAssign: (door: ScoredLead, repId: string, reason: string) => Promise<string | null>
 }) {
@@ -596,6 +615,14 @@ function AssignTab({
                 {nameOf(a.assignedTo)} · {ago(a.assignedAt)} · {a.leadStatus.replace(/_/g, ' ')}
               </p>
               {a.reason && <p className="mt-1 text-[11.5px] text-white/35">{a.reason}</p>}
+              <Button
+                variant="ghost"
+                full
+                className="mt-3"
+                onClick={() => onOpenLead(a.leadClientId)}
+              >
+                Open Lead 360
+              </Button>
               {canManage && (
                 <Button
                   variant="secondary"
