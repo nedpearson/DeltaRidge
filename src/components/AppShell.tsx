@@ -85,7 +85,25 @@ function useNavHeight(active: boolean) {
     observer.observe(element)
     window.addEventListener('orientationchange', measure)
     window.addEventListener('resize', measure)
+
+    /*
+     * Re-measure once the webfonts land.
+     *
+     * Caught by running the layout check against the deployed site rather than
+     * a local build: the first viewport measured the nav at 26px because
+     * Oswald and Poppins had not arrived yet and the labels were still in the
+     * fallback face. The ResizeObserver does fire when the nav grows, so the
+     * padding self-corrects — but for those few hundred milliseconds the page
+     * reserves too little space. On a slow connection in a truck that window is
+     * long enough to notice.
+     */
+    let cancelled = false
+    void document.fonts?.ready.then(() => {
+      if (!cancelled) measure()
+    })
+
     return () => {
+      cancelled = true
       observer.disconnect()
       window.removeEventListener('orientationchange', measure)
       window.removeEventListener('resize', measure)
