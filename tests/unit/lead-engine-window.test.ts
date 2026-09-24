@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SETTINGS, runLeadEngine, type LeadRunSettings } from '@/features/leads/engine'
+import {
+  DEFAULT_SETTINGS,
+  ENGINE_VERSION,
+  runLeadEngine,
+  type LeadRunSettings,
+} from '@/features/leads/engine'
 
 /**
  * The dates the engine actually asks upstream for.
@@ -158,6 +163,22 @@ describe('lead engine storm window', () => {
 
     expect(run.coverage.radar.kind).toBe('not_configured')
     expect(urls.some((u) => u.includes('swdiws'))).toBe(false)
+  })
+
+  /**
+   * The stamp that lets the page tell "old" from "written by an engine that
+   * did not have radar". Without it, a cached run minutes old kept the storm
+   * panel reading NOT CONFIGURED after radar had shipped and deployed.
+   */
+  it('stamps the engine version on every run it writes', async () => {
+    const { fetchImpl } = capturingFetch()
+
+    const run = await runLeadEngine(settings({ windowKey: 'this_year' }), { fetchImpl, now: NOW })
+
+    expect(run.engineVersion).toBe(ENGINE_VERSION)
+    // A run cached before the stamp existed has no value here, and that
+    // absence is what marks it stale. It must never equal the current one.
+    expect(ENGINE_VERSION).toBeGreaterThan(0)
   })
 
   it('carries the qualifying storms so the count can be checked against the events', async () => {

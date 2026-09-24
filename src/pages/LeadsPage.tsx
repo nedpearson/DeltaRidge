@@ -12,6 +12,7 @@ import { evidenceFor } from '@/features/routes/knock-evidence'
 import { observationOf, type StormCoverage } from '@/features/leads/coverage'
 import {
   DEFAULT_SETTINGS,
+  ENGINE_VERSION,
   readCachedRun,
   runLeadEngine,
   type LeadRun,
@@ -649,7 +650,16 @@ export default function LeadsPage() {
       // Open the app, get today's list. The cache is there so the page paints
       // instantly and still works in a dead spot, not so it can be the answer.
       const age = cached ? Date.now() - new Date(cached.ranAt).getTime() : Infinity
-      if (age > MAX_CACHE_AGE_MS && navigator.onLine) {
+
+      // Age is not the only way a cached run goes wrong. A run written by an
+      // older engine can be minutes old and still describe a world that no
+      // longer exists — radar hail shipped, the new bundle deployed, and the
+      // panel kept saying NOT CONFIGURED because the cached run predated the
+      // source. The rep has no way to tell that apart from the truth, so a run
+      // from a different engine is stale however fresh it is.
+      const fromOlderEngine = !cached || cached.engineVersion !== ENGINE_VERSION
+
+      if ((fromOlderEngine || age > MAX_CACHE_AGE_MS) && navigator.onLine) {
         void refresh(cached?.settings ?? DEFAULT_SETTINGS, true)
       }
     })

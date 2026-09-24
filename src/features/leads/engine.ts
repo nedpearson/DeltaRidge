@@ -107,8 +107,27 @@ export const DEFAULT_SETTINGS: LeadRunSettings = {
   maxParcelLookupsPerRun: 2000,
 }
 
+/**
+ * Bumped whenever a run produced by older code would show the rep something
+ * misleading rather than merely something old.
+ *
+ * The case that forced this: radar hail shipped, the new bundle deployed, and
+ * the storm panel still read NOT CONFIGURED — because the cached run was
+ * written by the engine that had no radar, and 30 minutes of cache age had not
+ * elapsed. New chrome, old answer, no way for the rep to tell. Age alone
+ * cannot catch that: the run was fresh, it was just from a different engine.
+ *
+ * 2 = radar-estimated hail is a source.
+ */
+export const ENGINE_VERSION = 2
+
 export interface LeadRun {
   ranAt: string
+  /**
+   * Which engine produced this. Absent on anything cached before the stamp
+   * existed, which is exactly the case that must be treated as stale.
+   */
+  engineVersion?: number
   settings: LeadRunSettings
   /** The dates this run actually asked for, so the screen never re-derives them. */
   window: ResolvedWindow
@@ -609,6 +628,7 @@ export async function runLeadEngine(
 
   const run: LeadRun = {
     ranAt: now.toISOString(),
+    engineVersion: ENGINE_VERSION,
     settings,
     window,
     coverage,
