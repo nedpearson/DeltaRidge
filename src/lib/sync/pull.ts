@@ -4,10 +4,10 @@ import {
   saveEventFromServer,
   saveLeadFromServer,
 } from '@/features/leads/lead-store'
+import { asDoorOutcome } from '@/features/leads/pipeline'
 import type {
   ContactEvent,
   ContactKind,
-  DoorOutcome,
   KnockVerificationRecord,
   LeadStatus,
   ManagedLead,
@@ -73,7 +73,12 @@ export function localLeadStatus(remote: string): LeadStatus {
     case 'proposal_pending':
     case 'sold':
       return 'inspected'
+    // 'lost' is what the office writes both for a rejection and for a door that
+    // was never a prospect. The door sheet cannot tell them apart from here, so
+    // it shows the weaker of the two rather than telling a rep somebody turned
+    // them down when the roof was simply already new.
     case 'lost':
+      return 'disqualified'
     case 'not_interested':
       return 'not_interested'
     case 'do_not_contact':
@@ -94,25 +99,7 @@ export const TERMINAL_REMOTE_STATUSES = new Set([
   'existing_customer',
 ])
 
-/**
- * `activities.outcome` is a free-text column. Anything the office or a future
- * integration wrote there that the door sheet does not recognise is dropped
- * rather than cast: a bad value would sit in the history looking like a real
- * outcome and drive the status rules off a word that means nothing here.
- */
-const DOOR_OUTCOMES = new Set<string>([
-  'no_answer',
-  'come_back',
-  'interested',
-  'appointment_set',
-  'inspect_now',
-  'not_interested',
-  'do_not_knock',
-])
-
-export function asDoorOutcome(value: string | null): DoorOutcome | null {
-  return value && DOOR_OUTCOMES.has(value) ? (value as DoorOutcome) : null
-}
+// The outcome vocabulary lives in pipeline.ts; see `asDoorOutcome` there.
 
 /**
  * The stored GPS verdict, if the server has one and this build recognises it.

@@ -5,6 +5,7 @@ import {
   listForeignOutbox,
   listOutbox,
   listStalledOutbox,
+  isAuthError,
   markOutboxError,
   setRemoteIdScope,
   unblockAuthOutbox,
@@ -14,7 +15,7 @@ import { inspectionResolver } from './resolve'
 import { pushObservation, pushPhoto, pushVoiceNote } from './push'
 import { pushHandoff } from './handoff'
 import { pushLead, pushLeadActivity, pushLeadAttachment } from './leads'
-import { pushRoutePoint, pushRouteSession } from './routes'
+import { POINT_BATCH_SIZE, pushRoutePoint, pushRoutePointBatch, pushRouteSession } from './routes'
 import type { OutboxEntity } from '../db'
 
 export interface SyncResult {
@@ -76,7 +77,11 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
   await unblockAuthOutbox()
 
   const due = await listDueOutbox(userId)
-  const ordered = [...due].sort((a, b) => ORDER[a.entity] - ORDER[b.entity])
+  const ordered = [...due]
+    .filter((i) => i.entity !== 'routePoint')
+    .sort((a, b) => ORDER[a.entity] - ORDER[b.entity])
+  // Handled separately, in batches, after everything else. See `drainRoutePoints`.
+  const points = due.filter((i) => i.entity === 'routePoint')
 
   // One resolver per drain: forty photos on one roof resolve the inspection
   // once, not forty times, but the next drain still pushes the rep's latest
@@ -94,7 +99,7 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
       else if (item.entity === 'leadActivity') await pushLeadActivity(item.entityId, orgId, userId)
       else if (item.entity === 'leadAttachment') await pushLeadAttachment(item.entityId, orgId, userId)
       else if (item.entity === 'routeSession') await pushRouteSession(item.entityId, orgId, userId)
-      else if (item.entity === 'routePoint') await pushRoutePoint(item.entityId, orgId, userId)
+      // routePoint is not handled here; see drainRoutePoints below.
       await clearOutboxItem(item.id)
       result.pushed += 1
     } catch (err) {
@@ -105,10 +110,78 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
     }
   }
 
+  await drainRoutePoints(points, orgId, userId, result)
+
   result.stalled = (await listStalledOutbox()).length
   result.foreign = await countForeign(userId)
   recordDrain(result.pushed, result.failed)
   return result
+}
+
+/**
+ * GPS fixes, many at a time.
+ *
+ * A rep who worked a street with no signal comes back with hundreds of points.
+ * Pushed one by one that is hundreds of round trips on a connection that is
+ * barely there, and the queue never empties while the rep watches it not empty.
+ *
+ * The queue is still one item per point. Only what the server acknowledges is
+ * cleared; anything it did not return keeps its item, its error and its
+ * backoff, exactly as the single-point path would have left it. A batch that
+ * fails outright falls back to pushing its points individually, so one bad
+ * fix — a constraint violation, a session that will not resolve — cannot hold
+ * ninety-nine good ones hostage.
+ */
+async function drainRoutePoints(
+  items: readonly { id: string; entityId: string; entity: OutboxEntity }[],
+  orgId: string,
+  userId: string,
+  result: SyncResult,
+): Promise<void> {
+  for (let i = 0; i < items.length; i += POINT_BATCH_SIZE) {
+    const chunk = items.slice(i, i + POINT_BATCH_SIZE)
+    const byEntityId = new Map(chunk.map((item) => [item.entityId, item.id]))
+    try {
+      const acknowledged = await pushRoutePointBatch([...byEntityId.keys()], orgId, userId)
+      for (const entityId of acknowledged) {
+        const itemId = byEntityId.get(entityId)
+        if (itemId) await clearOutboxItem(itemId)
+        byEntityId.delete(entityId)
+        result.pushed += 1
+      }
+      // Anything the server did not acknowledge is retried on its own next
+      // time rather than being marked failed here: a row missing from a
+      // returning clause is not the same as a row the server refused.
+    } catch (batchError) {
+      const batchMessage = batchError instanceof Error ? batchError.message : String(batchError)
+
+      // An expired token will refuse all hundred the same way. Retrying them
+      // one at a time would be a hundred pointless requests and, worse, a
+      // hundred chances to spend a retry budget on something a sign-in fixes.
+      if (isAuthError(batchMessage)) {
+        for (const itemId of byEntityId.values()) await markOutboxError(itemId, batchMessage)
+        result.failed += byEntityId.size
+        if (result.errors.length < 5) result.errors.push(`routePoint: ${batchMessage}`)
+        continue
+      }
+
+      for (const [entityId, itemId] of byEntityId) {
+        try {
+          await pushRoutePoint(entityId, orgId, userId)
+          await clearOutboxItem(itemId)
+          result.pushed += 1
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err)
+          await markOutboxError(itemId, message)
+          result.failed += 1
+          if (result.errors.length < 5) result.errors.push(`routePoint: ${message}`)
+        }
+      }
+      if (result.errors.length < 5 && byEntityId.size === 0) {
+        result.errors.push(`routePoint batch: ${batchMessage}`)
+      }
+    }
+  }
 }
 
 async function countForeign(userId: string | null): Promise<number> {

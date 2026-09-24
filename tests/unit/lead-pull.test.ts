@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  TERMINAL_REMOTE_STATUSES,
-  asDoorOutcome,
-  localContactKind,
-  localLeadStatus,
-} from '@/lib/sync/pull'
+import { TERMINAL_REMOTE_STATUSES, localContactKind, localLeadStatus } from '@/lib/sync/pull'
 import { remoteLeadStatus } from '@/lib/sync/leads'
+import { asDoorOutcome } from '@/features/leads/pipeline'
 import type { LeadStatus } from '@/features/leads/pipeline'
 
 /**
@@ -35,7 +31,10 @@ describe('localLeadStatus', () => {
   it('shows an office-only outcome as the nearest thing a door sheet can say', () => {
     expect(localLeadStatus('sold')).toBe('inspected')
     expect(localLeadStatus('proposal_pending')).toBe('inspected')
-    expect(localLeadStatus('lost')).toBe('not_interested')
+    // 'lost' is written both for a refusal and for a door that was never a
+    // prospect. It shows as the weaker of the two so a rep is not told somebody
+    // turned them down when the roof was simply already new.
+    expect(localLeadStatus('lost')).toBe('disqualified')
   })
 
   it('treats a status this build has never heard of as nothing having happened', () => {

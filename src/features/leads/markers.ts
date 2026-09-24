@@ -35,6 +35,10 @@ export const COLOUR: Record<MarkerStatus, string> = {
   appointment: '#059669',
   inspected: '#059669',
   not_interested: '#dc2626',
+  // Grey, not red. A door that was never a prospect is not a rejection, and a
+  // map that paints the two the same colour tells a manager the neighbourhood
+  // is hostile when it is simply already re-roofed.
+  disqualified: '#64748b',
   do_not_knock: '#dc2626',
 }
 

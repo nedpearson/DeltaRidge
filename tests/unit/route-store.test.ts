@@ -3,11 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as DbModule from '@/lib/db'
 import { openDB } from 'idb'
 import {
+  isPaused,
   listPoints,
   openSession,
+  pauseSession,
+  pausedSeconds,
   recordPoint,
+  resumeSession,
   startSession,
   stopSession,
+  type RouteSession,
 } from '@/features/routes/route-store'
 
 /**
@@ -127,5 +132,65 @@ describe('route sessions', () => {
       '2026-09-23T14:05:00.000Z',
       '2026-09-23T14:10:00.000Z',
     ])
+  })
+})
+
+describe('pausing a route', () => {
+  beforeEach(async () => {
+    await wipe()
+    queued.length = 0
+  })
+
+  it('records nothing while paused, and starts again when resumed', async () => {
+    const session = await startSession(T0)
+    expect(await recordPoint(session.id, fix('2026-09-23T14:05:00.000Z'))).not.toBeNull()
+
+    await pauseSession(session.id, '2026-09-23T14:10:00.000Z')
+    // The watch is also cleared in the hook. This is the second lock on the
+    // same door, because a rep's break must not depend on a component having
+    // unmounted cleanly.
+    expect(await recordPoint(session.id, fix('2026-09-23T14:15:00.000Z'))).toBeNull()
+
+    await resumeSession(session.id, '2026-09-23T14:40:00.000Z')
+    expect(await recordPoint(session.id, fix('2026-09-23T14:45:00.000Z'))).not.toBeNull()
+
+    expect(await listPoints(session.id)).toHaveLength(2)
+  })
+
+  it('treats a second pause as the same pause', async () => {
+    const session = await startSession(T0)
+    await pauseSession(session.id, '2026-09-23T14:10:00.000Z')
+    const again = await pauseSession(session.id, '2026-09-23T14:11:00.000Z')
+    expect(again?.pauses).toHaveLength(1)
+    expect(again?.pauses?.[0]?.at).toBe('2026-09-23T14:10:00.000Z')
+  })
+
+  it('measures an open pause up to now so the rep sees it moving', async () => {
+    const session = await startSession(T0)
+    const paused = await pauseSession(session.id, '2026-09-23T14:10:00.000Z')
+    expect(paused).not.toBeNull()
+    const seconds = pausedSeconds(paused as RouteSession, Date.parse('2026-09-23T14:25:00.000Z'))
+    expect(seconds).toBe(900)
+    expect(isPaused(paused as RouteSession)).toBe(true)
+  })
+
+  it('closes an open pause when the route ends, so the break has a length', async () => {
+    const session = await startSession(T0)
+    await pauseSession(session.id, '2026-09-23T14:10:00.000Z')
+    const closed = await stopSession(session.id, '2026-09-23T14:30:00.000Z')
+    expect(closed?.pauses?.[0]?.until).toBe('2026-09-23T14:30:00.000Z')
+    expect(pausedSeconds(closed as RouteSession)).toBe(1200)
+    expect(isPaused(closed as RouteSession)).toBe(false)
+  })
+
+  it('queues the session again on every pause and resume', async () => {
+    const session = await startSession(T0)
+    queued.length = 0
+    await pauseSession(session.id, '2026-09-23T14:10:00.000Z')
+    await resumeSession(session.id, '2026-09-23T14:20:00.000Z')
+    // Through the same outbox as everything else. A break that only exists on
+    // the phone is a break the office cannot see, which makes the paid-time
+    // figure wrong for whoever reads it next.
+    expect(queued.filter((q) => q.entity === 'routeSession')).toHaveLength(2)
   })
 })

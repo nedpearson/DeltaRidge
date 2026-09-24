@@ -1,5 +1,7 @@
 import { getSupabase } from '@/lib/supabase'
+import type { RoutePoint } from '@/features/routes/route-store'
 import type { ActivityRow, AssignmentOutcome, RouteRow } from './metrics'
+import type { AssignedLead } from './performance'
 
 /**
  * Reading the manager views.
@@ -135,6 +137,7 @@ export async function readManagerSnapshot(
       startedAt: r.started_at as string,
       endedAt: (r.ended_at as string | null) ?? null,
       pointCount: Number(r.point_count ?? 0),
+      firstFixAt: (r.first_fix_at as string | null) ?? null,
       lastFixAt: (r.last_fix_at as string | null) ?? null,
       latitude: (r.latitude as number | null) ?? null,
       longitude: (r.longitude as number | null) ?? null,
@@ -166,6 +169,118 @@ export async function readManagerSnapshot(
     })),
     error: null,
   }
+}
+
+/**
+ * The whole trail of one route, for replaying it.
+ *
+ * Read one session at a time, deliberately. `manager_route_rows` carries only
+ * the last fix because a live status board does not need everyone's whole day,
+ * and handing out every point of every rep's week to draw a summary screen is a
+ * different question from "where is this person now".
+ */
+export async function readRoutePoints(
+  orgId: string | null,
+  sessionId: string,
+): Promise<{ points: RoutePoint[]; error: string | null }> {
+  const supabase = getSupabase()
+  if (!supabase) return { points: [], error: 'The app is not configured for a server.' }
+  if (!orgId) return { points: [], error: 'No organization on this account yet.' }
+
+  const { data, error } = await supabase
+    .from('route_point_rows')
+    .select('*')
+    .eq('organization_id', orgId)
+    .eq('route_session_id', sessionId)
+    .order('recorded_at', { ascending: true })
+    .limit(20_000)
+
+  if (error) return { points: [], error: error.message }
+
+  return {
+    points: (data ?? []).map((r, index) => ({
+      // The trail is read-only here, so the local id is positional. Nothing
+      // downstream writes these back.
+      id: `${sessionId}-${index}`,
+      sessionId,
+      recordedAt: r.recorded_at as string,
+      latitude: Number(r.latitude),
+      longitude: Number(r.longitude),
+      ...(r.accuracy_m !== null ? { accuracyMeters: Number(r.accuracy_m) } : {}),
+      ...(r.altitude_m !== null ? { altitudeMeters: Number(r.altitude_m) } : {}),
+      ...(r.speed_mps !== null ? { speedMps: Number(r.speed_mps) } : {}),
+      ...(r.heading_deg !== null ? { headingDeg: Number(r.heading_deg) } : {}),
+    })),
+    error: null,
+  }
+}
+
+export interface FollowupRow {
+  leadClientId: string
+  status: string
+  nextActionAt: string | null
+  lastActivityAt: string | null
+  score: number
+  subdivision: string | null
+  address: string
+}
+
+/** What every lead is waiting on, for the follow-up figures. */
+export async function readFollowups(
+  orgId: string | null,
+): Promise<{ rows: FollowupRow[]; error: string | null }> {
+  const supabase = getSupabase()
+  if (!supabase || !orgId) return { rows: [], error: null }
+
+  const { data, error } = await supabase
+    .from('manager_lead_followups')
+    .select('*')
+    .eq('organization_id', orgId)
+    .limit(5000)
+
+  if (error) return { rows: [], error: error.message }
+  return {
+    rows: (data ?? []).map((r) => ({
+      leadClientId: r.lead_client_id as string,
+      status: r.lead_status as string,
+      nextActionAt: (r.next_action_at as string | null) ?? null,
+      lastActivityAt: (r.last_activity_at as string | null) ?? null,
+      score: Number(r.opportunity_score ?? 0),
+      subdivision: (r.subdivision as string | null) ?? null,
+      address: (r.address_line1 as string | null) ?? '',
+    })),
+    error: null,
+  }
+}
+
+/**
+ * Assigned doors in the shape the performance engine wants, with the follow-up
+ * dates joined on.
+ *
+ * The join is done here rather than in SQL because the two views answer to
+ * different RLS paths and a database join would quietly return the intersection
+ * — which on a rep's own device is a shorter list than the truth.
+ */
+export function assignedLeads(
+  assignments: readonly AssignmentRow[],
+  followups: readonly FollowupRow[],
+): AssignedLead[] {
+  const byLead = new Map(followups.map((f) => [f.leadClientId, f]))
+  return assignments
+    .filter((a) => !a.unassignedAt)
+    .map((a) => {
+      const followup = byLead.get(a.leadClientId)
+      return {
+        repId: a.assignedTo,
+        leadClientId: a.leadClientId,
+        scoreAtAssignment: a.scoreAtAssignment,
+        assignedAt: a.assignedAt,
+        status: a.leadStatus,
+        nextActionAt: followup?.nextActionAt ?? null,
+        lastActivityAt: followup?.lastActivityAt ?? null,
+        subdivision: a.subdivision,
+      }
+    })
 }
 
 /** Assignment rows in the shape the efficiency maths wants. */

@@ -45,6 +45,11 @@ export function remoteLeadStatus(status: LeadStatus): string {
       return 'inspected'
     case 'not_interested':
       return 'not_interested'
+    // A roof already replaced or a house nobody lives in. 'lost' is the closest
+    // honest word the office vocabulary has: the opportunity is gone, and it is
+    // not a refusal that a future campaign should treat as one.
+    case 'disqualified':
+      return 'lost'
     // The strongest word the database has. Anything weaker would let a future
     // campaign contact someone who asked not to be.
     case 'do_not_knock':

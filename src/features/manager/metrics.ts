@@ -15,6 +15,8 @@
  * and that number then gets quoted in a conversation about somebody's job.
  */
 
+import { asDoorOutcome, isConversation } from '@/features/leads/pipeline'
+
 export type LeadStatusText = string
 
 /** Statuses that mean the lead has stopped moving, one way or the other. */
@@ -274,8 +276,12 @@ export function rollUpActivity(rows: readonly ActivityRow[]): RepActivity[] {
 
     if (row.activityType === 'door_knock') rep.knocks += 1
     if (row.activityType === 'appointment') rep.appointments += 1
-    // A conversation is somebody having come to the door, not a knock landing.
-    if (row.outcome && row.outcome !== 'no_answer' && row.activityType === 'door_knock') {
+    // One definition of "a person engaged", shared with the door sheet. This
+    // used to be `outcome !== 'no_answer'`, which counted a door hanger, an
+    // empty lot and an already-finished roof as conversations and inflated the
+    // one rate the grading engine leans on hardest.
+    const outcome = asDoorOutcome(row.outcome)
+    if (row.activityType === 'door_knock' && outcome && isConversation(outcome)) {
       rep.conversations += 1
     }
 
@@ -478,6 +484,7 @@ export interface RouteRow {
   startedAt: string
   endedAt: string | null
   pointCount: number
+  firstFixAt: string | null
   lastFixAt: string | null
   latitude: number | null
   longitude: number | null

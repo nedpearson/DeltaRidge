@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  isPaused as sessionIsPaused,
   listPoints,
   openSession,
+  pauseSession,
   recordPoint,
+  resumeSession,
   startSession,
   stopSession,
   type RoutePoint,
@@ -31,6 +34,10 @@ export interface RouteTracking {
   problem: string | null
   start: (label?: string) => Promise<void>
   stop: () => Promise<void>
+  /** Stops recording without ending the route. Nothing is captured while paused. */
+  pause: () => Promise<void>
+  resume: () => Promise<void>
+  paused: boolean
   starting: boolean
 }
 
@@ -109,7 +116,10 @@ export function useRouteTracking(): RouteTracking {
       if (cancelled || !found) return
       setSession(found)
       await refreshPoints(found.id)
-      watch(found.id)
+      // A route picked back up mid-break stays on break. Resuming is the rep's
+      // decision, and an app that quietly resumed for them would be recording
+      // somebody's lunch.
+      if (!sessionIsPaused(found)) watch(found.id)
     })
     return () => {
       cancelled = true
@@ -133,6 +143,24 @@ export function useRouteTracking(): RouteTracking {
     [watch],
   )
 
+  const pause = useCallback(async () => {
+    // The watch is cleared here AND `recordPoint` refuses while paused. Two
+    // locks on the same door, because this is the one the rep was promised.
+    clearWatch()
+    if (!session) return
+    const next = await pauseSession(session.id, new Date().toISOString())
+    if (next) setSession(next)
+  }, [session, clearWatch])
+
+  const resume = useCallback(async () => {
+    if (!session) return
+    const next = await resumeSession(session.id, new Date().toISOString())
+    if (next) {
+      setSession(next)
+      watch(next.id)
+    }
+  }, [session, watch])
+
   const stop = useCallback(async () => {
     clearWatch()
     if (!session) return
@@ -141,5 +169,15 @@ export function useRouteTracking(): RouteTracking {
     lastKept.current = null
   }, [session, clearWatch])
 
-  return { session, points, problem, start, stop, starting }
+  return {
+    session,
+    points,
+    problem,
+    start,
+    stop,
+    pause,
+    resume,
+    paused: session ? sessionIsPaused(session) : false,
+    starting,
+  }
 }

@@ -239,6 +239,25 @@ export async function readHistory(leadId: string): Promise<ContactEvent[]> {
   }
 }
 
+/**
+ * Everything recorded between two instants, on this device.
+ *
+ * Reads the whole store and filters, because the events store is indexed by
+ * lead rather than by time. That is the right index for the screen this store
+ * exists to serve — a lead's history — and adding a second index to answer one
+ * panel would mean a schema version bump on every rep's phone for a list that
+ * is a few hundred rows on a heavy day.
+ */
+export async function eventsBetween(from: string, to: string): Promise<ContactEvent[]> {
+  try {
+    const db = await getCrmDb()
+    const events = (await db.getAll(EVENTS)) as ContactEvent[]
+    return events.filter((e) => e.at >= from && e.at <= to).sort((a, b) => a.at.localeCompare(b.at))
+  } catch {
+    return []
+  }
+}
+
 /** Address keys that must never be offered as a door again. */
 export function suppressedKeys(leads: readonly ManagedLead[]): Set<string> {
   const out = new Set<string>()

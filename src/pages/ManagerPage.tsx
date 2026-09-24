@@ -6,11 +6,21 @@ import type { ScoredLead } from '@/features/leads/scoring'
 import { assignDoorTo } from '@/features/manager/assign'
 import {
   EMPTY_SNAPSHOT,
+  assignedLeads,
   outcomesFrom,
+  readFollowups,
   readManagerSnapshot,
   unassignLead,
+  type FollowupRow,
   type ManagerSnapshot,
 } from '@/features/manager/read'
+import RoutesTab from '@/features/manager/tabs/RoutesTab'
+import PerformanceTab from '@/features/manager/tabs/PerformanceTab'
+import GradesTab from '@/features/manager/tabs/GradesTab'
+import SettingsTab from '@/features/manager/tabs/SettingsTab'
+import { readGradingConfig } from '@/features/manager/grade-store'
+import { DEFAULT_CONFIG, type GradingConfig } from '@/features/manager/grading'
+import { DEFAULT_WINDOW_DAYS } from '@/features/manager/read'
 import {
   activeRoutes,
   efficiencyFor,
@@ -40,14 +50,27 @@ import {
  * rep who did no work while the other is a bug. They are separate states here.
  */
 
-type Tab = 'team' | 'field' | 'leads' | 'territory' | 'log'
+type Tab =
+  | 'team'
+  | 'field'
+  | 'routes'
+  | 'performance'
+  | 'grades'
+  | 'leads'
+  | 'territory'
+  | 'log'
+  | 'settings'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'team', label: 'Team' },
-  { id: 'field', label: 'Field' },
+  { id: 'field', label: 'Live field' },
+  { id: 'routes', label: 'Routes' },
+  { id: 'performance', label: 'Performance' },
+  { id: 'grades', label: 'Grades' },
   { id: 'leads', label: 'Assign' },
   { id: 'territory', label: 'Territory' },
   { id: 'log', label: 'Log' },
+  { id: 'settings', label: 'Settings' },
 ]
 
 function ago(iso: string | null): string {
@@ -86,15 +109,26 @@ export default function ManagerPage() {
   const [doors, setDoors] = useState<ScoredLead[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
+  const [followups, setFollowups] = useState<FollowupRow[]>([])
+  const [config, setConfig] = useState<GradingConfig>(DEFAULT_CONFIG)
+  const [configIsDefault, setConfigIsDefault] = useState(true)
 
   const orgId = membership?.organizationId ?? null
   const canManage = membership?.role === 'admin' || membership?.role === 'manager'
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [snap, run] = await Promise.all([readManagerSnapshot(orgId), readCachedRun()])
+    const [snap, run, follow, grading] = await Promise.all([
+      readManagerSnapshot(orgId),
+      readCachedRun(),
+      readFollowups(orgId),
+      readGradingConfig(orgId),
+    ])
     setSnapshot(snap)
     setDoors(run?.leads ?? [])
+    setFollowups(follow.rows)
+    setConfig(grading.config)
+    setConfigIsDefault(grading.isDefault)
     setLoading(false)
   }, [orgId])
 
@@ -114,6 +148,17 @@ export default function ManagerPage() {
   )
 
   const outcomes = useMemo(() => outcomesFrom(snapshot.assignments), [snapshot.assignments])
+  const leadsWithFollowups = useMemo(
+    () => assignedLeads(snapshot.assignments, followups),
+    [snapshot.assignments, followups],
+  )
+  // The window the server was asked for. Every per-rep figure is computed
+  // inside it, so the screen and the query cannot drift apart.
+  const windowFrom = useMemo(
+    () => new Date(Date.now() - DEFAULT_WINDOW_DAYS * 86_400_000).toISOString(),
+    [],
+  )
+  const windowTo = useMemo(() => new Date().toISOString(), [])
   const baseline = useMemo(() => orgBaseline(outcomes), [outcomes])
   const repActivity = useMemo(() => rollUpActivity(snapshot.activity), [snapshot.activity])
   const coverage = useMemo(
@@ -206,6 +251,55 @@ export default function ManagerPage() {
       )}
 
       {tab === 'field' && <FieldTab routes={live} nameOf={nameOf} loading={loading} />}
+
+      {tab === 'routes' && (
+        <RoutesTab
+          routes={snapshot.routes}
+          activity={snapshot.activity}
+          orgId={orgId}
+          nameOf={nameOf}
+          loading={loading}
+        />
+      )}
+
+      {tab === 'performance' && (
+        <PerformanceTab
+          team={snapshot.team}
+          activity={snapshot.activity}
+          routes={snapshot.routes}
+          assignments={leadsWithFollowups}
+          baseline={baseline}
+          nameOf={nameOf}
+          windowFrom={windowFrom}
+          windowTo={windowTo}
+        />
+      )}
+
+      {tab === 'grades' && (
+        <GradesTab
+          team={snapshot.team}
+          activity={snapshot.activity}
+          routes={snapshot.routes}
+          assignments={leadsWithFollowups}
+          baseline={baseline}
+          config={config}
+          orgId={orgId}
+          userId={session.user.id}
+          canManage={canManage}
+          nameOf={nameOf}
+        />
+      )}
+
+      {tab === 'settings' && (
+        <SettingsTab
+          config={config}
+          isDefault={configIsDefault}
+          orgId={orgId}
+          userId={session.user.id}
+          canManage={canManage}
+          onSaved={() => void load()}
+        />
+      )}
 
       {tab === 'leads' && (
         <AssignTab

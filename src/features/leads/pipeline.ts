@@ -27,6 +27,14 @@ export type LeadStatus =
   /** An inspection was captured against this address. */
   | 'inspected'
   | 'not_interested'
+  /**
+   * Not a prospect, and not because of anything the homeowner decided: the roof
+   * is already new, the lot is empty, the building is gone. Held apart from
+   * 'not_interested' because a rep who turns up twenty of these has been given
+   * a bad list, which is a different problem from a rep who is being turned
+   * down at the door.
+   */
+  | 'disqualified'
   /** Asked not to be called on again. Never appears on a door list. */
   | 'do_not_knock'
 
@@ -37,13 +45,28 @@ export type LeadStatus =
  * know whether a call was answered, so it never offers that as an outcome.
  */
 export type DoorOutcome =
+  /** Knocked, nobody came. */
   | 'no_answer'
+  /** Somebody came to the door and there was a conversation. Nothing agreed. */
+  | 'spoke'
+  /** Door hanger, card, estimate sheet. Whether anyone answered is separate. */
+  | 'left_info'
   | 'come_back'
   | 'interested'
+  /** Asked, in so many words, to have the roof looked at. Stronger than interested. */
+  | 'wants_inspection'
   | 'appointment_set'
   | 'inspect_now'
   | 'not_interested'
+  /** Already re-roofed. Not a prospect, and not a rejection. */
+  | 'roof_replaced'
+  /** Whoever answered does not own it. The door is not the decision. */
+  | 'renter'
+  /** Nobody lives here. Empty, derelict, or the house is gone. */
+  | 'vacant'
   | 'do_not_knock'
+  /** None of the above. The note carries it. */
+  | 'other'
 
 /**
  * How a contact was made. Each name says exactly what the app witnessed and
@@ -60,12 +83,19 @@ export type ContactKind =
 
 export const OUTCOME_LABEL: Record<DoorOutcome, string> = {
   no_answer: 'Not home',
+  spoke: 'Spoke to owner',
+  left_info: 'Left information',
   come_back: 'Come back later',
   interested: 'Interested',
+  wants_inspection: 'Wants inspection',
   appointment_set: 'Appointment set',
   inspect_now: 'Inspecting now',
   not_interested: 'Not interested',
+  roof_replaced: 'Roof already replaced',
+  renter: 'Renter, not the owner',
+  vacant: 'Vacant',
   do_not_knock: 'Do not knock',
+  other: 'Something else',
 }
 
 export const CONTACT_KIND_LABEL: Record<ContactKind, string> = {
@@ -85,6 +115,7 @@ export const STATUS_LABEL: Record<LeadStatus, string> = {
   appointment: 'Appointment',
   inspected: 'Inspected',
   not_interested: 'Not interested',
+  disqualified: 'Not a prospect',
   do_not_knock: 'Do not knock',
 }
 
@@ -298,6 +329,17 @@ interface OutcomeRule {
   followUpDays?: number
   /** Counts as somebody having stood at the door. */
   knock: boolean
+  /**
+   * Counts as a human being having engaged.
+   *
+   * Stated per outcome rather than derived from `outcome !== 'no_answer'`,
+   * which is what the manager roll-up used to do and which quietly counted a
+   * door hanger, an empty lot and a finished roof as conversations. Contact
+   * rate is a load-bearing number in every performance screen downstream, so
+   * what does and does not count is written down here where it can be argued
+   * with.
+   */
+  conversation: boolean
 }
 
 /**
@@ -306,13 +348,63 @@ interface OutcomeRule {
  * in this system yet to learn a cadence from.
  */
 const RULES: Record<DoorOutcome, OutcomeRule> = {
-  no_answer: { status: 'attempted', followUpDays: 2, knock: true },
-  come_back: { status: 'follow_up', followUpDays: 3, knock: true },
-  interested: { status: 'need_visit', followUpDays: 1, knock: true },
-  appointment_set: { status: 'appointment', knock: true },
-  inspect_now: { status: 'inspected', knock: true },
-  not_interested: { status: 'not_interested', knock: true },
-  do_not_knock: { status: 'do_not_knock', knock: false },
+  no_answer: { status: 'attempted', followUpDays: 2, knock: true, conversation: false },
+  spoke: { status: 'follow_up', followUpDays: 3, knock: true, conversation: true },
+  // Left information is recorded as a knock and NOT as a conversation. A door
+  // hanger is not a person; counting it as contact would inflate the one number
+  // the whole grading engine leans on.
+  left_info: { status: 'attempted', followUpDays: 3, knock: true, conversation: false },
+  come_back: { status: 'follow_up', followUpDays: 3, knock: true, conversation: true },
+  interested: { status: 'need_visit', followUpDays: 1, knock: true, conversation: true },
+  wants_inspection: { status: 'need_visit', followUpDays: 1, knock: true, conversation: true },
+  appointment_set: { status: 'appointment', knock: true, conversation: true },
+  inspect_now: { status: 'inspected', knock: true, conversation: true },
+  not_interested: { status: 'not_interested', knock: true, conversation: true },
+  // Disqualifying outcomes. Someone answered in the renter case, so it counts
+  // as a conversation; an empty house and a finished roof do not.
+  roof_replaced: { status: 'disqualified', knock: true, conversation: false },
+  renter: { status: 'follow_up', followUpDays: 14, knock: true, conversation: true },
+  vacant: { status: 'disqualified', knock: true, conversation: false },
+  do_not_knock: { status: 'do_not_knock', knock: false, conversation: false },
+  // Deliberately conservative: the app does not know what happened, so it does
+  // not claim a conversation took place.
+  other: { status: 'attempted', followUpDays: 2, knock: true, conversation: false },
+}
+
+/**
+ * Every outcome this build understands, as a runtime set.
+ *
+ * The type alone cannot filter a string that arrived from the server, and a
+ * word this build does not recognise must be dropped rather than cast: it would
+ * otherwise sit in the history looking like a real outcome and drive both the
+ * status rules and a rep's contact rate off a value that means nothing here.
+ */
+export const DOOR_OUTCOMES: ReadonlySet<string> = new Set(Object.keys(RULES))
+
+export function asDoorOutcome(value: string | null | undefined): DoorOutcome | null {
+  return value && DOOR_OUTCOMES.has(value) ? (value as DoorOutcome) : null
+}
+
+/**
+ * Did a person engage at this door?
+ *
+ * The single definition, exported so the manager roll-ups and the grading
+ * engine cannot drift from the door sheet. Contact rate is quoted in
+ * performance reviews; two files disagreeing about what counts is how a rep
+ * ends up defending a number nobody can reproduce.
+ */
+export function isConversation(outcome: DoorOutcome): boolean {
+  return RULES[outcome].conversation
+}
+
+/** Outcomes that mean somebody stood at the door. */
+export function isKnock(outcome: DoorOutcome): boolean {
+  return RULES[outcome].knock
+}
+
+/** The outcomes that take a door off the list without anybody rejecting an offer. */
+export function isDisqualifying(outcome: DoorOutcome): boolean {
+  return RULES[outcome].status === 'disqualified'
 }
 
 export function addDays(iso: string, days: number): string {
@@ -377,7 +469,12 @@ export function applyOutcome(
     // appointment_set outcome.
     next.appointmentClientId = eventId
   }
-  if (outcome === 'do_not_knock' || outcome === 'not_interested') {
+  if (
+    outcome === 'do_not_knock' ||
+    outcome === 'not_interested' ||
+    outcome === 'roof_replaced' ||
+    outcome === 'vacant'
+  ) {
     delete next.appointmentAt
     delete next.appointmentClientId
   }
