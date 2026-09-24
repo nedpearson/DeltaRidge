@@ -42,6 +42,8 @@ function assertNoServerSecrets(raw: Record<string, unknown>): void {
     'VITE_AI_API_KEY',
     'VITE_MAPBOX_SECRET_TOKEN',
     'VITE_ROOFR_WEBHOOK_SECRET',
+    'VITE_EAGLEVIEW_CLIENT_ID',
+    'VITE_EAGLEVIEW_CLIENT_SECRET',
   ]
   const leaked = forbidden.filter((key) => typeof raw[key] === 'string' && raw[key] !== '')
   if (leaked.length > 0) {
