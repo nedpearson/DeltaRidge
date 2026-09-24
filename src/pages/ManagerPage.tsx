@@ -28,6 +28,8 @@ import {
   PASSED_RADIUS_METERS,
   type CoverageRow,
 } from '@/features/manager/coverage'
+import { dailyRollup, exceptions } from '@/features/manager/daily'
+import { factsFor, writeBrief } from '@/features/manager/brief'
 import PerformanceTab from '@/features/manager/tabs/PerformanceTab'
 import GradesTab from '@/features/manager/tabs/GradesTab'
 import SettingsTab from '@/features/manager/tabs/SettingsTab'
@@ -551,6 +553,12 @@ function FieldTab({
     [repIds, routes, activity, today],
   )
 
+  // The day so far, computed before anything is said about it. The brief is a
+  // rephrasing of these figures and never a source of one - see brief.ts.
+  const rollup = dailyRollup({ from: today.from, to: today.to, routes, activity })
+  const flagged = exceptions({ from: today.from, to: today.to, routes, activity })
+  const brief = writeBrief(factsFor(rollup, flagged))
+
   if (loading) return <Card><p className="text-[13px] text-white/45">Reading the server…</p></Card>
 
   const out = rows.filter((r) => r.status === 'active' || r.status === 'paused')
@@ -564,6 +572,36 @@ function FieldTab({
           recording entirely.
         </p>
       </Card>
+
+      <Card>
+        <p className="text-[11px] uppercase tracking-wider text-white/35">Today so far</p>
+        {brief.map((line, i) => (
+          <p key={i} className="mt-1 text-[12.5px] leading-relaxed text-white/70">
+            {line}
+          </p>
+        ))}
+      </Card>
+
+      {flagged.length > 0 && (
+        <Card>
+          <p className="text-[11px] uppercase tracking-wider text-amber-200/60">
+            Worth a look · {flagged.length}
+          </p>
+          {/*
+            Facts about records, never conclusions about people. The wording is
+            the feature: each line says what to go and check, and none of them
+            asserts why it happened.
+          */}
+          <ul className="mt-2 space-y-1.5">
+            {flagged.map((e, i) => (
+              <li key={`${e.kind}-${i}`} className="text-[12px] leading-relaxed text-white/65">
+                {e.repId && <span className="text-white/85">{nameOf(e.repId)}: </span>}
+                {e.detail}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {out.length === 0 && (
         <Nothing title="Nobody is on a route" body="This is what an ordinary evening looks like." />
