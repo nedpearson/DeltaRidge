@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { OwnerLine, occupancyEvidence } from '@/components/OwnerLine'
-import RoofView from '@/components/RoofView'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import ContactActions from '@/components/ContactActions'
 import { findByAddress } from '@/features/leads/lead-store'
@@ -147,21 +146,15 @@ export default function PropertyPage() {
         ← Doors
       </button>
 
+      {/* EagleView imagery as the hero — auto-fetched on mount */}
+      <RoofImageryPanel
+        latitude={lead.latitude}
+        longitude={lead.longitude}
+        storms={profile?.storms ?? []}
+        autoFetch
+      />
+
       <Card className="mt-2">
-        {/*
-          The controls are inline here rather than behind a tap, because this is
-          the screen a rep opens when they have already decided the roof is worth
-          looking at properly. On the door list the same view is one tap away,
-          where the list itself is the thing being scanned.
-        */}
-        <div className="mb-3">
-          <RoofView
-            latitude={lead.latitude}
-            longitude={lead.longitude}
-            address={lead.address}
-            boundary={lead.parcel?.boundary}
-          />
-        </div>
         <p className="text-[17px] font-semibold leading-tight">{lead.address}</p>
         <p className="mt-0.5 text-[12px] text-slate-600">
           {[lead.subdivision, lead.city].filter(Boolean).join(' · ') || 'East Baton Rouge Parish'}
@@ -210,7 +203,7 @@ export default function PropertyPage() {
       </div>
 
       <div className="mt-3">
-        {tab === 'property' && <PropertyTab profile={profile} latitude={lead.latitude} longitude={lead.longitude} />}
+        {tab === 'property' && <PropertyTab profile={profile} />}
         {tab === 'owner' && <OwnerTab profile={profile} {...(lead.parcel ? { parcel: lead.parcel } : {})} />}
         {tab === 'roof' && (
           <RoofTab
@@ -282,12 +275,8 @@ const shortDate = (iso: string) =>
 
 function PropertyTab({ 
   profile,
-  latitude,
-  longitude
 }: { 
   profile: PropertyProfile
-  latitude: number
-  longitude: number
 }) {
   return (
     <>
@@ -298,8 +287,6 @@ function PropertyTab({
         <FactRow label="Assessed value" fact={profile.assessedValue} format={money} />
         <FactRow label="Land value" fact={profile.landValue} format={money} />
       </Card>
-
-      <RoofImageryPanel latitude={latitude} longitude={longitude} storms={profile.storms} autoFetch />
 
       <SectionTitle>NOT AVAILABLE</SectionTitle>
       <Card className="!py-3">
