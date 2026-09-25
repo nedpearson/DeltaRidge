@@ -156,8 +156,8 @@ export default function PropertyPage() {
         */}
         <div className="mb-3">
           <RoofView
-            latitude={lead.latitude}
-            longitude={lead.longitude}
+            
+            
             address={lead.address}
             boundary={lead.parcel?.boundary}
           />
@@ -215,8 +215,8 @@ export default function PropertyPage() {
         {tab === 'roof' && (
           <RoofTab
             profile={profile}
-            latitude={lead.latitude}
-            longitude={lead.longitude}
+            
+            
           />
         )}
         {tab === 'storms' && <StormsTab profile={profile} />}
@@ -361,12 +361,8 @@ function OwnerTab({ profile, parcel }: { profile: PropertyProfile; parcel?: Parc
 
 function RoofTab({
   profile,
-  latitude,
-  longitude,
 }: {
   profile: PropertyProfile
-  latitude: number
-  longitude: number
 }) {
   return (
     <>
@@ -485,8 +481,8 @@ function PropertyContactBar({ lead }: { lead: ManagedLead }) {
       phone={lead.contactPhone ?? null}
       phoneNote={source === null ? null : CONTACT_SOURCE_LABEL[source]}
       email={null}
-      latitude={lead.latitude}
-      longitude={lead.longitude}
+      
+      
       call={{
         allowed: callBlock.allowed && window.allowed,
         reason: !callBlock.allowed
