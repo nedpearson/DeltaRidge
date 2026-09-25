@@ -139,7 +139,7 @@ export default function CapturePanel({
                       <p className="flex items-center gap-2 text-[14px] font-semibold capitalize">
                         {CATEGORY_LABELS[category]}
                         {isRequired && !satisfied && (
-                          <span className="rounded bg-brand-500/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand-300">
+                          <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700">
                             Required
                           </span>
                         )}
