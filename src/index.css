@@ -16,42 +16,42 @@
   --color-brand-200: #bfdbfe;
   --color-brand-300: #93c5fd;
   --color-brand-400: #60a5fa;
-  --color-brand-500: #3b82f6; /* Vibrant Blue */
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
-  --color-brand-800: #1e40af;
-  --color-brand-900: #1e3a8a;
-  --color-brand-950: #172554;
+  --color-brand-500: #1e40af; /* Deep Navy Blue */
+  --color-brand-600: #1e3a8a;
+  --color-brand-700: #172554;
+  --color-brand-800: #0f172a;
+  --color-brand-900: #020617;
+  --color-brand-950: #000000;
 
   --color-gold-50: #fffbeb;
   --color-gold-100: #fef3c7;
   --color-gold-200: #fde68a;
   --color-gold-300: #fcd34d;
   --color-gold-400: #fbbf24;
-  --color-gold-500: #f59e0b; /* Vibrant Amber */
-  --color-gold-600: #d97706;
-  --color-gold-700: #b45309;
-  --color-gold-800: #92400e;
-  --color-gold-900: #78350f;
+  --color-gold-500: #d97706; /* Professional Amber */
+  --color-gold-600: #b45309;
+  --color-gold-700: #92400e;
+  --color-gold-800: #78350f;
+  --color-gold-900: #451a03;
 
-  --color-ink: #0f172a; /* Dark Slate for text */
-  --color-surface: #f8fafc; /* Very light slate background */
+  --color-ink: #0f172a; /* Slate 900 for high-contrast primary text */
+  --color-surface: #f1f5f9; /* Slate 100 for cooler, professional background */
   --color-surface-2: #ffffff; /* Pure white cards */
-  --color-surface-3: #e2e8f0; /* Borders */
+  --color-surface-3: #cbd5e1; /* Slate 300 for visible borders */
 
   /* Status Colors: kept accessible for light background */
-  --color-status-untouched: #94a3b8;
-  --color-status-target: #f59e0b;
-  --color-status-attempted: #a855f7;
-  --color-status-noanswer: #64748b;
-  --color-status-spoke: #38bdf8;
-  --color-status-interested: #22d3ee;
-  --color-status-appointment: #3b82f6;
-  --color-status-inspected: #8b5cf6;
-  --color-status-proposal: #f59e0b;
-  --color-status-sold: #10b981;
-  --color-status-lost: #ef4444;
-  --color-status-dnc: #1f2937;
+  --color-status-untouched: #64748b;
+  --color-status-target: #b45309;
+  --color-status-attempted: #7e22ce;
+  --color-status-noanswer: #475569;
+  --color-status-spoke: #0284c7;
+  --color-status-interested: #0e7490;
+  --color-status-appointment: #1e40af;
+  --color-status-inspected: #6d28d9;
+  --color-status-proposal: #d97706;
+  --color-status-sold: #047857;
+  --color-status-lost: #b91c1c;
+  --color-status-dnc: #0f172a;
 }
 
 @layer base {

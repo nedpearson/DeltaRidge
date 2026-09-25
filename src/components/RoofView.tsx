@@ -117,7 +117,7 @@ export default function RoofView({
 
   if (!hasBasemap()) {
     return (
-      <div className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center">
+      <div className="rounded-2xl border border-dashed border-slate-300 px-5 py-8 text-center">
         <p className="text-[13px] text-[var(--color-ink)]/">No satellite imagery is configured for this app.</p>
       </div>
     )
@@ -175,10 +175,10 @@ export default function RoofView({
         {!outline && !failed && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="relative size-14">
-              <div className="absolute left-1/2 top-0 h-3.5 w-px -translate-x-1/2 bg-white/80" />
-              <div className="absolute bottom-0 left-1/2 h-3.5 w-px -translate-x-1/2 bg-white/80" />
-              <div className="absolute left-0 top-1/2 h-px w-3.5 -translate-y-1/2 bg-white/80" />
-              <div className="absolute right-0 top-1/2 h-px w-3.5 -translate-y-1/2 bg-white/80" />
+              <div className="absolute left-1/2 top-0 h-3.5 w-px -translate-x-1/2 bg-slate-200" />
+              <div className="absolute bottom-0 left-1/2 h-3.5 w-px -translate-x-1/2 bg-slate-200" />
+              <div className="absolute left-0 top-1/2 h-px w-3.5 -translate-y-1/2 bg-slate-200" />
+              <div className="absolute right-0 top-1/2 h-px w-3.5 -translate-y-1/2 bg-slate-200" />
             </div>
           </div>
         )}

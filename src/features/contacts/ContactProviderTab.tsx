@@ -87,7 +87,7 @@ export default function ContactProviderTab({
           className={`mt-3 rounded-xl px-3 py-3 ring-1 ${
             verdict.allowed
               ? 'bg-emerald-500/8 ring-emerald-500/25'
-              : 'bg-amber-500/8 ring-amber-500/25'
+              : 'bg-amber-100 ring-amber-500/25'
           }`}
         >
           <p className="text-[13px] font-semibold text-[var(--color-ink)]/">
@@ -105,12 +105,12 @@ export default function ContactProviderTab({
 
         <ul className="mt-3 space-y-2">
           {FINDINGS.map((f) => (
-            <li key={f.label} className="border-t border-white/8 pt-2 first:border-t-0 first:pt-0">
+            <li key={f.label} className="border-t border-slate-300 pt-2 first:border-t-0 first:pt-0">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="min-w-0 shrink-0 text-[12.5px] text-[var(--color-ink)]/">{f.label}</span>
                 <span
                   className={`min-w-0 break-words text-right text-[12.5px] ${
-                    f.tone === 'warn' ? 'text-amber-200/85' : 'text-[var(--color-ink)]/'
+                    f.tone === 'warn' ? 'text-amber-700/85' : 'text-[var(--color-ink)]/'
                   }`}
                 >
                   {f.value}
@@ -124,7 +124,7 @@ export default function ContactProviderTab({
           <p className="mt-3 rounded bg-red-500/10 px-3 py-2 text-[12.5px] text-red-300">{error}</p>
         )}
 
-        <div className="mt-4 border-t border-white/8 pt-3">
+        <div className="mt-4 border-t border-slate-300 pt-3">
           <Field
             label="What we hold"
             hint="Setting this to a business agreement does not by itself permit anything; the confirmation below does."
@@ -159,7 +159,7 @@ export default function ContactProviderTab({
           */}
           {settings.commercialUseConfirmed ? (
             <div className="mt-3 rounded-xl bg-emerald-500/8 px-3 py-2.5 ring-1 ring-emerald-500/20">
-              <p className="text-[12.5px] text-emerald-200/90">
+              <p className="text-[12.5px] text-emerald-700/90">
                 Commercial use confirmed{settings.basis ? `: ${settings.basis}` : ''}
               </p>
               <p className="mt-0.5 text-[11px] text-[var(--color-ink)]/">
@@ -214,7 +214,7 @@ export default function ContactProviderTab({
           </p>
         </div>
 
-        <p className="mt-3 border-t border-white/8 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-3 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
           No credential is entered on this screen and there is no field that could hold one. The key
           belongs in an Edge Function secret where the browser cannot reach it.
         </p>
@@ -236,7 +236,7 @@ export default function ContactProviderTab({
             on above once one exists.
           </li>
         </ul>
-        <p className="mt-3 border-t border-white/8 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-3 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
           Having a number is never permission to dial it. Consent, the internal do-not-call list and
           Louisiana’s calling hours all still apply, and they are checked separately on every lead.
         </p>

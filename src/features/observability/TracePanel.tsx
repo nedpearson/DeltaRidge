@@ -146,7 +146,7 @@ export default function TracePanel({ leadId }: { leadId?: string }) {
                 {carriedLabel(row.carriedSeconds) !== null && ` · ${carriedLabel(row.carriedSeconds)}`}
               </p>
               {row.detail !== null && (
-                <p className="mt-0.5 break-words text-[11.5px] text-amber-200/70">{row.detail}</p>
+                <p className="mt-0.5 break-words text-[11.5px] text-amber-700/70">{row.detail}</p>
               )}
             </li>
           ))}

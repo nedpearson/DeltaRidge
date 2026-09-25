@@ -57,8 +57,8 @@ export default function SyncPanel() {
       <SectionTitle {...(running ? { hint: 'syncing…' } : {})}>SYNC</SectionTitle>
 
       {stalled.length > 0 && (
-        <Card className="!bg-amber-500/8 ring-amber-500/20">
-          <p className="text-[13.5px] font-semibold text-amber-200">
+        <Card className="!bg-amber-100 ring-amber-300">
+          <p className="text-[13.5px] font-semibold text-amber-700">
             {summarise(stalled)} could not be sent.
           </p>
           <p className="mt-1 text-[12px] leading-relaxed text-amber-100/70">
@@ -74,7 +74,7 @@ export default function SyncPanel() {
             </Button>
           </div>
           {showDetail && (
-            <ul className="mt-3 space-y-2 border-t border-white/8 pt-3">
+            <ul className="mt-3 space-y-2 border-t border-slate-300 pt-3">
               {stalled.map((item) => (
                 <li key={item.id} className="text-[12px] leading-relaxed">
                   <span className="font-semibold text-[var(--color-ink)]/">{LABEL[item.entity]}</span>
@@ -89,7 +89,7 @@ export default function SyncPanel() {
 
       {blocked > 0 && (
         <Card className="mt-2 !bg-sky-500/8 ring-sky-500/20">
-          <p className="text-[13.5px] font-semibold text-sky-200">
+          <p className="text-[13.5px] font-semibold text-sky-700">
             {blocked} item{blocked === 1 ? '' : 's'} need you to sign in again.
           </p>
           <p className="mt-1 text-[12px] leading-relaxed text-sky-100/70">

@@ -432,7 +432,7 @@ export default function LeadPage() {
             {phoneSource && (
               <p
                 className={`mt-0.5 text-[11.5px] ${
-                  isFromHomeowner(phoneSource) ? 'text-[var(--color-ink)]/' : 'text-amber-200/70'
+                  isFromHomeowner(phoneSource) ? 'text-[var(--color-ink)]/' : 'text-amber-700/70'
                 }`}
               >
                 {CONTACT_SOURCE_LABEL[phoneSource]}
@@ -444,7 +444,7 @@ export default function LeadPage() {
         )}
 
         {!window.allowed && lead.contactPhone && (
-          <div className="mt-2 rounded-xl bg-amber-500/8 px-3 py-2 ring-1 ring-amber-500/20">
+          <div className="mt-2 rounded-xl bg-amber-100 px-3 py-2 ring-1 ring-amber-300">
             {window.reasons.map((reason) => (
               <p key={reason} className="text-[12px] leading-relaxed text-amber-100/80">
                 {reason}
@@ -479,7 +479,7 @@ export default function LeadPage() {
         </div>
 
         {blockReason && (
-          <p className="mt-2 text-[12px] leading-relaxed text-amber-200/80">{blockReason}</p>
+          <p className="mt-2 text-[12px] leading-relaxed text-amber-700/80">{blockReason}</p>
         )}
 
         <p className="mt-2 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
@@ -487,7 +487,7 @@ export default function LeadPage() {
           whether it was answered or delivered, so it does not say that it was.
         </p>
         {editingNumber ? (
-          <div className="mt-3 border-t border-white/5 pt-3">
+          <div className="mt-3 border-t border-slate-300 pt-3">
             <Field label="Number">
               <TextInput
                 type="tel"
@@ -510,7 +510,7 @@ export default function LeadPage() {
                 >
                   <span className="text-[13px]">{CONTACT_SOURCE_LABEL[source]}</span>
                   {!isFromHomeowner(source) && (
-                    <span className="text-[10.5px] text-amber-200/70">not dialable here</span>
+                    <span className="text-[10.5px] text-amber-700/70">not dialable here</span>
                   )}
                 </button>
               ))}
@@ -549,7 +549,7 @@ export default function LeadPage() {
       <SectionTitle>PERMISSION</SectionTitle>
       <Card>
         {lead.optedOutAt ? (
-          <p className="text-[12.5px] leading-relaxed text-amber-200/90">
+          <p className="text-[12.5px] leading-relaxed text-amber-700/90">
             They asked not to be contacted, on {when(lead.optedOutAt)}. Every permission on this
             lead was cleared at the same time, and this cannot be undone from the field.
           </p>
@@ -639,7 +639,7 @@ export default function LeadPage() {
         <Card>
           <ol className="space-y-3">
             {history.map((event) => (
-              <li key={event.id} className="border-l-2 border-white/10 pl-3">
+              <li key={event.id} className="border-l-2 border-slate-300 pl-3">
                 <p className="text-[12.5px] font-semibold text-[var(--color-ink)]/">
                   {event.outcome ? OUTCOME_LABEL[event.outcome] : CONTACT_KIND_LABEL[event.kind]}
                 </p>

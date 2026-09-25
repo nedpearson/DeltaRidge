@@ -200,7 +200,7 @@ export default function RoutePanel() {
           </div>
 
           {stats.gapCount > 0 && (
-            <p className="mt-2 text-[11.5px] leading-relaxed text-amber-200/70">
+            <p className="mt-2 text-[11.5px] leading-relaxed text-amber-700/70">
               {stats.gapCount} stretch{stats.gapCount === 1 ? '' : 'es'} with no GPS, {duration(stats.gapSeconds)} in
               total. The doors you recorded in them are saved; the trail just has holes where the phone had
               no fix.
@@ -217,7 +217,7 @@ export default function RoutePanel() {
             ones that happened - a screen of zeros in a driveway is noise.
           */}
           {outcomes.length > 0 && (
-            <div className="mt-4 border-t border-white/8 pt-3">
+            <div className="mt-4 border-t border-slate-300 pt-3">
               <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">Doors worked</p>
               <ul className="mt-2 space-y-1">
                 {outcomes.map((row) => (
@@ -234,7 +234,7 @@ export default function RoutePanel() {
             The funnel. Each rate is against the stage above it, and a stage
             with nothing above it shows a dash rather than 0% - see recap.ts.
           */}
-          <div className="mt-4 border-t border-white/8 pt-3">
+          <div className="mt-4 border-t border-slate-300 pt-3">
             <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">How the day converted</p>
             <ul className="mt-2 space-y-1">
               {funnel.stages.map((stage) => (
@@ -264,8 +264,8 @@ export default function RoutePanel() {
             does it. Named records only - never a judgement about the rep.
           */}
           {summary.open.length > 0 && (
-            <div className="mt-4 border-t border-white/8 pt-3">
-              <p className="text-[11px] uppercase tracking-wider text-amber-200/60">
+            <div className="mt-4 border-t border-slate-300 pt-3">
+              <p className="text-[11px] uppercase tracking-wider text-amber-700/60">
                 Still open · {summary.open.length}
               </p>
               <ul className="mt-2 space-y-2">
@@ -327,11 +327,11 @@ export default function RoutePanel() {
       <Card
         className={
           paused
-            ? '!bg-amber-500/8 ring-amber-500/20'
-            : '!bg-emerald-500/8 ring-emerald-500/20'
+            ? '!bg-amber-100 ring-amber-300'
+            : '!bg-emerald-100 ring-emerald-300'
         }
       >
-        <p className={`text-[13.5px] font-semibold ${paused ? 'text-amber-200' : 'text-emerald-200'}`}>
+        <p className={`text-[13.5px] font-semibold ${paused ? 'text-amber-900' : 'text-emerald-900'}`}>
           {paused ? '⏸ Paused — nothing is being recorded.' : '● Recording your route.'}
         </p>
         <p className="mt-0.5 text-[11.5px] text-[var(--color-ink)]/">
@@ -348,7 +348,7 @@ export default function RoutePanel() {
           <Stat value={counts.queued === 0 ? 'clear' : String(counts.queued)} label="waiting to send" />
         </div>
 
-        {problem && <p className="mt-2 text-[12px] leading-relaxed text-amber-200/80">{problem}</p>}
+        {problem && <p className="mt-2 text-[12px] leading-relaxed text-amber-700/80">{problem}</p>}
 
         {confirmStop ? (
           <div className="mt-3">
@@ -366,7 +366,7 @@ export default function RoutePanel() {
                 <ul className="mt-2 space-y-1.5">
                   {groupOpenItems(pendingOpen).map((group) => (
                     <li key={group.kind}>
-                      <p className="text-[11px] uppercase tracking-wider text-amber-200/50">
+                      <p className="text-[11px] uppercase tracking-wider text-amber-700/50">
                         {group.label} · {group.items.length}
                       </p>
                       {group.items.slice(0, 3).map((item) => (

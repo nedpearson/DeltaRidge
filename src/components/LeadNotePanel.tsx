@@ -195,7 +195,7 @@ export default function LeadNotePanel({
       </div>
 
       {pending.length > 0 && (
-        <ul className="mt-3 space-y-1.5 border-t border-white/8 pt-3">
+        <ul className="mt-3 space-y-1.5 border-t border-slate-300 pt-3">
           {pending.map((p, i) => (
             <li key={p.attachment.id} className="flex items-center justify-between gap-3">
               <span className="truncate text-[12.5px] text-[var(--color-ink)]/">{p.label}</span>

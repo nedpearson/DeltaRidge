@@ -131,7 +131,7 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
             {!area && <span className="text-brand-400">Required</span>}
             {area && <span className="text-green-400">Area Defined</span>}
           </label>
-          <div className="overflow-hidden rounded-xl border border-white/10">
+          <div className="overflow-hidden rounded-xl border border-slate-300">
             <div ref={mapContainer} className="h-64 w-full" />
           </div>
         </div>

@@ -178,7 +178,7 @@ export default function PropertyPage() {
       {managed !== null ? (
         <PropertyContactBar lead={managed} />
       ) : (
-        <div className="mt-3 flex items-center gap-2 rounded-xl bg-white/4 px-3 py-2.5">
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-200 px-3 py-2.5">
           <a
             href={`https://www.google.com/maps/dir/?api=1&destination=${lead.latitude},${lead.longitude}`}
             target="_blank"
@@ -201,7 +201,7 @@ export default function PropertyPage() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] ${
-              tab === t.key ? 'bg-gold-500/20 text-gold-300' : 'bg-white/6 text-[var(--color-ink)]/'
+              tab === t.key ? 'bg-gold-500/20 text-gold-300' : 'bg-slate-200 text-[var(--color-ink)]/'
             }`}
           >
             {t.label}
@@ -246,7 +246,7 @@ function FactRow<T>({
 }) {
   const known = fact.value !== null && fact.certainty !== 'unknown'
   return (
-    <div className="border-t border-white/8 py-2 first:border-t-0 first:pt-0">
+    <div className="border-t border-slate-300 py-2 first:border-t-0 first:pt-0">
       {/*
         `min-w-0` on both children, and it is not cosmetic. A flex item defaults
         to `min-width: auto`, which refuses to shrink below its content — so a
@@ -340,7 +340,7 @@ function OwnerTab({ profile, parcel }: { profile: PropertyProfile; parcel?: Parc
         }
       />
       {parcel && (
-        <p className="mt-2 border-t border-white/8 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-2 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
           {occupancyEvidence(parcel)}
         </p>
       )}
@@ -350,7 +350,7 @@ function OwnerTab({ profile, parcel }: { profile: PropertyProfile; parcel?: Parc
         a contact editor. A stale reassurance is worse than none: it describes a
         guarantee the software no longer makes.
       */}
-      <p className="mt-2 border-t border-white/8 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+      <p className="mt-2 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
         No phone or email is appended to this parcel from a data broker. A number appears here only
         when a homeowner gave it at the door, and calling it is gated on consent and on Louisiana’s
         solicitation hours.
@@ -388,7 +388,7 @@ function StormsTab({ profile }: { profile: PropertyProfile }) {
   return (
     <Card>
       {profile.storms.map((s: StormEvent) => (
-        <div key={s.externalId} className="border-t border-white/8 py-2 first:border-t-0 first:pt-0">
+        <div key={s.externalId} className="border-t border-slate-300 py-2 first:border-t-0 first:pt-0">
           <div className="flex items-baseline justify-between gap-3">
             <p className="text-[13px] text-[var(--color-ink)]/">
               {[s.city, s.countyParish].filter(Boolean).join(', ') || 'Unnamed location'}
@@ -440,7 +440,7 @@ function PermitsTab({
       {[...permits]
         .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))
         .map((p) => (
-          <div key={p.externalId} className="border-t border-white/8 py-2 first:border-t-0 first:pt-0">
+          <div key={p.externalId} className="border-t border-slate-300 py-2 first:border-t-0 first:pt-0">
             <div className="flex items-baseline justify-between gap-3">
               <p className="min-w-0 text-[13px] text-[var(--color-ink)]/">{p.permitType}</p>
               <p className="shrink-0 text-[11.5px] text-[var(--color-ink)]/">{shortDate(p.issuedAt)}</p>
@@ -450,7 +450,7 @@ function PermitsTab({
             )}
           </div>
         ))}
-      <p className="mt-2 border-t border-white/8 pt-2 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
+      <p className="mt-2 border-t border-slate-300 pt-2 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
         {profile.roof.lastReroofAt.value === null
           ? 'No re-roof permit appears above. A roof replaced without a permit leaves no record here, so this is strong evidence rather than proof.'
           : 'A re-roof permit records that work was authorised, not that it was finished.'}

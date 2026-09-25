@@ -20,7 +20,7 @@ interface Choice {
   tone: string
 }
 
-const NEUTRAL = 'bg-white/8 ring-1 ring-slate-200'
+const NEUTRAL = 'bg-slate-200 ring-1 ring-slate-200'
 const QUIET = 'bg-slate-100 hover:bg-slate-200 ring-1 ring-slate-200'
 
 /**

@@ -177,7 +177,7 @@ export default function DiagnosticsPage() {
         <Row label="Knocks read back" value={lastPull ? String(lastPull.activities) : '—'} muted />
         {lastPull?.skipped && <Row label="Last pull skipped" value={lastPull.skipped} muted />}
         {lastPull?.errors.map((e, i) => (
-          <p key={i} className="mt-1 break-words text-[12px] text-amber-200/70">
+          <p key={i} className="mt-1 break-words text-[12px] text-amber-700/70">
             {e}
           </p>
         ))}

@@ -202,7 +202,7 @@ export default function RoofImageryPanel({
                 <button
                   key={value}
                   onClick={() => setFilter(value)}
-                  className={`rounded-full px-3 py-1 text-[11px] ${filter === value ? 'bg-gold-500/20 text-gold-300' : 'bg-white/6 text-[var(--color-ink)]/'}`}
+                  className={`rounded-full px-3 py-1 text-[11px] ${filter === value ? 'bg-gold-500/20 text-gold-300' : 'bg-slate-200 text-[var(--color-ink)]/'}`}
                 >
                   {label}
                 </button>
@@ -247,12 +247,12 @@ export default function RoofImageryPanel({
                   </div>
                 )}
 
-                <div className="mt-3 max-h-40 space-y-1 overflow-y-auto border-t border-white/8 pt-2">
+                <div className="mt-3 max-h-40 space-y-1 overflow-y-auto border-t border-slate-300 pt-2">
                   {captures.map((capture) => (
                     <button
                       key={`${capture.captureId}-${capture.view}-${capture.imageUrn}`}
                       onClick={() => { setSelected(capture); setCompare(false) }}
-                      className={`flex w-full justify-between gap-3 rounded-lg px-2 py-2 text-left ${selected.imageUrn === capture.imageUrn ? 'bg-white/8' : 'hover:bg-slate-100 hover:bg-slate-200'}`}
+                      className={`flex w-full justify-between gap-3 rounded-lg px-2 py-2 text-left ${selected.imageUrn === capture.imageUrn ? 'bg-slate-200' : 'hover:bg-slate-100 hover:bg-slate-200'}`}
                     >
                       <span className="text-[11.5px] text-[var(--color-ink)]/">{date(capture.capturedUntil ?? capture.capturedFrom)} · {capture.view}</span>
                       <span className="shrink-0 text-[10.5px] text-[var(--color-ink)]/">{resolutionLabel(capture.gsdMetres)}</span>

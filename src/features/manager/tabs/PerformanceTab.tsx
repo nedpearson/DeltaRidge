@@ -104,7 +104,7 @@ export default function PerformanceTab({
             label="inspections sold"
           />
         </div>
-        <p className="mt-3 border-t border-white/5 pt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-3 border-t border-slate-300 pt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
           Pooled across the team, not averaged across reps — averaging lets somebody with four doors count
           as much as somebody with four hundred. There is no industry benchmark anywhere on this screen:
           Delta Ridge's own numbers are the only honest expectation for a Delta Ridge rep.
@@ -261,7 +261,7 @@ function RepDetail({
           />
         </div>
         {rep.quality.efficiency.contributions.length > 0 && (
-          <div className="mt-3 space-y-1 border-t border-white/5 pt-2">
+          <div className="mt-3 space-y-1 border-t border-slate-300 pt-2">
             {rep.quality.efficiency.contributions.map((c) => (
               <p key={c.label} className="text-[11.5px] text-[var(--color-ink)]/">
                 Score {c.label}: {c.decided} decided, {c.actual} won
@@ -296,7 +296,7 @@ function RepDetail({
               qualifying segment reads like a finding and contains none.
             </p>
           )}
-          <div className="mt-3 border-t border-white/5 pt-2">
+          <div className="mt-3 border-t border-slate-300 pt-2">
             <p className="text-[11px] font-medium text-[var(--color-ink)]/">Splits this system cannot make yet</p>
             {MISSING_SEGMENTS.map((missing) => (
               <p key={missing.name} className="mt-1 text-[11px] leading-relaxed text-[var(--color-ink)]/">
@@ -309,7 +309,7 @@ function RepDetail({
 
       {rep.completeness.notes.length > 0 && (
         <Card className="!bg-amber-500/6 ring-amber-500/15">
-          <p className="text-[12px] font-semibold text-amber-200/90">What is missing from this window</p>
+          <p className="text-[12px] font-semibold text-amber-700/90">What is missing from this window</p>
           {rep.completeness.notes.map((note) => (
             <p key={note} className="mt-1 text-[11.5px] leading-relaxed text-amber-100/60">
               {note}

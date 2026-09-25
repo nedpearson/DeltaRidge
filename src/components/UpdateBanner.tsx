@@ -69,7 +69,7 @@ export default function UpdateBanner() {
         bottom: 'calc(var(--bottom-nav-height, 0px) + env(safe-area-inset-bottom, 0px) + 0.75rem)',
       }}
     >
-      <div className="flex items-center gap-3 rounded-xl bg-[#1b2740] px-4 py-3 shadow-lg ring-1 ring-sky-400/25">
+      <div className="flex items-center gap-3 rounded-xl bg-[#1b2740] px-4 py-3 shadow-lg ring-1 ring-sky-300">
         <p className="flex-1 text-[13px] leading-snug text-[var(--color-ink)]/">
           {held ? (
             <>
@@ -92,7 +92,7 @@ export default function UpdateBanner() {
         )}
         <button
           onClick={applyUpdate}
-          className="shrink-0 rounded-lg bg-sky-400/15 px-3 py-2 text-[13px] font-semibold text-sky-200 ring-1 ring-sky-400/30"
+          className="shrink-0 rounded-lg bg-sky-100 px-3 py-2 text-[13px] font-semibold text-sky-700 ring-1 ring-sky-300"
         >
           {held || deferred ? 'Update now' : 'Update'}
         </button>

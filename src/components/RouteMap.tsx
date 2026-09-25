@@ -84,7 +84,7 @@ export default function RouteMap({
 
   if (points.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center">
+      <div className="rounded-2xl border border-dashed border-slate-300 px-5 py-10 text-center">
         <p className="font-display text-sm tracking-wide text-[var(--color-ink)]/">No trail for this route</p>
         <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-[var(--color-ink)]/">
           The route was recorded but no GPS fixes reached the server. The doors and their outcomes are
@@ -185,7 +185,7 @@ export default function RouteMap({
                 key={key}
                 onClick={() => onStyleChange(key)}
                 className={`rounded px-2 py-1 text-[11px] font-medium ${
-                  style === key ? 'bg-white/20 text-white' : 'text-[var(--color-ink)]/'
+                  style === key ? 'bg-slate-200 text-white' : 'text-[var(--color-ink)]/'
                 }`}
               >
                 {MAP_STYLES[key].label}

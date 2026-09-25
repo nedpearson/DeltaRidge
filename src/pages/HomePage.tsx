@@ -98,8 +98,8 @@ export default function HomePage() {
       )}
 
       {!backend.configured && (
-        <Card className="mt-4 !bg-amber-500/8 ring-amber-500/20">
-          <p className="text-[12px] leading-relaxed text-amber-200/90">{backend.reason}</p>
+        <Card className="mt-4 !bg-amber-100 ring-amber-300">
+          <p className="text-[12px] leading-relaxed text-amber-700/90">{backend.reason}</p>
         </Card>
       )}
 

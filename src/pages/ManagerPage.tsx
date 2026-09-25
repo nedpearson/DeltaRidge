@@ -250,8 +250,8 @@ export default function ManagerPage() {
       <SectionTitle {...(loading ? { hint: 'loading…' } : {})}>MANAGER</SectionTitle>
 
       {snapshot.error && (
-        <Card className="!bg-amber-500/8 ring-amber-500/20">
-          <p className="text-[13.5px] font-semibold text-amber-200">These numbers could not be loaded.</p>
+        <Card className="!bg-amber-100 ring-amber-300">
+          <p className="text-[13.5px] font-semibold text-amber-700">These numbers could not be loaded.</p>
           <p className="mt-1 text-[12px] leading-relaxed text-amber-100/70">{snapshot.error}</p>
           <p className="mt-1 text-[12px] leading-relaxed text-amber-100/50">
             Nothing below is showing zero because the team did nothing — it is showing nothing because the
@@ -278,7 +278,7 @@ export default function ManagerPage() {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
-              tab === t.id ? 'bg-gold-400 text-black' : 'bg-white/6 text-[var(--color-ink)]/'
+              tab === t.id ? 'bg-gold-400 text-black' : 'bg-slate-200 text-[var(--color-ink)]/'
             }`}
           >
             {t.label}
@@ -465,7 +465,7 @@ function TeamTab({
               <Stat value={String(rep.appointments)} label="appts" />
             </div>
 
-            <div className="mt-3 border-t border-white/8 pt-3">
+            <div className="mt-3 border-t border-slate-300 pt-3">
               <p className="text-[11px] uppercase tracking-wide text-[var(--color-ink)]/">GPS evidence</p>
               <p className="mt-1 text-[12.5px] text-[var(--color-ink)]/">
                 {rep.verified} confirmed · {rep.probable} consistent · {rep.unverified} off-property ·{' '}
@@ -483,7 +483,7 @@ function TeamTab({
               )}
             </div>
 
-            <div className="mt-3 border-t border-white/8 pt-3">
+            <div className="mt-3 border-t border-slate-300 pt-3">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="text-[11px] uppercase tracking-wide text-[var(--color-ink)]/">Against the doors given</p>
                 <p className="text-[15px] font-semibold">
@@ -589,7 +589,7 @@ function FieldTab({
 
       {flagged.length > 0 && (
         <Card>
-          <p className="text-[11px] uppercase tracking-wider text-amber-200/60">
+          <p className="text-[11px] uppercase tracking-wider text-amber-700/60">
             Worth a look · {flagged.length}
           </p>
           {/*
@@ -770,7 +770,7 @@ function AssignTab({
                 </button>
 
                 {expanded && (
-                  <div className="mt-2 space-y-2 border-t border-white/8 pt-2">
+                  <div className="mt-2 space-y-2 border-t border-slate-300 pt-2">
                     {suggestions.length === 0 ? (
                       <p className="text-[11.5px] text-[var(--color-ink)]/">
                         No active reps on the team to suggest.
@@ -785,7 +785,7 @@ function AssignTab({
                           <ul className="mt-0.5 space-y-0.5">
                             {s.factors.map((f) => (
                               <li key={f.label} className="text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
-                                <span className={f.weight < 0 ? 'text-amber-200/70' : 'text-[var(--color-ink)]/'}>
+                                <span className={f.weight < 0 ? 'text-amber-700/70' : 'text-[var(--color-ink)]/'}>
                                   {f.weight > 0 ? '+' : ''}
                                   {f.weight}
                                 </span>{' '}
@@ -823,7 +823,7 @@ function AssignTab({
                       ))
                     )}
                     {failed && (
-                      <p className="text-[11.5px] leading-relaxed text-amber-200/80">{failed}</p>
+                      <p className="text-[11.5px] leading-relaxed text-amber-700/80">{failed}</p>
                     )}
                     <p className="text-[11px] leading-relaxed text-[var(--color-ink)]/">
                       Assigning sends this door to the server first, as a target rather than a knock.
@@ -878,7 +878,7 @@ function TerritoryTab({
             between them is work on a street the team has already paid to reach.
           </p>
           {routeCoverageError && (
-            <p className="mt-2 text-[11.5px] leading-relaxed text-amber-200/70">
+            <p className="mt-2 text-[11.5px] leading-relaxed text-amber-700/70">
               Coverage could not be read: {routeCoverageError}. The figures below are missing, not
               zero.
             </p>
@@ -977,7 +977,7 @@ function TerritoryFromDevice({
             {row.bestScore !== null && ` · best door ${row.bestScore}`}
           </p>
           {row.available > 0 && (
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/8">
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
               <div
                 className="h-full rounded-full bg-gold-400"
                 style={{ width: `${Math.round(row.share * 100)}%` }}

@@ -11,9 +11,9 @@ import { integrityChecks, summarise, type CheckState, type IntegrityEvidence } f
 
 const TONE: Record<CheckState, { dot: string; text: string; word: string }> = {
   established: { dot: 'bg-emerald-400', text: 'text-[var(--color-ink)]/', word: 'Established' },
-  reported: { dot: 'bg-white/30', text: 'text-[var(--color-ink)]/', word: 'Reported' },
+  reported: { dot: 'bg-slate-200', text: 'text-[var(--color-ink)]/', word: 'Reported' },
   stale: { dot: 'bg-amber-400', text: 'text-[var(--color-ink)]/', word: 'Ageing' },
-  absent: { dot: 'bg-white/15', text: 'text-[var(--color-ink)]/', word: 'None' },
+  absent: { dot: 'bg-slate-200', text: 'text-[var(--color-ink)]/', word: 'None' },
   attention: { dot: 'bg-red-400', text: 'text-[var(--color-ink)]/', word: 'Needs attention' },
 }
 

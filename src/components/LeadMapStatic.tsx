@@ -280,7 +280,7 @@ export default function LeadMapStatic({
                   setTilesFailed(false)
                 }}
                 className={`px-2.5 py-1 text-[11px] font-semibold ${
-                  style === key ? 'bg-brand-600 text-white' : 'bg-white/90 text-brand-950'
+                  style === key ? 'bg-brand-600 text-white' : 'bg-slate-200 text-brand-950'
                 }`}
               >
                 {MAP_STYLES[key].label}
@@ -291,28 +291,28 @@ export default function LeadMapStatic({
           <div className="absolute bottom-2 right-2 flex gap-1">
             <button
               onClick={() => recentre(zoomBy(current, -1))}
-              className="rounded-lg bg-white/90 px-2.5 py-1 text-[14px] font-semibold text-brand-950 ring-1 ring-black/10"
+              className="rounded-lg bg-slate-200 px-2.5 py-1 text-[14px] font-semibold text-brand-950 ring-1 ring-black/10"
               aria-label="Zoom out"
             >
               −
             </button>
             <button
               onClick={() => recentre(zoomBy(current, 1))}
-              className="rounded-lg bg-white/90 px-2.5 py-1 text-[14px] font-semibold text-brand-950 ring-1 ring-black/10"
+              className="rounded-lg bg-slate-200 px-2.5 py-1 text-[14px] font-semibold text-brand-950 ring-1 ring-black/10"
               aria-label="Zoom in"
             >
               +
             </button>
             <button
               onClick={() => recentre(null)}
-              className="rounded-lg bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-brand-950 ring-1 ring-black/10"
+              className="rounded-lg bg-slate-200 px-2.5 py-1 text-[11px] font-semibold text-brand-950 ring-1 ring-black/10"
             >
               Fit
             </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-white/8 px-3 py-2">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-slate-300 px-3 py-2">
           {LEGEND.map((l) => (
             <span key={l.status} className="flex items-center gap-1.5 text-[10.5px] text-[var(--color-ink)]/">
               <span
@@ -325,7 +325,7 @@ export default function LeadMapStatic({
         </div>
 
         {selected && (
-          <div className="border-t border-white/8 px-3 py-2.5">
+          <div className="border-t border-slate-300 px-3 py-2.5">
             <p className="truncate text-[13px] text-[var(--color-ink)]/">{selected.label}</p>
             <p className="mt-0.5 text-[11px] text-[var(--color-ink)]/">
               {selected.status === 'door' ? 'Not knocked yet' : STATUS_LABEL[selected.status]}
@@ -353,13 +353,13 @@ export default function LeadMapStatic({
         )}
 
         {!hasBasemap() && (
-          <p className="border-t border-white/8 px-3 py-2 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
+          <p className="border-t border-slate-300 px-3 py-2 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
             Positions only — there are no streets under these dots. Add a Mapbox public token as
             VITE_MAPBOX_PUBLIC_TOKEN and the street map appears here.
           </p>
         )}
         {hasBasemap() && tilesFailed && (
-          <p className="border-t border-white/8 px-3 py-2 text-[10.5px] leading-relaxed text-amber-200/70">
+          <p className="border-t border-slate-300 px-3 py-2 text-[10.5px] leading-relaxed text-amber-700/70">
             The {onSatellite ? 'satellite' : 'street'} map could not load, so this is positions
             only. The dots are still right.
           </p>

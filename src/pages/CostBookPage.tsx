@@ -159,7 +159,7 @@ export default function CostBookPage() {
       </Card>
 
       {saveError && (
-        <p className="rounded-lg bg-amber-400/10 px-3 py-2 text-[13px] text-amber-200 ring-1 ring-amber-400/25">
+        <p className="rounded-lg bg-amber-100 px-3 py-2 text-[13px] text-amber-700 ring-1 ring-amber-300">
           {saveError}
         </p>
       )}

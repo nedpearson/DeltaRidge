@@ -150,7 +150,7 @@ export default function RoofrTab({
 
         {freshToken !== null && (
           <div className="mt-3 rounded border border-gold-400/40 bg-gold-400/10 px-3 py-3">
-            <p className="text-sm text-gold-200">
+            <p className="text-sm text-gold-700">
               Copy this now. It is not stored and cannot be shown again.
             </p>
             <p className="mt-2 break-all font-mono text-xs text-[var(--color-ink)]">{freshToken}</p>

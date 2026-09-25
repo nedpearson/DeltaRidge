@@ -6,8 +6,8 @@ import { CATEGORY_LABELS, type PhotoCategory } from './photo-categories'
 
 const TONE: Record<CompletenessIssue['severity'], { ring: string; dot: string; label: string }> = {
   blocker: { ring: 'ring-red-500/30 bg-red-500/8', dot: 'bg-red-400', label: 'Office needs this' },
-  warning: { ring: 'ring-amber-500/25 bg-amber-500/8', dot: 'bg-amber-400', label: 'Office will call' },
-  advisory: { ring: 'ring-slate-200 bg-white/4', dot: 'bg-white/30', label: 'Worth adding' },
+  warning: { ring: 'ring-amber-500/25 bg-amber-100', dot: 'bg-amber-400', label: 'Office will call' },
+  advisory: { ring: 'ring-slate-200 bg-slate-200', dot: 'bg-slate-200', label: 'Worth adding' },
 }
 
 export default function ReviewPanel({
@@ -86,7 +86,7 @@ export default function ReviewPanel({
       {report.issues.length === 0 ? (
         <Card className="mt-3 !bg-emerald-500/8 ring-emerald-500/20">
           <p className="text-[14px] font-semibold text-emerald-300">Nothing missing.</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-emerald-200/70">
+          <p className="mt-1 text-[12px] leading-relaxed text-emerald-700/70">
             Every required photo is captured, every observation has a supporting picture, and the office has what it
             needs to price this.
           </p>
@@ -232,7 +232,7 @@ export default function ReviewPanel({
               </p>
             </div>
             {inspection.overriddenIssueCodes && inspection.overriddenIssueCodes.length > 0 && (
-              <div className="rounded-lg bg-amber-500/8 px-3 py-2 ring-1 ring-amber-500/20">
+              <div className="rounded-lg bg-amber-100 px-3 py-2 ring-1 ring-amber-300">
                 <p className="font-display text-[10px] tracking-widest text-amber-300/70">FINISHED WITH GAPS</p>
                 <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--color-ink)]/">
                   The rep closed this out with {inspection.overriddenIssueCodes.length} item
@@ -241,7 +241,7 @@ export default function ReviewPanel({
                 </p>
               </div>
             )}
-            <p className="border-t border-white/8 pt-2.5 text-[11px] text-[var(--color-ink)]/">
+            <p className="border-t border-slate-300 pt-2.5 text-[11px] text-[var(--color-ink)]/">
               Sending puts this package in the office queue on the Delta Ridge server, where the office can open it.
               Automatic delivery into CompanyCam — which syncs onward into Roofr — turns on once an API token is
               configured.
@@ -254,7 +254,7 @@ export default function ReviewPanel({
         {inspection.sentToOfficeAt ? (
           <Card className="!bg-emerald-500/8 ring-emerald-500/20">
             <p className="text-[14px] font-semibold text-emerald-300">The office has this.</p>
-            <p className="mt-1 text-[12px] leading-relaxed text-emerald-200/70">
+            <p className="mt-1 text-[12px] leading-relaxed text-emerald-700/70">
               Sent {new Date(inspection.sentToOfficeAt).toLocaleString()}. If it is still listed as waiting to sync,
               the package is safe on this device and will go up on its own.
             </p>

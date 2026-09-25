@@ -95,7 +95,7 @@ export default function MessagingReadiness({ leads }: { leads: readonly ManagedL
           {open ? 'Hide what bulk sending would need' : 'What bulk sending would need'}
         </button>
         {open && (
-          <ul className="mt-1 space-y-2.5 border-t border-white/8 pt-3">
+          <ul className="mt-1 space-y-2.5 border-t border-slate-300 pt-3">
             {requirements.map((r) => (
               <li key={r.label} className="flex gap-2.5">
                 <span

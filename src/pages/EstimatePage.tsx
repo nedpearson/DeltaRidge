@@ -249,7 +249,7 @@ export default function EstimatePage() {
 
       {!ready && (
         <Card>
-          <p className="text-[13px] leading-relaxed text-amber-200">
+          <p className="text-[13px] leading-relaxed text-amber-700">
             Your costs are not entered yet, so nothing can be priced. This is not a setup step to
             skip — the estimator refuses to invent a price.
           </p>
@@ -266,7 +266,7 @@ export default function EstimatePage() {
             <span className="font-semibold text-[var(--color-ink)]">{money(saved.sellPriceCents as Cents)}</span>.
           </p>
           {drifted && (
-            <p className="mt-2 text-[12px] leading-relaxed text-amber-200">
+            <p className="mt-2 text-[12px] leading-relaxed text-amber-700">
               Your cost sheet has changed since this was priced. The figures below are recalculated
               at today&apos;s costs — the saved version keeps the price the homeowner was given.
               Save a new version to record the change.
@@ -363,7 +363,7 @@ export default function EstimatePage() {
 
           {built.gaps.length > 0 && (
             <Card>
-              <p className="text-[13px] font-semibold text-amber-200">
+              <p className="text-[13px] font-semibold text-amber-700">
                 {built.gaps.length} item{built.gaps.length === 1 ? '' : 's'} could not be priced
               </p>
               <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-ink)]/">
@@ -474,7 +474,7 @@ export default function EstimatePage() {
       )}
 
       {saveError && (
-        <p className="rounded-lg bg-amber-400/10 px-3 py-2 text-[13px] text-amber-200 ring-1 ring-amber-400/25">
+        <p className="rounded-lg bg-amber-100 px-3 py-2 text-[13px] text-amber-700 ring-1 ring-amber-300">
           {saveError}
         </p>
       )}
@@ -501,7 +501,7 @@ export default function EstimatePage() {
                     onClick={() => reopen(s)}
                     className="flex w-full items-baseline gap-3 text-left text-[13px]"
                   >
-                    <span className={`flex-1 truncate ${open ? 'text-sky-200' : 'text-[var(--color-ink)]/'}`}>
+                    <span className={`flex-1 truncate ${open ? 'text-sky-700' : 'text-[var(--color-ink)]/'}`}>
                       {s.label}
                       {open && ' · open'}
                     </span>

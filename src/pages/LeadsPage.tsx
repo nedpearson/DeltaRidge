@@ -172,7 +172,7 @@ function DoorCard({
       <OwnerLine parcel={parcel} />
 
       {managed && (
-        <p className="mt-2 inline-block rounded-full bg-white/8 px-2.5 py-1 text-[11px] text-[var(--color-ink)]/">
+        <p className="mt-2 inline-block rounded-full bg-slate-200 px-2.5 py-1 text-[11px] text-[var(--color-ink)]/">
           {STATUS_LABEL[managed.status]} · knocked {managed.knockCount}x
         </p>
       )}
@@ -339,7 +339,7 @@ function ScoreSpread({ doors }: { doors: readonly ScoredLead[] }) {
  */
 function ScoreBreakdown({ lead }: { lead: ScoredLead }) {
   return (
-    <div className="mt-1 border-t border-white/8 pt-2">
+    <div className="mt-1 border-t border-slate-300 pt-2">
       <ul className="space-y-1">
         {lead.breakdown.map((factor) => (
           <li key={factor.label} className="flex items-baseline gap-2 text-[12px]">
@@ -353,7 +353,7 @@ function ScoreBreakdown({ lead }: { lead: ScoredLead }) {
           </li>
         ))}
       </ul>
-      <div className="mt-1.5 flex items-baseline gap-2 border-t border-white/8 pt-1.5 text-[12px]">
+      <div className="mt-1.5 flex items-baseline gap-2 border-t border-slate-300 pt-1.5 text-[12px]">
         <span className="w-9 shrink-0 text-right font-display text-[var(--color-ink)]/">{lead.score}</span>
         <span className="text-[var(--color-ink)]/">Priority</span>
       </div>
@@ -402,7 +402,7 @@ function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
         {due && (
           <span
             className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] ${
-              overdue ? 'bg-gold-500/20 text-gold-300' : 'bg-white/8 text-[var(--color-ink)]/'
+              overdue ? 'bg-gold-500/20 text-gold-300' : 'bg-slate-200 text-[var(--color-ink)]/'
             }`}
           >
             {due}
@@ -483,7 +483,7 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
           {official.kind === 'failed' ? ` ${official.why}` : ''}
         </p>
 
-        <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-white/8 pt-3">
+        <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-slate-300 pt-3">
           <p className="text-[13px] text-[var(--color-ink)]/">Radar-estimated hail (NEXRAD)</p>
           {coverage.radar.kind === 'live' ? (
             <p className="shrink-0 font-display text-[15px] text-emerald-400">
@@ -505,11 +505,11 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
         </p>
 
         {coverage.byYear.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5 border-t border-white/8 pt-3">
+          <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-300 pt-3">
             {coverage.byYear.map((y) => (
               <span
                 key={y.year}
-                className="rounded-full bg-white/6 px-2.5 py-1 text-[11px] text-[var(--color-ink)]/"
+                className="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] text-[var(--color-ink)]/"
               >
                 {y.year} · {y.count}
               </span>
@@ -524,7 +524,7 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
           {open ? 'Hide storms' : `View ${events.length} storm${events.length === 1 ? '' : 's'}`}
         </button>
         {open && (
-          <ul className="mt-1 space-y-1.5 border-t border-white/8 pt-2">
+          <ul className="mt-1 space-y-1.5 border-t border-slate-300 pt-2">
             {events.length === 0 && (
               <li className="text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
                 Nothing qualified in this window. That is the feed answering, not the feed failing.
@@ -583,7 +583,7 @@ function Chip({
     <button
       onClick={onClick}
       className={`flex shrink-0 items-baseline gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
-        active ? 'bg-gold-500 text-brand-950' : 'bg-white/8 text-[var(--color-ink)]/'
+        active ? 'bg-gold-500 text-brand-950' : 'bg-slate-200 text-[var(--color-ink)]/'
       }`}
     >
       {label}
@@ -864,8 +864,8 @@ export default function LeadsPage() {
       </div>
 
       {error && (
-        <Card className="mt-3 !bg-amber-500/8 ring-amber-500/20">
-          <p className="text-[12.5px] leading-relaxed text-amber-200/90">{error}</p>
+        <Card className="mt-3 !bg-amber-100 ring-amber-300">
+          <p className="text-[12.5px] leading-relaxed font-medium text-amber-900">{error}</p>
         </Card>
       )}
 
@@ -947,9 +947,9 @@ export default function LeadsPage() {
           {run && (
             <>
               {run.notes.length > 0 && (
-                <Card className="mt-3 !bg-amber-500/8 ring-amber-500/20">
+                <Card className="mt-3 !bg-amber-100 ring-amber-300">
                   {run.notes.map((note) => (
-                    <p key={note} className="text-[12.5px] leading-relaxed text-amber-200/90">
+                    <p key={note} className="text-[12.5px] leading-relaxed text-amber-700/90">
                       {note}
                     </p>
                   ))}
@@ -1020,7 +1020,7 @@ export default function LeadsPage() {
                   className={`mt-2 w-full rounded-full px-4 py-2 text-[12.5px] ${
                     ownerOccupiedOnly
                       ? 'bg-emerald-500/20 text-emerald-300'
-                      : 'bg-white/6 text-[var(--color-ink)]/'
+                      : 'bg-slate-200 text-[var(--color-ink)]/'
                   }`}
                 >
                   {ownerOccupiedOnly
@@ -1098,7 +1098,7 @@ export default function LeadsPage() {
                       {showCompetitors ? 'Hide' : 'Show re-roof permits by contractor'}
                     </Button>
                     {showCompetitors && (
-                      <ul className="mt-3 space-y-2 border-t border-white/8 pt-3">
+                      <ul className="mt-3 space-y-2 border-t border-slate-300 pt-3">
                         {run.competitors.map((c) => (
                           <li
                             key={c.contractorName}

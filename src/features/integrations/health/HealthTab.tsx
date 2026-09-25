@@ -22,9 +22,9 @@ const TONE: Record<HealthState, { dot: string; word: string }> = {
   down: { dot: 'bg-red-400', word: 'Down' },
   degraded: { dot: 'bg-amber-400', word: 'Unreliable' },
   stale: { dot: 'bg-amber-400', word: 'Gone quiet' },
-  never_used: { dot: 'bg-white/30', word: 'Unproven' },
+  never_used: { dot: 'bg-slate-200', word: 'Unproven' },
   healthy: { dot: 'bg-emerald-400', word: 'Working' },
-  not_configured: { dot: 'bg-white/15', word: 'Not set up' },
+  not_configured: { dot: 'bg-slate-200', word: 'Not set up' },
 }
 
 interface Row {

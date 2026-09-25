@@ -18,7 +18,7 @@ export default function ProofChip({ proof }: { proof: Proof }) {
 
   if (!proof.established) {
     return (
-      <div className="rounded-xl bg-white/4 px-3 py-2">
+      <div className="rounded-xl bg-slate-200 px-3 py-2">
         <p className="text-[12.5px] text-[var(--color-ink)]/">{proof.claim}</p>
         <p className="mt-0.5 text-[11.5px] text-[var(--color-ink)]/">{proof.because}</p>
       </div>
@@ -28,7 +28,7 @@ export default function ProofChip({ proof }: { proof: Proof }) {
   const oldest = oldestObservation(proof)
 
   return (
-    <div className="rounded-xl bg-white/4 px-3 py-2">
+    <div className="rounded-xl bg-slate-200 px-3 py-2">
       <button
         onClick={() => setOpen((v) => !v)}
         className="!min-h-0 flex w-full items-baseline justify-between gap-3 py-0.5 text-left"
@@ -45,7 +45,7 @@ export default function ProofChip({ proof }: { proof: Proof }) {
       )}
 
       {open && (
-        <div className="mt-2 space-y-2 border-t border-white/8 pt-2">
+        <div className="mt-2 space-y-2 border-t border-slate-300 pt-2">
           {proof.records.map((record, index) => (
             <div key={`${record.label}-${index}`} className="text-[12px] leading-relaxed">
               <p className="text-[var(--color-ink)]/">{record.detail}</p>
@@ -69,7 +69,7 @@ export default function ProofChip({ proof }: { proof: Proof }) {
             contractor can do, and it is the opposite of what the industry does.
           */}
           {proof.gaps.length > 0 && (
-            <div className="border-t border-white/8 pt-2">
+            <div className="border-t border-slate-300 pt-2">
               <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">
                 What this does not show
               </p>
@@ -84,7 +84,7 @@ export default function ProofChip({ proof }: { proof: Proof }) {
           )}
 
           {oldest !== null && (
-            <p className="border-t border-white/8 pt-2 text-[11px] text-[var(--color-ink)]/">
+            <p className="border-t border-slate-300 pt-2 text-[11px] text-[var(--color-ink)]/">
               {/* The oldest, not the newest. A case is only as current as its
                   weakest-dated record, and the flattering number is the one
                   nobody should be quoting. */}

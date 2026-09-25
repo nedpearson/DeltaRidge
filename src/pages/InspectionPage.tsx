@@ -125,7 +125,7 @@ export default function InspectionPage() {
               from what was recorded rather than from memory at the truck. */}
           <Link
             to={`/estimate/${inspection.id}`}
-            className="rounded-full bg-sky-400/10 px-2.5 py-1 text-[11px] font-medium text-sky-200 ring-1 ring-sky-400/25"
+            className="rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-medium text-sky-700 ring-1 ring-sky-300"
           >
             Price this roof
           </Link>

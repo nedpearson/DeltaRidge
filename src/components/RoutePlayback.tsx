@@ -175,7 +175,7 @@ export default function RoutePlayback({
               key={s}
               onClick={() => setSpeed(s)}
               className={`rounded px-2 py-0.5 text-[11px] ${
-                speed === s ? 'bg-white/15 text-white' : 'text-[var(--color-ink)]/'
+                speed === s ? 'bg-slate-200 text-white' : 'text-[var(--color-ink)]/'
               }`}
             >
               {s}×
@@ -214,7 +214,7 @@ function TimelineRow({
     <div
       data-active={active}
       className={`flex gap-3 rounded-xl px-3 py-2 transition-opacity ${
-        active ? 'bg-white/6' : ''
+        active ? 'bg-slate-200' : ''
       } ${reached ? 'opacity-100' : 'opacity-35'}`}
     >
       <span className="w-14 shrink-0 pt-0.5 text-[11px] tabular-nums text-[var(--color-ink)]/">

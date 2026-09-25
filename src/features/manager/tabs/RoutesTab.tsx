@@ -188,7 +188,7 @@ function OneRoute({
           <Stat value={String(stats.doors.appointments)} label="booked" />
         </div>
 
-        <div className="mt-3 space-y-1 border-t border-white/5 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+        <div className="mt-3 space-y-1 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
           <p>
             Tracked {duration(stats.trackedSeconds)} from first fix to last. Paused{' '}
             {duration(stats.pausedSeconds)}. {stats.gapCount} gap{stats.gapCount === 1 ? '' : 's'} totalling{' '}
@@ -209,7 +209,7 @@ function OneRoute({
       </Card>
 
       {signals.length > 0 && (
-        <Card className={needsReview(signals) ? '!bg-amber-500/8 ring-amber-500/20' : ''}>
+        <Card className={needsReview(signals) ? '!bg-amber-100 ring-amber-300' : ''}>
           <p className="text-[13px] font-semibold">
             {needsReview(signals) ? 'Worth opening before you draw a conclusion' : 'Worth knowing'}
           </p>
@@ -224,7 +224,7 @@ function OneRoute({
               </div>
             ))}
           </div>
-          <p className="mt-2.5 border-t border-white/5 pt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+          <p className="mt-2.5 border-t border-slate-300 pt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
             None of this is a finding about the rep. These are shapes in the data with an ordinary
             explanation attached to each one.
           </p>
@@ -232,7 +232,7 @@ function OneRoute({
       )}
 
       {error && (
-        <Card className="!bg-amber-500/8 ring-amber-500/20">
+        <Card className="!bg-amber-100 ring-amber-300">
           <p className="text-[12.5px] text-amber-100/80">The trail could not be read: {error}</p>
         </Card>
       )}

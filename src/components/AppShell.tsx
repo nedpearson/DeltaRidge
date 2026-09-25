@@ -139,7 +139,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
        */
       style={{ '--bottom-nav-height': `${navHeight}px` } as CSSProperties}
     >
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-200 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
             <div className="grid size-8 place-items-center rounded-md bg-brand-500 font-display text-sm font-bold text-white shadow-sm">DR</div>
@@ -172,7 +172,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {!hideNav && (
         <nav
           ref={navRef}
-          className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-screen-sm border-t border-white/5 bg-[var(--color-surface-2)]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur md:max-w-3xl lg:max-w-5xl"
+          className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-screen-sm border-t border-slate-300 bg-[var(--color-surface-2)]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur md:max-w-3xl lg:max-w-5xl"
         >
           {/*
             The column count is DERIVED from NAV, not written down beside it.

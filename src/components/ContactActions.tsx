@@ -50,7 +50,7 @@ function Action({
           {label}
         </Button>
         {availability.reason !== null && (
-          <p id={`why-${label}`} className="text-[10.5px] leading-tight text-amber-200/70">
+          <p id={`why-${label}`} className="text-[10.5px] leading-tight text-amber-700/70">
             {availability.reason}
           </p>
         )}
@@ -100,7 +100,7 @@ export default function ContactActions({
      * belongs to the navigation, and a second fixed bar down there is how the
      * two end up on top of each other on a small phone.
      */
-    <div className="sticky top-[57px] z-10 -mx-4 mb-3 border-b border-white/5 bg-[var(--color-surface)]/95 px-4 py-3 backdrop-blur">
+    <div className="sticky top-[57px] z-10 -mx-4 mb-3 border-b border-slate-300 bg-[var(--color-surface)]/95 px-4 py-3 backdrop-blur">
       {phone !== null ? (
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
           {/* A phone number is a thing people read aloud and type; it gets to be

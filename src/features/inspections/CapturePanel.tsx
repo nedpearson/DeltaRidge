@@ -108,12 +108,12 @@ export default function CapturePanel({
 
       {busy && (
         <Card className="mb-3 !bg-brand-500/10 ring-brand-500/20">
-          <p className="text-[13px] text-brand-200">Processing photo and checking quality…</p>
+          <p className="text-[13px] text-brand-700">Processing photo and checking quality…</p>
         </Card>
       )}
       {error && (
         <Card className="mb-3 !bg-red-500/10 ring-red-500/20">
-          <p className="text-[13px] text-red-200">{error}</p>
+          <p className="text-[13px] text-red-700">{error}</p>
         </Card>
       )}
 

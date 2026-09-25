@@ -289,7 +289,7 @@ export default function LeadMapLive({
                 key={key}
                 onClick={() => switchStyle(key)}
                 className={`px-2.5 py-1 text-[11px] font-semibold ${
-                  style === key ? 'bg-brand-600 text-white' : 'bg-white/90 text-brand-950'
+                  style === key ? 'bg-brand-600 text-white' : 'bg-slate-200 text-brand-950'
                 }`}
               >
                 {MAP_STYLES[key].label}
@@ -299,13 +299,13 @@ export default function LeadMapLive({
 
           <button
             onClick={fit}
-            className="absolute right-2 top-2 z-10 rounded-lg bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-brand-950 ring-1 ring-black/15"
+            className="absolute right-2 top-2 z-10 rounded-lg bg-slate-200 px-2.5 py-1 text-[11px] font-semibold text-brand-950 ring-1 ring-black/15"
           >
             Fit
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-white/8 px-3 py-2">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-slate-300 px-3 py-2">
           {LEGEND.map((l) => (
             <span key={l.status} className="flex items-center gap-1.5 text-[10.5px] text-[var(--color-ink)]/">
               <span
@@ -318,7 +318,7 @@ export default function LeadMapLive({
         </div>
 
         {selected && (
-          <div className="border-t border-white/8 px-3 py-2.5">
+          <div className="border-t border-slate-300 px-3 py-2.5">
             <p className="truncate text-[13px] text-[var(--color-ink)]/">{selected.label}</p>
             <p className="mt-0.5 text-[11px] text-[var(--color-ink)]/">
               {selected.status === 'door'

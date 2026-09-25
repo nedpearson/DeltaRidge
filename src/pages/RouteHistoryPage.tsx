@@ -166,7 +166,7 @@ export default function RouteHistoryPage() {
               nothing was measured, not that nobody moved.
             </p>
           )}
-          {note && <p className="mt-2 text-[11.5px] leading-relaxed text-amber-200/70">{note}</p>}
+          {note && <p className="mt-2 text-[11.5px] leading-relaxed text-amber-700/70">{note}</p>}
         </Card>
 
         {/*
@@ -245,7 +245,7 @@ export default function RouteHistoryPage() {
             onClick={() => setWindowKey(w.key)}
             className={
               'rounded-full px-3 py-1.5 text-[11.5px] ' +
-              (w.key === windowKey ? 'bg-gold-400/20 text-gold-200' : 'bg-white/6 text-[var(--color-ink)]/')
+              (w.key === windowKey ? 'bg-gold-400/20 text-gold-700' : 'bg-slate-200 text-[var(--color-ink)]/')
             }
           >
             {w.label}
@@ -281,7 +281,7 @@ export default function RouteHistoryPage() {
                 </div>
 
                 {s.attribution === 'inferred' && (
-                  <p className="mt-2 text-[11px] text-amber-200/60">Doors matched by time of day</p>
+                  <p className="mt-2 text-[11px] text-amber-700/60">Doors matched by time of day</p>
                 )}
                 {(pointsBySession[s.sessionId]?.length ?? 0) === 0 && (
                   <p className="mt-1 text-[11px] text-[var(--color-ink)]/">No GPS recorded — nothing to replay</p>

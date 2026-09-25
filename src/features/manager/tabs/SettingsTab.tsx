@@ -127,7 +127,7 @@ export default function SettingsTab({
           ))}
         </div>
         <p
-          className={`mt-2 text-[11.5px] ${balanced ? 'text-[var(--color-ink)]/' : 'text-amber-200/80'}`}
+          className={`mt-2 text-[11.5px] ${balanced ? 'text-[var(--color-ink)]/' : 'text-amber-700/80'}`}
         >
           {balanced
             ? 'Adds to 100%.'
@@ -200,7 +200,7 @@ export default function SettingsTab({
       </Card>
 
       {error && (
-        <Card className="!bg-amber-500/8 ring-amber-500/20">
+        <Card className="!bg-amber-100 ring-amber-300">
           <p className="text-[12.5px] text-amber-100/80">{error}</p>
         </Card>
       )}

@@ -157,15 +157,15 @@ export default function GradesTab({
               ? 'A grade is suggested from the figures. It is not the rep’s grade until you accept or change it.'
               : 'A grade is computed automatically and stands until you change it. It stays labelled as computed.'}
         </p>
-        <p className="mt-2 border-t border-white/5 pt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-2 border-t border-slate-300 pt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
           The suggestion is a published weighted rubric, not a language model — arithmetic you can check,
           with every weight and threshold on screen. It is never computed from {NEVER_GRADED_ON.join(', ')}.
         </p>
       </Card>
 
       {error && (
-        <Card className="!bg-amber-500/8 ring-amber-500/20">
-          <p className="text-[12.5px] font-semibold text-amber-200">That did not save.</p>
+        <Card className="!bg-amber-100 ring-amber-300">
+          <p className="text-[12.5px] font-semibold text-amber-700">That did not save.</p>
           <p className="mt-1 text-[12px] leading-relaxed text-amber-100/70">{error}</p>
         </Card>
       )}
@@ -203,7 +203,7 @@ export default function GradesTab({
             <p className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">{verdict.note}</p>
 
             {config.mode !== 'manual' && (
-              <div className="mt-2 rounded-xl bg-white/4 px-3 py-2">
+              <div className="mt-2 rounded-xl bg-slate-200 px-3 py-2">
                 <p className="text-[12px]">
                   Suggested: <span className="font-semibold">{computed.letter ?? 'no grade'}</span>
                   {computed.score !== null && ` · ${Math.round(computed.score)}/100`}
@@ -211,7 +211,7 @@ export default function GradesTab({
                   {pct(computed.confidence)}
                 </p>
                 {computed.lowConfidence && (
-                  <p className="mt-1 text-[11px] leading-relaxed text-amber-200/70">
+                  <p className="mt-1 text-[11px] leading-relaxed text-amber-700/70">
                     Low confidence. {pct(computed.coverage)} of the rubric could be scored and the data is{' '}
                     {pct(computed.confidenceFrom.dataCompleteness)} complete. Worth reading the breakdown
                     before using this for anything.
@@ -311,7 +311,7 @@ function Review({
   const canSubmit = canManage && !busy && (!differs || reason.trim() !== '')
 
   return (
-    <div className="mt-3 space-y-3 border-t border-white/5 pt-3">
+    <div className="mt-3 space-y-3 border-t border-slate-300 pt-3">
       <div>
         <p className="text-[12px] font-semibold text-[var(--color-ink)]/">HOW THIS WAS WORKED OUT</p>
         <div className="mt-2 space-y-1.5">
@@ -338,7 +338,7 @@ function Review({
         <div>
           <p className="text-[12px] font-semibold text-[var(--color-ink)]/">WHAT IS WORKING</p>
           {computed.strengths.map((line) => (
-            <p key={line} className="mt-1 text-[11.5px] leading-relaxed text-emerald-200/70">
+            <p key={line} className="mt-1 text-[11.5px] leading-relaxed text-emerald-700/70">
               {line}
             </p>
           ))}
@@ -349,7 +349,7 @@ function Review({
         <div>
           <p className="text-[12px] font-semibold text-[var(--color-ink)]/">WHERE DEALS ARE GOING</p>
           {computed.weaknesses.map((line) => (
-            <p key={line} className="mt-1 text-[11.5px] leading-relaxed text-amber-200/70">
+            <p key={line} className="mt-1 text-[11.5px] leading-relaxed text-amber-700/70">
               {line}
             </p>
           ))}
