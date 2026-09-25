@@ -14,6 +14,7 @@
     "check:layout": "vite build && (vite preview --port 4173 --host 127.0.0.1 & sleep 4) && node scripts/check-layout.mjs"
   },
   "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.2",
     "@supabase/supabase-js": "^2.48.1",
     "@tanstack/react-query": "^5.66.0",
     "@types/mapbox-gl": "^3.4.1",
@@ -28,6 +29,7 @@
     "@eslint/js": "^9.19.0",
     "@tailwindcss/vite": "^4.0.6",
     "@testing-library/react": "^16.2.0",
+    "@types/mapbox__mapbox-gl-draw": "^1.4.9",
     "@types/node": "^22.13.1",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",

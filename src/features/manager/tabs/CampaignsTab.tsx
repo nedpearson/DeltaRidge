@@ -1,6 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import mapboxgl from 'mapbox-gl'
+import MapboxDraw from '@mapbox/mapbox-gl-draw'
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { Button, Card, SectionTitle } from '@/components/ui'
 import { Nothing } from '@/features/manager/tabs/shared'
+import { supabase } from '@/lib/supabase'
 
 export default function CampaignsTab() {
   const [isCreating, setIsCreating] = useState(false)
@@ -24,34 +28,122 @@ export default function CampaignsTab() {
           body="Campaign scoping (Spec 16) is wired up. You can create targeted geographic areas and assign leads to them."
         />
       ) : (
-        <Card className="animate-in fade-in slide-in-from-top-2">
-          <h3 className="mb-4 text-sm font-semibold text-white">New Campaign Scope</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-xs text-white/50">Campaign Name</label>
-              <input type="text" className="w-full rounded-xl bg-surface-3 px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-brand-500" placeholder="e.g., Spring Hail Storm - Area 4" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-white/50">Target Area</label>
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-surface/50 p-8 text-center">
-                <svg className="mb-2 h-8 w-8 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-                <p className="text-sm font-medium text-white/60">Draw Geographic Scope</p>
-                <p className="mt-1 text-xs text-brand-400">Mapbox GL Draw integration pending full Spec 16 review.</p>
-              </div>
-            </div>
-            <div className="flex gap-3 pt-4">
-              <Button variant="ghost" onClick={() => setIsCreating(false)}>
-                Cancel
-              </Button>
-              <Button className="flex-1">
-                Save Campaign
-              </Button>
-            </div>
-          </div>
-        </Card>
+        <CreateCampaignForm onCancel={() => setIsCreating(false)} />
       )}
     </div>
+  )
+}
+
+function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
+  const mapContainer = useRef<HTMLDivElement>(null)
+  const map = useRef<mapboxgl.Map | null>(null)
+  const draw = useRef<MapboxDraw | null>(null)
+  
+  const [name, setName] = useState('')
+  const [area, setArea] = useState<any>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!mapContainer.current) return
+
+    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN || ''
+    
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/satellite-streets-v12',
+      center: [-90.9634, 30.2241], // Default to Baton Rouge area
+      zoom: 11
+    })
+
+    draw.current = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {
+        polygon: true,
+        trash: true
+      },
+      defaultMode: 'draw_polygon'
+    })
+
+    map.current.addControl(draw.current)
+
+    map.current.on('draw.create', updateArea)
+    map.current.on('draw.delete', updateArea)
+    map.current.on('draw.update', updateArea)
+
+    function updateArea(e: any) {
+      const data = draw.current?.getAll()
+      if (data && data.features.length > 0) {
+        setArea(data)
+      } else {
+        setArea(null)
+      }
+    }
+
+    return () => {
+      map.current?.remove()
+    }
+  }, [])
+
+  const handleSave = async () => {
+    if (!name || !area) return
+    setSaving(true)
+    
+    try {
+      // Create campaign in Supabase with the drawn MultiPolygon
+      const feature = area.features[0] // Assuming single polygon for MVP
+      const { error } = await supabase.from('campaigns').insert({
+        name,
+        is_active: true,
+        area: feature.geometry // PostGIS will cast this GeoJSON to geography if formatted correctly
+      })
+      
+      if (error) throw error
+      onCancel()
+    } catch (err) {
+      console.error('Failed to save campaign:', err)
+      alert('Failed to save campaign. Check console.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card className="animate-in fade-in slide-in-from-top-2">
+      <h3 className="mb-4 text-sm font-semibold text-white">New Campaign Scope</h3>
+      <div className="space-y-4">
+        <div>
+          <label className="mb-1 block text-xs text-white/50">Campaign Name</label>
+          <input 
+            type="text" 
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full rounded-xl bg-surface-3 px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-brand-500" 
+            placeholder="e.g., Spring Hail Storm - Area 4" 
+          />
+        </div>
+        <div>
+          <label className="mb-1 flex items-center justify-between text-xs text-white/50">
+            <span>Target Area (Draw Polygon)</span>
+            {!area && <span className="text-brand-400">Required</span>}
+            {area && <span className="text-green-400">Area Defined</span>}
+          </label>
+          <div className="overflow-hidden rounded-xl border border-white/10">
+            <div ref={mapContainer} className="h-64 w-full" />
+          </div>
+        </div>
+        <div className="flex gap-3 pt-4">
+          <Button variant="ghost" onClick={onCancel} disabled={saving}>
+            Cancel
+          </Button>
+          <Button 
+            className="flex-1" 
+            disabled={!name || !area || saving}
+            onClick={handleSave}
+          >
+            {saving ? 'Saving...' : 'Save Campaign'}
+          </Button>
+        </div>
+      </div>
+    </Card>
   )
 }
