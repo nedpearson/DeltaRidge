@@ -29,7 +29,7 @@ interface Row {
 
 const TONE: Record<string, string> = {
   ok: 'text-emerald-300',
-  started: 'text-white/60',
+  started: 'text-[var(--color-ink)]/',
   refused: 'text-amber-300',
   failed: 'text-red-300',
   unknown: 'text-amber-300',
@@ -126,22 +126,22 @@ export default function TracePanel({ leadId }: { leadId?: string }) {
         />
       </div>
 
-      {note !== null && <p className="mt-2 text-[12px] text-white/45">{note}</p>}
-      {loading && <p className="mt-2 text-[12px] text-white/40">Loading…</p>}
+      {note !== null && <p className="mt-2 text-[12px] text-[var(--color-ink)]/">{note}</p>}
+      {loading && <p className="mt-2 text-[12px] text-[var(--color-ink)]/">Loading…</p>}
 
       {rows.length > 0 && (
         <ol className="mt-3 space-y-2">
           {rows.map((row, index) => (
             <li key={`${row.traceId}-${row.step}-${index}`} className="text-[12px] leading-relaxed">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                <span className={`min-w-0 break-words ${TONE[row.outcome] ?? 'text-white/70'}`}>
+                <span className={`min-w-0 break-words ${TONE[row.outcome] ?? 'text-[var(--color-ink)]/'}`}>
                   {row.step.replace(/[._]/g, ' ')}
                 </span>
-                <span className="shrink-0 text-[11px] text-white/35">
+                <span className="shrink-0 text-[11px] text-[var(--color-ink)]/">
                   {new Date(row.at).toLocaleTimeString()}
                 </span>
               </div>
-              <p className="text-[11px] text-white/35">
+              <p className="text-[11px] text-[var(--color-ink)]/">
                 {row.layer}
                 {carriedLabel(row.carriedSeconds) !== null && ` · ${carriedLabel(row.carriedSeconds)}`}
               </p>

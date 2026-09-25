@@ -20,8 +20,8 @@ interface Choice {
   tone: string
 }
 
-const NEUTRAL = 'bg-white/8 ring-1 ring-white/10'
-const QUIET = 'bg-white/5 ring-1 ring-white/8'
+const NEUTRAL = 'bg-white/8 ring-1 ring-slate-200'
+const QUIET = 'bg-slate-100 hover:bg-slate-200 ring-1 ring-slate-200'
 
 /**
  * The six that get tapped all day.
@@ -106,14 +106,14 @@ export default function DoorOutcomeSheet({
       }`}
     >
       <span className="block text-[13.5px] font-semibold">{OUTCOME_LABEL[c.outcome]}</span>
-      <span className="mt-0.5 block text-[10.5px] text-white/40">{c.hint}</span>
+      <span className="mt-0.5 block text-[10.5px] text-[var(--color-ink)]/">{c.hint}</span>
     </button>
   )
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-[var(--color-surface-2)] p-4 pb-8 ring-1 ring-white/10">
-        <p className="text-[11px] uppercase tracking-wider text-white/35">What happened at</p>
+      <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-[var(--color-surface-2)] p-4 pb-8 ring-1 ring-slate-200">
+        <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">What happened at</p>
         <p className="mt-0.5 truncate text-[15px] font-semibold">{address}</p>
 
         <div className="mt-3 grid grid-cols-2 gap-2">{PRIMARY.map(tile)}</div>
@@ -123,7 +123,7 @@ export default function DoorOutcomeSheet({
         ) : (
           <button
             onClick={() => setShowMore(true)}
-            className="mt-2 w-full rounded-xl bg-white/5 px-3 py-2.5 text-[12.5px] font-medium text-white/60 ring-1 ring-white/8"
+            className="mt-2 w-full rounded-xl bg-slate-100 hover:bg-slate-200 px-3 py-2.5 text-[12.5px] font-medium text-[var(--color-ink)]/ ring-1 ring-slate-200"
           >
             Something else happened
           </button>
@@ -191,7 +191,7 @@ export default function DoorOutcomeSheet({
             {needsTime && toIso(when) === undefined ? 'Pick a time' : needsNote ? 'Add a note' : 'Record it'}
           </Button>
         </div>
-        <p className="mt-2 text-center text-[10.5px] leading-relaxed text-white/25">
+        <p className="mt-2 text-center text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
           Saved on this device straight away. Nothing here claims a call was answered or a text
           was delivered — only that it was placed.
         </p>

@@ -185,7 +185,7 @@ export default function RoutePanel() {
         <SectionTitle>ROUTE SUMMARY</SectionTitle>
         <Card>
           <p className="text-[13.5px] font-semibold">Route saved.</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-white/45">
+          <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-ink)]/">
             Everything below is on this phone already. It reaches the office as soon as there is signal —
             you do not have to wait here for it.
           </p>
@@ -207,7 +207,7 @@ export default function RoutePanel() {
             </p>
           )}
 
-          <p className="mt-2 text-[11.5px] leading-relaxed text-white/40">
+          <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
             Distance counts only stretches the phone actually recorded. Gaps are left out rather than
             guessed at.
           </p>
@@ -218,12 +218,12 @@ export default function RoutePanel() {
           */}
           {outcomes.length > 0 && (
             <div className="mt-4 border-t border-white/8 pt-3">
-              <p className="text-[11px] uppercase tracking-wider text-white/35">Doors worked</p>
+              <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">Doors worked</p>
               <ul className="mt-2 space-y-1">
                 {outcomes.map((row) => (
                   <li key={row.outcome} className="flex items-baseline justify-between gap-3">
-                    <span className="text-[12.5px] text-white/75">{row.label}</span>
-                    <span className="font-display text-[13px] text-white/90">{row.count}</span>
+                    <span className="text-[12.5px] text-[var(--color-ink)]/">{row.label}</span>
+                    <span className="font-display text-[13px] text-[var(--color-ink)]/">{row.count}</span>
                   </li>
                 ))}
               </ul>
@@ -235,14 +235,14 @@ export default function RoutePanel() {
             with nothing above it shows a dash rather than 0% - see recap.ts.
           */}
           <div className="mt-4 border-t border-white/8 pt-3">
-            <p className="text-[11px] uppercase tracking-wider text-white/35">How the day converted</p>
+            <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">How the day converted</p>
             <ul className="mt-2 space-y-1">
               {funnel.stages.map((stage) => (
                 <li key={stage.key} className="flex items-baseline justify-between gap-3">
-                  <span className="text-[12.5px] text-white/75">{stage.label}</span>
+                  <span className="text-[12.5px] text-[var(--color-ink)]/">{stage.label}</span>
                   <span className="flex items-baseline gap-2">
-                    <span className="font-display text-[13px] text-white/90">{stage.count}</span>
-                    <span className="w-10 text-right text-[11px] text-white/35">
+                    <span className="font-display text-[13px] text-[var(--color-ink)]/">{stage.count}</span>
+                    <span className="w-10 text-right text-[11px] text-[var(--color-ink)]/">
                       {rateLabel(stage.rate)}
                     </span>
                   </span>
@@ -250,7 +250,7 @@ export default function RoutePanel() {
               ))}
             </ul>
             {funnel.unmeasured.length > 0 && (
-              <p className="mt-2 text-[11.5px] leading-relaxed text-white/40">
+              <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
                 {funnel.unmeasured.map((k) => FUNNEL_LABEL[k].toLowerCase()).join(', ')} are not
                 counted on this screen. They are left out rather than shown as zero, because a zero
                 here would read as a bad day instead of a number nobody collected.
@@ -271,11 +271,11 @@ export default function RoutePanel() {
               <ul className="mt-2 space-y-2">
                 {groupOpenItems(summary.open).map((group) => (
                   <li key={group.kind}>
-                    <p className="text-[11.5px] text-white/50">{group.label}</p>
+                    <p className="text-[11.5px] text-[var(--color-ink)]/">{group.label}</p>
                     {group.items.map((item) => (
-                      <p key={item.leadId} className="truncate text-[12.5px] text-white/80">
+                      <p key={item.leadId} className="truncate text-[12.5px] text-[var(--color-ink)]/">
                         {item.address}
-                        <span className="text-white/35"> — {item.detail}</span>
+                        <span className="text-[var(--color-ink)]/"> — {item.detail}</span>
                       </p>
                     ))}
                   </li>
@@ -298,7 +298,7 @@ export default function RoutePanel() {
         <SectionTitle>FIELD ROUTE</SectionTitle>
         <Card>
           <p className="text-[13.5px]">Not started.</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-white/45">
+          <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-ink)]/">
             Starting a route records where you walk until you stop it, so a knock can be checked against
             where the phone actually was. Nothing is recorded before you start, after you stop, or while
             you are paused.
@@ -309,7 +309,7 @@ export default function RoutePanel() {
           {/* The only way into history. A route nobody can reopen was not worth recording. */}
           <Link
             to="/routes"
-            className="mt-3 block text-center text-[12px] text-white/45 underline underline-offset-2"
+            className="mt-3 block text-center text-[12px] text-[var(--color-ink)]/ underline underline-offset-2"
           >
             Past routes
           </Link>
@@ -334,7 +334,7 @@ export default function RoutePanel() {
         <p className={`text-[13.5px] font-semibold ${paused ? 'text-amber-200' : 'text-emerald-200'}`}>
           {paused ? '⏸ Paused — nothing is being recorded.' : '● Recording your route.'}
         </p>
-        <p className="mt-0.5 text-[11.5px] text-white/40">
+        <p className="mt-0.5 text-[11.5px] text-[var(--color-ink)]/">
           Started {new Date(session.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} ·{' '}
           {duration(elapsed)} elapsed{onBreak > 0 ? ` · ${duration(onBreak)} paused` : ''}
         </p>
@@ -370,19 +370,19 @@ export default function RoutePanel() {
                         {group.label} · {group.items.length}
                       </p>
                       {group.items.slice(0, 3).map((item) => (
-                        <p key={item.leadId} className="truncate text-[12px] text-white/65">
+                        <p key={item.leadId} className="truncate text-[12px] text-[var(--color-ink)]/">
                           {item.address}
                         </p>
                       ))}
                       {group.items.length > 3 && (
-                        <p className="text-[11.5px] text-white/35">
+                        <p className="text-[11.5px] text-[var(--color-ink)]/">
                           and {group.items.length - 3} more
                         </p>
                       )}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-[11.5px] leading-relaxed text-white/40">
+                <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
                   These are on the summary after you end, and they stay on the doors. Ending the
                   route does not lose them.
                 </p>
@@ -428,7 +428,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <p className="text-[16px] font-semibold tabular-nums">{value}</p>
-      <p className="text-[10px] uppercase tracking-wide text-white/35">{label}</p>
+      <p className="text-[10px] uppercase tracking-wide text-[var(--color-ink)]/">{label}</p>
     </div>
   )
 }

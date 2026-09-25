@@ -90,7 +90,7 @@ export default function ContactProviderTab({
               : 'bg-amber-500/8 ring-amber-500/25'
           }`}
         >
-          <p className="text-[13px] font-semibold text-white/85">
+          <p className="text-[13px] font-semibold text-[var(--color-ink)]/">
             {verdict.allowed ? 'Lookups are permitted' : 'Lookups are switched off'}
           </p>
           {!verdict.allowed && (
@@ -98,7 +98,7 @@ export default function ContactProviderTab({
               <p className="mt-1 text-[12.5px] leading-relaxed text-amber-100/85">
                 {verdict.reason}
               </p>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-white/55">{verdict.remedy}</p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-[var(--color-ink)]/">{verdict.remedy}</p>
             </>
           )}
         </div>
@@ -107,10 +107,10 @@ export default function ContactProviderTab({
           {FINDINGS.map((f) => (
             <li key={f.label} className="border-t border-white/8 pt-2 first:border-t-0 first:pt-0">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="min-w-0 shrink-0 text-[12.5px] text-white/45">{f.label}</span>
+                <span className="min-w-0 shrink-0 text-[12.5px] text-[var(--color-ink)]/">{f.label}</span>
                 <span
                   className={`min-w-0 break-words text-right text-[12.5px] ${
-                    f.tone === 'warn' ? 'text-amber-200/85' : 'text-white/80'
+                    f.tone === 'warn' ? 'text-amber-200/85' : 'text-[var(--color-ink)]/'
                   }`}
                 >
                   {f.value}
@@ -142,7 +142,7 @@ export default function ContactProviderTab({
             </Select>
           </Field>
 
-          <label className="mt-3 flex items-center gap-3 text-[13px] text-white/80">
+          <label className="mt-3 flex items-center gap-3 text-[13px] text-[var(--color-ink)]/">
             <input
               type="checkbox"
               checked={settings.credentialPresent}
@@ -162,7 +162,7 @@ export default function ContactProviderTab({
               <p className="text-[12.5px] text-emerald-200/90">
                 Commercial use confirmed{settings.basis ? `: ${settings.basis}` : ''}
               </p>
-              <p className="mt-0.5 text-[11px] text-white/40">
+              <p className="mt-0.5 text-[11px] text-[var(--color-ink)]/">
                 {settings.confirmedAt
                   ? `Recorded ${new Date(settings.confirmedAt).toLocaleDateString()}`
                   : ''}
@@ -200,7 +200,7 @@ export default function ContactProviderTab({
             )
           )}
 
-          <label className="mt-4 flex items-center gap-3 text-[13px] text-white/80">
+          <label className="mt-4 flex items-center gap-3 text-[13px] text-[var(--color-ink)]/">
             <input
               type="checkbox"
               checked={settings.secondaryProvidersEnabled}
@@ -209,12 +209,12 @@ export default function ContactProviderTab({
             />
             Allow paid fallback providers
           </label>
-          <p className="mt-1 text-[11px] text-white/35">
+          <p className="mt-1 text-[11px] text-[var(--color-ink)]/">
             Off by default. Each call to a fallback provider costs money.
           </p>
         </div>
 
-        <p className="mt-3 border-t border-white/8 pt-2 text-[11.5px] leading-relaxed text-white/35">
+        <p className="mt-3 border-t border-white/8 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
           No credential is entered on this screen and there is no field that could hold one. The key
           belongs in an Edge Function secret where the browser cannot reach it.
         </p>
@@ -222,21 +222,21 @@ export default function ContactProviderTab({
 
       <Card>
         <SectionTitle hint="What works today, with no provider at all.">Getting a number</SectionTitle>
-        <ul className="mt-2 space-y-2 text-[12.5px] leading-relaxed text-white/65">
+        <ul className="mt-2 space-y-2 text-[12.5px] leading-relaxed text-[var(--color-ink)]/">
           <li>
-            <span className="text-white/85">The homeowner tells a rep.</span> Governed by nobody’s
+            <span className="text-[var(--color-ink)]/">The homeowner tells a rep.</span> Governed by nobody’s
             terms, and the only source this app will dial without further checks.
           </li>
           <li>
-            <span className="text-white/85">A public record.</span> The parish roll is public by
+            <span className="text-[var(--color-ink)]/">A public record.</span> The parish roll is public by
             statute.
           </li>
           <li>
-            <span className="text-white/85">A provider, under a business agreement.</span> Switched
+            <span className="text-[var(--color-ink)]/">A provider, under a business agreement.</span> Switched
             on above once one exists.
           </li>
         </ul>
-        <p className="mt-3 border-t border-white/8 pt-2 text-[11.5px] leading-relaxed text-white/35">
+        <p className="mt-3 border-t border-white/8 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
           Having a number is never permission to dial it. Consent, the internal do-not-call list and
           Louisiana’s calling hours all still apply, and they are checked separately on every lead.
         </p>

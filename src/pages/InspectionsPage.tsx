@@ -23,7 +23,7 @@ export default function InspectionsPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-semibold">{inspectionTitle(i)}</p>
-                    <p className="mt-0.5 truncate text-[12px] text-white/40">
+                    <p className="mt-0.5 truncate text-[12px] text-[var(--color-ink)]/">
                       {[i.city, i.parish && `${i.parish} Parish`].filter(Boolean).join(' · ') || 'No address details'}
                     </p>
                   </div>
@@ -31,7 +31,7 @@ export default function InspectionsPage() {
                     className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ${
                       i.status === 'complete'
                         ? 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/25'
-                        : 'bg-white/5 text-white/50 ring-white/10'
+                        : 'bg-slate-100 hover:bg-slate-200 text-[var(--color-ink)]/ ring-slate-200'
                     }`}
                   >
                     {i.status === 'complete' ? 'Complete' : 'Open'}

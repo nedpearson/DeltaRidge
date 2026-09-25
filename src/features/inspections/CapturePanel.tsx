@@ -145,7 +145,7 @@ export default function CapturePanel({
                         )}
                         {satisfied && <span className="text-[13px] text-emerald-400">✓</span>}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-white/35">
+                      <p className="mt-0.5 text-[11px] text-[var(--color-ink)]/">
                         {shots.length === 0
                           ? 'No photo yet'
                           : `${usable.length} usable${shots.length > usable.length ? ` · ${shots.length - usable.length} flagged` : ''}`}
@@ -168,12 +168,12 @@ export default function CapturePanel({
                           <PhotoThumb
                             blob={p.thumbnail}
                             alt={CATEGORY_LABELS[category]}
-                            className={`size-20 rounded-lg object-cover ${p.retakeRecommended ? 'opacity-50 ring-2 ring-amber-500' : 'ring-1 ring-white/10'}`}
+                            className={`size-20 rounded-lg object-cover ${p.retakeRecommended ? 'opacity-50 ring-2 ring-amber-500' : 'ring-1 ring-slate-200'}`}
                           />
                           <button
                             onClick={() => void remove(p.id)}
                             aria-label="Delete photo"
-                            className="absolute -right-1 -top-1 grid size-6 !min-h-0 !min-w-0 place-items-center rounded-full bg-black/80 text-[13px] text-white/70 ring-1 ring-white/15"
+                            className="absolute -right-1 -top-1 grid size-6 !min-h-0 !min-w-0 place-items-center rounded-full bg-black/80 text-[13px] text-[var(--color-ink)]/ ring-1 ring-slate-200"
                           >
                             ×
                           </button>

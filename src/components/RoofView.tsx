@@ -118,7 +118,7 @@ export default function RoofView({
   if (!hasBasemap()) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center">
-        <p className="text-[13px] text-white/45">No satellite imagery is configured for this app.</p>
+        <p className="text-[13px] text-[var(--color-ink)]/">No satellite imagery is configured for this app.</p>
       </div>
     )
   }
@@ -127,7 +127,7 @@ export default function RoofView({
     <div>
       <div
         ref={box}
-        className="relative w-full overflow-hidden rounded-2xl bg-[var(--color-surface-3)] ring-1 ring-white/8"
+        className="relative w-full overflow-hidden rounded-2xl bg-[var(--color-surface-3)] ring-1 ring-slate-200"
         // w-full with an aspect ratio and a max height: the width stays full and
         // only the height is capped. Capping with max-h alone makes the browser
         // honour the ratio by shrinking the WIDTH instead.
@@ -146,7 +146,7 @@ export default function RoofView({
 
         {failed && (
           <div className="flex size-full items-center justify-center px-6 text-center">
-            <p className="text-[12.5px] leading-relaxed text-white/45">
+            <p className="text-[12.5px] leading-relaxed text-[var(--color-ink)]/">
               The imagery for this address did not load. Everything else about the door is unaffected.
             </p>
           </div>
@@ -221,7 +221,7 @@ export default function RoofView({
           roof against a number they already think in.
         */}
         <div
-          className="pointer-events-none absolute top-2 rounded bg-black/60 px-2 py-1 text-[10.5px] text-white/70 backdrop-blur-sm"
+          className="pointer-events-none absolute top-2 rounded bg-black/60 px-2 py-1 text-[10.5px] text-[var(--color-ink)]/ backdrop-blur-sm"
           // Clear of the close button when there is one.
           style={{ left: onClose ? '3.25rem' : '0.5rem' }}
         >
@@ -229,7 +229,7 @@ export default function RoofView({
         </div>
       </div>
 
-      <p className="mt-1.5 text-[10.5px] leading-relaxed text-white/30">
+      <p className="mt-1.5 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
         {framed
           ? 'Outline is the parish parcel record, not a survey.'
           : 'Centred on this address — the parish has no lot outline for it.'}{' '}

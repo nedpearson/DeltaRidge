@@ -119,7 +119,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <p className="text-[19px] font-semibold leading-tight">{value}</p>
-      <p className="text-[10.5px] uppercase tracking-wide text-white/35">{label}</p>
+      <p className="text-[10.5px] uppercase tracking-wide text-[var(--color-ink)]/">{label}</p>
     </div>
   )
 }
@@ -265,7 +265,7 @@ export default function ManagerPage() {
 
       {!canManage && (
         <Card>
-          <p className="text-[12px] leading-relaxed text-white/45">
+          <p className="text-[12px] leading-relaxed text-[var(--color-ink)]/">
             You are signed in as a {membership?.role ?? 'member'}, so the server returns your own rows only.
             That is enforced where the data lives, not by hiding anything here.
           </p>
@@ -278,7 +278,7 @@ export default function ManagerPage() {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
-              tab === t.id ? 'bg-gold-400 text-black' : 'bg-white/6 text-white/60'
+              tab === t.id ? 'bg-gold-400 text-black' : 'bg-white/6 text-[var(--color-ink)]/'
             }`}
           >
             {t.label}
@@ -434,7 +434,7 @@ function TeamTab({
 }) {
   const [open, setOpen] = useState<string | null>(null)
 
-  if (loading) return <Card><p className="text-[13px] text-white/45">Reading the server…</p></Card>
+  if (loading) return <Card><p className="text-[13px] text-[var(--color-ink)]/">Reading the server…</p></Card>
   if (repActivity.length === 0) {
     return (
       <Nothing
@@ -453,7 +453,7 @@ function TeamTab({
           <Card key={rep.repId}>
             <div className="flex items-baseline justify-between gap-3">
               <p className="truncate text-[14px] font-semibold">{nameOf(rep.repId)}</p>
-              <span className="shrink-0 text-[11.5px] text-white/35">
+              <span className="shrink-0 text-[11.5px] text-[var(--color-ink)]/">
                 {openByRep.get(rep.repId) ?? 0} open
               </span>
             </div>
@@ -466,17 +466,17 @@ function TeamTab({
             </div>
 
             <div className="mt-3 border-t border-white/8 pt-3">
-              <p className="text-[11px] uppercase tracking-wide text-white/35">GPS evidence</p>
-              <p className="mt-1 text-[12.5px] text-white/70">
+              <p className="text-[11px] uppercase tracking-wide text-[var(--color-ink)]/">GPS evidence</p>
+              <p className="mt-1 text-[12.5px] text-[var(--color-ink)]/">
                 {rep.verified} confirmed · {rep.probable} consistent · {rep.unverified} off-property ·{' '}
                 {rep.noFix} no fix
               </p>
               {rep.offPropertyShare === null ? (
-                <p className="mt-1 text-[11.5px] leading-relaxed text-white/35">
+                <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
                   Too few usable fixes to draw any conclusion from.
                 </p>
               ) : (
-                <p className="mt-1 text-[11.5px] leading-relaxed text-white/35">
+                <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
                   {pct(rep.offPropertyShare)} of knocks with a usable fix were away from the property.
                   Phones and parcel maps are both wrong sometimes.
                 </p>
@@ -485,15 +485,15 @@ function TeamTab({
 
             <div className="mt-3 border-t border-white/8 pt-3">
               <div className="flex items-baseline justify-between gap-3">
-                <p className="text-[11px] uppercase tracking-wide text-white/35">Against the doors given</p>
+                <p className="text-[11px] uppercase tracking-wide text-[var(--color-ink)]/">Against the doors given</p>
                 <p className="text-[15px] font-semibold">
                   {eff.index === null ? '—' : eff.index.toFixed(2)}
                 </p>
               </div>
               {eff.unavailable ? (
-                <p className="mt-1 text-[11.5px] leading-relaxed text-white/40">{eff.unavailable}</p>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">{eff.unavailable}</p>
               ) : (
-                <p className="mt-1 text-[11.5px] leading-relaxed text-white/40">
+                <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
                   {eff.won} closed against {eff.expected?.toFixed(1)} the team&apos;s own rate predicts for
                   doors of the same score. 1.00 is exactly par. This is decision support, not a rating.
                 </p>
@@ -502,15 +502,15 @@ function TeamTab({
                 <>
                   <button
                     onClick={() => setOpen(expanded ? null : rep.repId)}
-                    className="mt-2 text-[11.5px] text-white/45 underline"
+                    className="mt-2 text-[11.5px] text-[var(--color-ink)]/ underline"
                   >
                     {expanded ? 'Hide the arithmetic' : 'Show the arithmetic'}
                   </button>
                   {expanded && (
                     <ul className="mt-2 space-y-1.5">
                       {eff.contributions.map((c) => (
-                        <li key={c.label} className="text-[11.5px] leading-relaxed text-white/50">
-                          <span className="font-semibold text-white/70">Score {c.label}</span> ·{' '}
+                        <li key={c.label} className="text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+                          <span className="font-semibold text-[var(--color-ink)]/">Score {c.label}</span> ·{' '}
                           {c.decided} decided ·{' '}
                           {c.teamRate === null
                             ? 'team has no rate here yet, so this band is left out of both sides'
@@ -564,14 +564,14 @@ function FieldTab({
   const flagged = exceptions({ from: today.from, to: today.to, routes, activity })
   const brief = writeBrief(factsFor(rollup, flagged))
 
-  if (loading) return <Card><p className="text-[13px] text-white/45">Reading the server…</p></Card>
+  if (loading) return <Card><p className="text-[13px] text-[var(--color-ink)]/">Reading the server…</p></Card>
 
   const out = rows.filter((r) => r.status === 'active' || r.status === 'paused')
 
   return (
     <div className="space-y-2">
       <Card>
-        <p className="text-[12px] leading-relaxed text-white/45">
+        <p className="text-[12px] leading-relaxed text-[var(--color-ink)]/">
           Only routes a rep has started and not yet stopped are followed here. Nobody&apos;s location is
           recorded or shown outside one, including their own, and a declared break stops the
           recording entirely.
@@ -579,9 +579,9 @@ function FieldTab({
       </Card>
 
       <Card>
-        <p className="text-[11px] uppercase tracking-wider text-white/35">Today so far</p>
+        <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">Today so far</p>
         {brief.map((line, i) => (
-          <p key={i} className="mt-1 text-[12.5px] leading-relaxed text-white/70">
+          <p key={i} className="mt-1 text-[12.5px] leading-relaxed text-[var(--color-ink)]/">
             {line}
           </p>
         ))}
@@ -599,8 +599,8 @@ function FieldTab({
           */}
           <ul className="mt-2 space-y-1.5">
             {flagged.map((e, i) => (
-              <li key={`${e.kind}-${i}`} className="text-[12px] leading-relaxed text-white/65">
-                {e.repId && <span className="text-white/85">{nameOf(e.repId)}: </span>}
+              <li key={`${e.kind}-${i}`} className="text-[12px] leading-relaxed text-[var(--color-ink)]/">
+                {e.repId && <span className="text-[var(--color-ink)]/">{nameOf(e.repId)}: </span>}
                 {e.detail}
               </li>
             ))}
@@ -623,7 +623,7 @@ function FieldTab({
                   ? 'text-emerald-300'
                   : row.status === 'paused'
                     ? 'text-purple-300'
-                    : 'text-white/35')
+                    : 'text-[var(--color-ink)]/')
               }
             >
               {REP_STATUS_LABEL[row.status]}
@@ -631,7 +631,7 @@ function FieldTab({
           </div>
 
           {row.startedAt && (
-            <p className="mt-0.5 text-[11.5px] text-white/40">
+            <p className="mt-0.5 text-[11.5px] text-[var(--color-ink)]/">
               started {ago(row.startedAt)}
               {row.lastFixAt ? ` · last fix ${ago(row.lastFixAt)}` : ' · no fix yet'}
             </p>
@@ -651,7 +651,7 @@ function FieldTab({
             about where somebody is that the data does not support. `mappable`
             is the only thing allowed to put a pin on a map.
           */}
-          <p className="mt-2 text-[11.5px] leading-relaxed text-white/40">
+          <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
             {locationNote(row)}
             {row.status === 'active' && row.freshness === 'stale' && (
               <>
@@ -700,7 +700,7 @@ function AssignTab({
   return (
     <div className="space-y-3">
       <Card>
-        <p className="text-[12px] leading-relaxed text-white/45">
+        <p className="text-[12px] leading-relaxed text-[var(--color-ink)]/">
           Suggestions rank reps and show every term that went into the ranking. Nothing is assigned
           automatically, and a rep with no index yet is neither rewarded nor penalised for it.
         </p>
@@ -715,12 +715,12 @@ function AssignTab({
             <Card key={a.id}>
               <div className="flex items-baseline justify-between gap-3">
                 <p className="truncate text-[13.5px] font-semibold">{a.address}</p>
-                <span className="shrink-0 text-[12px] text-white/40">{a.scoreAtAssignment}</span>
+                <span className="shrink-0 text-[12px] text-[var(--color-ink)]/">{a.scoreAtAssignment}</span>
               </div>
-              <p className="mt-0.5 text-[12px] text-white/45">
+              <p className="mt-0.5 text-[12px] text-[var(--color-ink)]/">
                 {nameOf(a.assignedTo)} · {ago(a.assignedAt)} · {a.leadStatus.replace(/_/g, ' ')}
               </p>
-              {a.reason && <p className="mt-1 text-[11.5px] text-white/35">{a.reason}</p>}
+              {a.reason && <p className="mt-1 text-[11.5px] text-[var(--color-ink)]/">{a.reason}</p>}
               {canManage && (
                 <Button
                   variant="secondary"
@@ -757,14 +757,14 @@ function AssignTab({
               <Card key={door.addressKey}>
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="truncate text-[13.5px] font-semibold">{door.address}</p>
-                  <span className="shrink-0 text-[12px] text-white/40">{door.score}</span>
+                  <span className="shrink-0 text-[12px] text-[var(--color-ink)]/">{door.score}</span>
                 </div>
                 {door.subdivision && (
-                  <p className="mt-0.5 text-[12px] text-white/45">{door.subdivision}</p>
+                  <p className="mt-0.5 text-[12px] text-[var(--color-ink)]/">{door.subdivision}</p>
                 )}
                 <button
                   onClick={() => setPicked(expanded ? null : door.addressKey)}
-                  className="mt-2 text-[11.5px] text-white/45 underline"
+                  className="mt-2 text-[11.5px] text-[var(--color-ink)]/ underline"
                 >
                   {expanded ? 'Hide suggestions' : 'Who should take this?'}
                 </button>
@@ -772,7 +772,7 @@ function AssignTab({
                 {expanded && (
                   <div className="mt-2 space-y-2 border-t border-white/8 pt-2">
                     {suggestions.length === 0 ? (
-                      <p className="text-[11.5px] text-white/40">
+                      <p className="text-[11.5px] text-[var(--color-ink)]/">
                         No active reps on the team to suggest.
                       </p>
                     ) : (
@@ -780,12 +780,12 @@ function AssignTab({
                         <div key={s.repId}>
                           <div className="flex items-baseline justify-between gap-3">
                             <p className="text-[12.5px] font-semibold">{nameOf(s.repId)}</p>
-                            <span className="text-[12px] text-white/40">{s.score}</span>
+                            <span className="text-[12px] text-[var(--color-ink)]/">{s.score}</span>
                           </div>
                           <ul className="mt-0.5 space-y-0.5">
                             {s.factors.map((f) => (
-                              <li key={f.label} className="text-[11.5px] leading-relaxed text-white/45">
-                                <span className={f.weight < 0 ? 'text-amber-200/70' : 'text-white/60'}>
+                              <li key={f.label} className="text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+                                <span className={f.weight < 0 ? 'text-amber-200/70' : 'text-[var(--color-ink)]/'}>
                                   {f.weight > 0 ? '+' : ''}
                                   {f.weight}
                                 </span>{' '}
@@ -825,7 +825,7 @@ function AssignTab({
                     {failed && (
                       <p className="text-[11.5px] leading-relaxed text-amber-200/80">{failed}</p>
                     )}
-                    <p className="text-[11px] leading-relaxed text-white/30">
+                    <p className="text-[11px] leading-relaxed text-[var(--color-ink)]/">
                       Assigning sends this door to the server first, as a target rather than a knock.
                       Nothing about it implies anyone has been there.
                     </p>
@@ -837,7 +837,7 @@ function AssignTab({
         </div>
       )}
 
-      <p className="px-1 text-[11px] leading-relaxed text-white/30">
+      <p className="px-1 text-[11px] leading-relaxed text-[var(--color-ink)]/">
         A rep carrying more than {COMFORTABLE_OPEN_ASSIGNMENTS} open doors is marked as stretched rather
         than simply ranked lower without explanation.
       </p>
@@ -871,10 +871,10 @@ function TerritoryTab({
             knocking it, and the gap between the two is the only number here
             that tells anybody what to do tomorrow.
           */}
-          <p className="text-[12px] leading-relaxed text-white/45">
-            <b className="text-white/70">Passed</b> means the recorded trail came within{' '}
+          <p className="text-[12px] leading-relaxed text-[var(--color-ink)]/">
+            <b className="text-[var(--color-ink)]/">Passed</b> means the recorded trail came within{' '}
             {PASSED_RADIUS_METERS} m of the house. It is not a visit and nobody is credited for it.{' '}
-            <b className="text-white/70">Knocked</b> means an outcome was recorded there. The gap
+            <b className="text-[var(--color-ink)]/">Knocked</b> means an outcome was recorded there. The gap
             between them is work on a street the team has already paid to reach.
           </p>
           {routeCoverageError && (
@@ -899,11 +899,11 @@ function TerritoryTab({
           <Card key={`gap-${gap.subdivision}`} className="mb-2">
             <div className="flex items-baseline justify-between gap-3">
               <p className="truncate text-[13.5px] font-semibold">{gap.subdivision}</p>
-              <span className="shrink-0 text-[12px] text-white/40">
+              <span className="shrink-0 text-[12px] text-[var(--color-ink)]/">
                 {gap.workRate === null ? '—' : pct(gap.workRate)}
               </span>
             </div>
-            <p className="mt-0.5 text-[12px] text-white/45">
+            <p className="mt-0.5 text-[12px] text-[var(--color-ink)]/">
               {gap.passedNotKnocked > 0
                 ? `${gap.passedNotKnocked} door${gap.passedNotKnocked === 1 ? '' : 's'} gone past and not knocked`
                 : 'Every door the trail reached was knocked'}
@@ -954,7 +954,7 @@ function TerritoryFromDevice({
   return (
     <div className="space-y-2">
       <Card>
-        <p className="text-[12px] leading-relaxed text-white/45">
+        <p className="text-[12px] leading-relaxed text-[var(--color-ink)]/">
           Available doors come from the list built on this device; knocks come from the server. A
           neighbourhood this phone has never loaded shows nothing available — never as fully covered.
           {!hasDoors && ' No door list is loaded here right now, so every denominator below is unknown.'}
@@ -965,11 +965,11 @@ function TerritoryFromDevice({
         <Card key={row.subdivision}>
           <div className="flex items-baseline justify-between gap-3">
             <p className="truncate text-[13.5px] font-semibold">{row.subdivision}</p>
-            <span className="shrink-0 text-[12px] text-white/40">
+            <span className="shrink-0 text-[12px] text-[var(--color-ink)]/">
               {row.available > 0 ? pct(row.share) : '—'}
             </span>
           </div>
-          <p className="mt-0.5 text-[12px] text-white/45">
+          <p className="mt-0.5 text-[12px] text-[var(--color-ink)]/">
             {row.knocked} knocked
             {row.available > 0
               ? ` of ${row.available} on the list`
@@ -1001,7 +1001,7 @@ function LogTab({
   nameOf: (id: string | null) => string
   loading: boolean
 }) {
-  if (loading) return <Card><p className="text-[13px] text-white/45">Reading the server…</p></Card>
+  if (loading) return <Card><p className="text-[13px] text-[var(--color-ink)]/">Reading the server…</p></Card>
   if (rows.length === 0) {
     return (
       <Nothing
@@ -1014,7 +1014,7 @@ function LogTab({
   return (
     <div className="space-y-2">
       <Card>
-        <p className="text-[12px] leading-relaxed text-white/45">
+        <p className="text-[12px] leading-relaxed text-[var(--color-ink)]/">
           Written by the database on every assignment change, and not editable by anyone — including an
           admin. The score shown is the one frozen at the moment the decision was made.
         </p>
@@ -1027,14 +1027,14 @@ function LogTab({
                 <p className="truncate text-[13px] font-semibold">
                   {row.action === 'assigned' ? 'Assigned' : 'Released'} · {nameOf(row.assignedTo)}
                 </p>
-                <span className="shrink-0 text-[11.5px] text-white/35">{ago(row.occurredAt)}</span>
+                <span className="shrink-0 text-[11.5px] text-[var(--color-ink)]/">{ago(row.occurredAt)}</span>
               </div>
-              <p className="mt-0.5 truncate text-[12px] text-white/45">
+              <p className="mt-0.5 truncate text-[12px] text-[var(--color-ink)]/">
                 {row.address}
                 {row.subdivision ? ` · ${row.subdivision}` : ''} · score {row.scoreAtAssignment}
               </p>
-              {row.reason && <p className="mt-0.5 text-[11.5px] text-white/35">{row.reason}</p>}
-              <p className="mt-0.5 text-[11px] text-white/25">by {nameOf(row.actor)}</p>
+              {row.reason && <p className="mt-0.5 text-[11.5px] text-[var(--color-ink)]/">{row.reason}</p>}
+              <p className="mt-0.5 text-[11px] text-[var(--color-ink)]/">by {nameOf(row.actor)}</p>
             </li>
           ))}
         </ul>

@@ -7,7 +7,7 @@ import { CATEGORY_LABELS, type PhotoCategory } from './photo-categories'
 const TONE: Record<CompletenessIssue['severity'], { ring: string; dot: string; label: string }> = {
   blocker: { ring: 'ring-red-500/30 bg-red-500/8', dot: 'bg-red-400', label: 'Office needs this' },
   warning: { ring: 'ring-amber-500/25 bg-amber-500/8', dot: 'bg-amber-400', label: 'Office will call' },
-  advisory: { ring: 'ring-white/10 bg-white/4', dot: 'bg-white/30', label: 'Worth adding' },
+  advisory: { ring: 'ring-slate-200 bg-white/4', dot: 'bg-white/30', label: 'Worth adding' },
 }
 
 export default function ReviewPanel({
@@ -72,13 +72,13 @@ export default function ReviewPanel({
   return (
     <div className="pb-4">
       <Card className="text-center">
-        <p className="font-display text-[11px] tracking-[0.16em] text-white/40">DOCUMENTATION COMPLETENESS</p>
+        <p className="font-display text-[11px] tracking-[0.16em] text-[var(--color-ink)]/">DOCUMENTATION COMPLETENESS</p>
         <p className={`mt-1 font-display text-5xl ${scoreTone}`}>{report.score}</p>
-        <p className="mt-1 text-[12px] text-white/40">
+        <p className="mt-1 text-[12px] text-[var(--color-ink)]/">
           {usablePhotos.length} usable photo{usablePhotos.length === 1 ? '' : 's'} · {observations.length} observation
           {observations.length === 1 ? '' : 's'}
         </p>
-        <p className="mx-auto mt-3 max-w-xs text-[11px] leading-relaxed text-white/30">
+        <p className="mx-auto mt-3 max-w-xs text-[11px] leading-relaxed text-[var(--color-ink)]/">
           This scores how well the roof is documented — not its condition.
         </p>
       </Card>
@@ -102,7 +102,7 @@ export default function ReviewPanel({
                   <div className="flex items-start gap-2.5">
                     <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${tone.dot}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{tone.label}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink)]/">{tone.label}</p>
                       <p className="mt-0.5 text-[13.5px] leading-snug">{issue.message}</p>
                       {issue.fix?.kind === 'camera' && (
                         <Button
@@ -176,26 +176,26 @@ export default function ReviewPanel({
         {showPackage && (
           <div className="mt-3 space-y-3 rounded-xl bg-black/25 p-3.5 text-[12.5px] leading-relaxed">
             <div>
-              <p className="font-display text-[10px] tracking-widest text-white/35">CUSTOMER</p>
+              <p className="font-display text-[10px] tracking-widest text-[var(--color-ink)]/">CUSTOMER</p>
               <p className="mt-0.5">
                 {[inspection.customerFirstName, inspection.customerLastName].filter(Boolean).join(' ') ||
                   inspection.customerCompanyName || <span className="text-red-400">— missing —</span>}
               </p>
-              <p className="text-white/50">
+              <p className="text-[var(--color-ink)]/">
                 {inspection.customerPhone ?? inspection.customerEmail ?? (
                   <span className="text-red-400">no contact recorded</span>
                 )}
               </p>
             </div>
             <div>
-              <p className="font-display text-[10px] tracking-widest text-white/35">PROPERTY</p>
+              <p className="font-display text-[10px] tracking-widest text-[var(--color-ink)]/">PROPERTY</p>
               <p className="mt-0.5">{inspection.addressLine1}</p>
-              <p className="text-white/50">
+              <p className="text-[var(--color-ink)]/">
                 {[inspection.city, inspection.parish && `${inspection.parish} Parish`, inspection.postalCode]
                   .filter(Boolean)
                   .join(', ')}
               </p>
-              <p className="mt-1 text-white/50">
+              <p className="mt-1 text-[var(--color-ink)]/">
                 {inspection.roofMaterial.replace(/_/g, ' ')} · {inspection.stories ?? '?'} stor
                 {inspection.stories === 1 ? 'y' : 'ies'}
                 {inspection.homeownerStatedRoofAgeYears
@@ -204,13 +204,13 @@ export default function ReviewPanel({
               </p>
             </div>
             <div>
-              <p className="font-display text-[10px] tracking-widest text-white/35">OBSERVED CONDITIONS</p>
+              <p className="font-display text-[10px] tracking-widest text-[var(--color-ink)]/">OBSERVED CONDITIONS</p>
               {observations.length === 0 ? (
-                <p className="mt-0.5 text-white/40">None recorded.</p>
+                <p className="mt-0.5 text-[var(--color-ink)]/">None recorded.</p>
               ) : (
                 <ul className="mt-0.5 space-y-1">
                   {observations.map((o) => (
-                    <li key={o.id} className="text-white/80">
+                    <li key={o.id} className="text-[var(--color-ink)]/">
                       • {o.finding}
                       {o.area ? ` (${o.area})` : ''} — {o.severity.replace(/_/g, ' ')}
                     </li>
@@ -219,29 +219,29 @@ export default function ReviewPanel({
               )}
             </div>
             <div>
-              <p className="font-display text-[10px] tracking-widest text-white/35">PHOTO REPORT</p>
-              <p className="mt-0.5 text-white/60">
+              <p className="font-display text-[10px] tracking-widest text-[var(--color-ink)]/">PHOTO REPORT</p>
+              <p className="mt-0.5 text-[var(--color-ink)]/">
                 {usablePhotos.length} photo{usablePhotos.length === 1 ? '' : 's'} across{' '}
                 {new Set(usablePhotos.map((p) => p.category)).size} categories
               </p>
             </div>
             <div>
-              <p className="font-display text-[10px] tracking-widest text-white/35">RECOMMENDED ACTION</p>
-              <p className="mt-0.5 text-white/80">
-                {inspection.inspectorRecommendation || <span className="text-white/40">Not yet written.</span>}
+              <p className="font-display text-[10px] tracking-widest text-[var(--color-ink)]/">RECOMMENDED ACTION</p>
+              <p className="mt-0.5 text-[var(--color-ink)]/">
+                {inspection.inspectorRecommendation || <span className="text-[var(--color-ink)]/">Not yet written.</span>}
               </p>
             </div>
             {inspection.overriddenIssueCodes && inspection.overriddenIssueCodes.length > 0 && (
               <div className="rounded-lg bg-amber-500/8 px-3 py-2 ring-1 ring-amber-500/20">
                 <p className="font-display text-[10px] tracking-widest text-amber-300/70">FINISHED WITH GAPS</p>
-                <p className="mt-0.5 text-[12px] leading-relaxed text-white/70">
+                <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--color-ink)]/">
                   The rep closed this out with {inspection.overriddenIssueCodes.length} item
                   {inspection.overriddenIssueCodes.length === 1 ? '' : 's'} outstanding.
                   {inspection.overrideNote ? ` "${inspection.overrideNote}"` : ''}
                 </p>
               </div>
             )}
-            <p className="border-t border-white/8 pt-2.5 text-[11px] text-white/30">
+            <p className="border-t border-white/8 pt-2.5 text-[11px] text-[var(--color-ink)]/">
               Sending puts this package in the office queue on the Delta Ridge server, where the office can open it.
               Automatic delivery into CompanyCam — which syncs onward into Roofr — turns on once an API token is
               configured.
@@ -267,12 +267,12 @@ export default function ReviewPanel({
             <SectionTitle>SEND WITHOUT THESE?</SectionTitle>
             <ul className="mt-2 space-y-1.5">
               {report.blockers.map((b) => (
-                <li key={b.code} className="text-[13px] leading-relaxed text-white/70">
+                <li key={b.code} className="text-[13px] leading-relaxed text-[var(--color-ink)]/">
                   • {b.message}
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-[12px] leading-relaxed text-white/40">
+            <p className="mt-3 text-[12px] leading-relaxed text-[var(--color-ink)]/">
               This gets recorded on the inspection so the office knows what is missing before they price it.
             </p>
             <div className="mt-3">
@@ -312,7 +312,7 @@ export default function ReviewPanel({
               {report.canSend ? 'Send to office' : `Send anyway — ${report.blockers.length} unresolved`}
             </Button>
             {report.blockers.length > 0 && (
-              <p className="mt-2 text-center text-[11px] text-white/40">
+              <p className="mt-2 text-center text-[11px] text-[var(--color-ink)]/">
                 Nothing here is mandatory. You will be asked to confirm what is missing.
               </p>
             )}

@@ -3,11 +3,11 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAt
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'gold'
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-gradient-to-r from-brand-600 to-brand-400 text-white shadow-lg shadow-brand-500/25 hover:from-brand-500 hover:to-brand-300 active:scale-[0.98]',
-  gold: 'bg-gradient-to-r from-gold-600 to-gold-400 text-surface shadow-lg shadow-gold-500/25 hover:from-gold-500 hover:to-gold-300 active:scale-[0.98]',
-  secondary: 'bg-white/5 text-white ring-1 ring-white/10 hover:bg-white/10 backdrop-blur-sm',
-  ghost: 'text-white/70 hover:bg-white/5 hover:text-white',
-  danger: 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/20',
+  primary: 'bg-brand-500 text-white shadow-md shadow-brand-500/20 hover:bg-brand-400 active:scale-[0.98]',
+  gold: 'bg-gold-500 text-white shadow-md shadow-gold-500/20 hover:bg-gold-400 active:scale-[0.98]',
+  secondary: 'bg-white text-[var(--color-ink)] ring-1 ring-[var(--color-surface-3)] hover:bg-slate-50 shadow-sm active:scale-[0.98]',
+  ghost: 'text-[var(--color-ink)]/70 hover:bg-[var(--color-surface-3)] hover:text-[var(--color-ink)]',
+  danger: 'bg-red-50 text-red-600 ring-1 ring-red-200 hover:bg-red-100',
 }
 
 export function Button({
@@ -37,7 +37,7 @@ export function Card({
   id?: string
 }) {
   return (
-    <div id={id} className={`rounded-2xl bg-[var(--color-surface-2)] p-4 ring-1 ring-white/5 shadow-xl shadow-black/40 ${className}`}>
+    <div id={id} className={`rounded-2xl bg-[var(--color-surface-2)] p-4 ring-1 ring-slate-200 shadow-sm ${className}`}>
       {children}
     </div>
   )
@@ -46,8 +46,8 @@ export function Card({
 export function SectionTitle({ children, hint }: { children: ReactNode; hint?: string }) {
   return (
     <div className="mb-2.5 mt-6 flex items-baseline justify-between first:mt-0">
-      <h2 className="font-display text-xs tracking-[0.14em] text-white/50">{children}</h2>
-      {hint && <span className="text-[11px] text-white/35">{hint}</span>}
+      <h2 className="font-display text-xs tracking-[0.14em] text-[var(--color-ink)]/60">{children}</h2>
+      {hint && <span className="text-[11px] text-[var(--color-ink)]/40">{hint}</span>}
     </div>
   )
 }
@@ -63,15 +63,15 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12px] font-medium text-white/60">{label}</span>
+      <span className="mb-1.5 block text-[12px] font-medium text-[var(--color-ink)]/70">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-[11px] text-white/35">{hint}</span>}
+      {hint && <span className="mt-1 block text-[11px] text-[var(--color-ink)]/40">{hint}</span>}
     </label>
   )
 }
 
 const CONTROL =
-  'w-full rounded-xl bg-[var(--color-surface-3)] px-3.5 py-3 text-[15px] text-white ring-1 ring-white/8 outline-none placeholder:text-white/25 focus:ring-2 focus:ring-brand-400'
+  'w-full rounded-xl bg-white px-3.5 py-3 text-[15px] text-[var(--color-ink)] ring-1 ring-[var(--color-surface-3)] outline-none placeholder:text-[var(--color-ink)]/30 focus:ring-2 focus:ring-brand-500 shadow-sm'
 
 export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${CONTROL} ${props.className ?? ''}`} />
@@ -87,9 +87,9 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
 
 export function Empty({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center">
-      <p className="font-display text-sm tracking-wide text-white/70">{title}</p>
-      <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-white/40">{body}</p>
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 px-5 py-10 text-center">
+      <p className="font-display text-sm tracking-wide text-[var(--color-ink)]/80">{title}</p>
+      <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-[var(--color-ink)]/50">{body}</p>
     </div>
   )
 }

@@ -77,9 +77,9 @@ export default function SyncPanel() {
             <ul className="mt-3 space-y-2 border-t border-white/8 pt-3">
               {stalled.map((item) => (
                 <li key={item.id} className="text-[12px] leading-relaxed">
-                  <span className="font-semibold text-white/70">{LABEL[item.entity]}</span>
-                  <span className="text-white/35"> · {item.attempts} attempts</span>
-                  <p className="mt-0.5 break-words text-white/45">{item.lastError ?? 'No error recorded.'}</p>
+                  <span className="font-semibold text-[var(--color-ink)]/">{LABEL[item.entity]}</span>
+                  <span className="text-[var(--color-ink)]/"> · {item.attempts} attempts</span>
+                  <p className="mt-0.5 break-words text-[var(--color-ink)]/">{item.lastError ?? 'No error recorded.'}</p>
                 </li>
               ))}
             </ul>
@@ -101,11 +101,11 @@ export default function SyncPanel() {
 
       {foreign > 0 && (
         <Card className="mt-2">
-          <p className="text-[13.5px] font-semibold text-white/80">
+          <p className="text-[13.5px] font-semibold text-[var(--color-ink)]/">
             {foreign} item{foreign === 1 ? '' : 's'} on this phone{' '}
             {foreign === 1 ? 'belongs' : 'belong'} to another sign-in.
           </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-white/45">
+          <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-ink)]/">
             They are safe and they are not being sent under your account. Whoever captured them can sign in on this
             phone and they will go up under their own name.
           </p>
@@ -117,7 +117,7 @@ export default function SyncPanel() {
           <p className="text-[13.5px]">
             {mine} field update{mine === 1 ? '' : 's'} waiting to sync.
           </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-white/45">
+          <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-ink)]/">
             {signedOut
               ? 'Saved on this device. Sign in above and it will go up on its own.'
               : noOrg
@@ -134,7 +134,7 @@ export default function SyncPanel() {
         </Card>
       )}
 
-      <Link to="/diagnostics" className="mt-2 block text-center text-[11.5px] text-white/35 underline">
+      <Link to="/diagnostics" className="mt-2 block text-center text-[11.5px] text-[var(--color-ink)]/ underline">
         Sync diagnostics
       </Link>
     </>

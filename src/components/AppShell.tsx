@@ -40,7 +40,7 @@ export function OnlinePill() {
   }, [])
 
   const label = !online ? 'Offline — saved on device' : pending > 0 ? `${pending} waiting to sync` : 'Saved on device'
-  const tone = !online ? 'bg-amber-500/15 text-amber-300 ring-amber-500/30' : 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/25'
+  const tone = !online ? 'bg-amber-50 text-amber-700 ring-amber-200' : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ${tone}`}>
@@ -139,13 +139,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
        */
       style={{ '--bottom-nav-height': `${navHeight}px` } as CSSProperties}
     >
-      <header className="sticky top-0 z-20 border-b border-white/5 bg-[var(--color-surface)]/90 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <div className="grid size-8 place-items-center rounded-md bg-brand-500 font-display text-sm font-bold text-white">DR</div>
+            <div className="grid size-8 place-items-center rounded-md bg-brand-500 font-display text-sm font-bold text-white shadow-sm">DR</div>
             <div className="leading-none">
-              <div className="font-display text-[15px] tracking-wide">Delta Ridge</div>
-              <div className="mt-0.5 text-[10px] uppercase tracking-widest text-white/40">Field</div>
+              <div className="font-display text-[15px] tracking-wide text-slate-900">Delta Ridge</div>
+              <div className="mt-0.5 text-[10px] uppercase tracking-widest text-slate-500">Field</div>
             </div>
           </div>
           <OnlinePill />
@@ -186,7 +186,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             cannot generate a class name built at runtime.
           */}
           <div
-            className="grid"
+            className="grid bg-white border-t border-slate-200"
             style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}
           >
             {NAV.map((item) => (
@@ -196,7 +196,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 end={item.to === '/'}
                 className={({ isActive }) =>
                   `flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-                    isActive ? 'text-brand-300' : 'text-white/45'
+                    isActive ? 'text-brand-600' : 'text-slate-400 hover:text-slate-500'
                   }`
                 }
               >

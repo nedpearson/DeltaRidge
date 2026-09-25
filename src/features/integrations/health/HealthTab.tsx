@@ -194,12 +194,12 @@ export default function HealthTab({ organizationId }: { organizationId: string |
       </SectionTitle>
 
       {loading ? (
-        <p className="mt-3 text-[12.5px] text-white/40">Loading…</p>
+        <p className="mt-3 text-[12.5px] text-[var(--color-ink)]/">Loading…</p>
       ) : rows.length === 0 ? (
         <Nothing title="Nothing to report" body="No integrations are configured yet." />
       ) : (
         <>
-          <p className={`mt-2 text-[12.5px] ${attention > 0 ? 'text-amber-300' : 'text-white/50'}`}>
+          <p className={`mt-2 text-[12.5px] ${attention > 0 ? 'text-amber-300' : 'text-[var(--color-ink)]/'}`}>
             {attention > 0
               ? `${attention} need${attention === 1 ? 's' : ''} a look`
               : 'Nothing needs attention'}
@@ -213,16 +213,16 @@ export default function HealthTab({ organizationId }: { organizationId: string |
                   <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${tone.dot}`} aria-hidden="true" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                      <span className="min-w-0 break-words text-[13px] text-white/85">{row.label}</span>
+                      <span className="min-w-0 break-words text-[13px] text-[var(--color-ink)]/">{row.label}</span>
                       {/* Spelled out, not left to the colour — the screen gets
                           read in sunlight, and by people who cannot tell amber
                           from green. */}
-                      <span className="shrink-0 text-[11px] text-white/40">{tone.word}</span>
+                      <span className="shrink-0 text-[11px] text-[var(--color-ink)]/">{tone.word}</span>
                     </div>
-                    <p className="text-[11.5px] text-white/45">{row.health.summary}</p>
-                    <p className="text-[11px] text-white/30">{row.detail}</p>
+                    <p className="text-[11.5px] text-[var(--color-ink)]/">{row.health.summary}</p>
+                    <p className="text-[11px] text-[var(--color-ink)]/">{row.detail}</p>
                     {row.health.lastSuccessAt !== null && (
-                      <p className="text-[11px] text-white/30">
+                      <p className="text-[11px] text-[var(--color-ink)]/">
                         Last success {ago(row.health.lastSuccessAt)}
                       </p>
                     )}

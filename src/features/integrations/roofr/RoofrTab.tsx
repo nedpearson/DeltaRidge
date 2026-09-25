@@ -127,16 +127,16 @@ export default function RoofrTab({
           Inbound webhook
         </SectionTitle>
 
-        <p className="mt-3 break-all rounded bg-black/30 px-3 py-2 font-mono text-xs text-white/70">
+        <p className="mt-3 break-all rounded bg-black/30 px-3 py-2 font-mono text-xs text-[var(--color-ink)]/">
           {endpoint}
         </p>
 
-        <div className="mt-3 text-sm text-white/60">
+        <div className="mt-3 text-sm text-[var(--color-ink)]/">
           {settings?.secretHint === null || settings?.secretHint === undefined ? (
             <p>No token yet. Roofr events will be rejected until one is created.</p>
           ) : (
             <p>
-              Token ending <span className="font-mono text-white/80">{settings.secretHint}</span>,
+              Token ending <span className="font-mono text-[var(--color-ink)]/">{settings.secretHint}</span>,
               created {ago(settings.secretRotatedAt)}.
             </p>
           )}
@@ -153,8 +153,8 @@ export default function RoofrTab({
             <p className="text-sm text-gold-200">
               Copy this now. It is not stored and cannot be shown again.
             </p>
-            <p className="mt-2 break-all font-mono text-xs text-white">{freshToken}</p>
-            <p className="mt-2 text-xs text-white/60">
+            <p className="mt-2 break-all font-mono text-xs text-[var(--color-ink)]">{freshToken}</p>
+            <p className="mt-2 text-xs text-[var(--color-ink)]/">
               In the Zap’s webhook step, send it as the header{' '}
               <span className="font-mono">x-delta-ridge-token</span>.
             </p>
@@ -170,7 +170,7 @@ export default function RoofrTab({
           Sending leads to Roofr
         </SectionTitle>
 
-        <label className="mt-3 flex items-center gap-3 text-sm text-white/80">
+        <label className="mt-3 flex items-center gap-3 text-sm text-[var(--color-ink)]/">
           <input
             type="checkbox"
             checked={settings?.pushEnabled === true}
@@ -179,7 +179,7 @@ export default function RoofrTab({
           />
           Allow Delta Ridge to create jobs in Roofr
         </label>
-        <p className="mt-1 text-xs text-white/40">
+        <p className="mt-1 text-xs text-[var(--color-ink)]/">
           Roofr’s own documentation still describes the Zapier integration as one-way. Leave this off
           until a test Zap has actually created a job on your account.
         </p>
@@ -213,7 +213,7 @@ export default function RoofrTab({
         )}
 
         {loading ? (
-          <p className="mt-3 text-sm text-white/40">Loading…</p>
+          <p className="mt-3 text-sm text-[var(--color-ink)]/">Loading…</p>
         ) : log.length === 0 ? (
           <Nothing
             title="Nothing has come through yet"
@@ -223,12 +223,12 @@ export default function RoofrTab({
           <ul className="mt-3 divide-y divide-white/5">
             {log.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                <span className="w-16 shrink-0 text-xs text-white/40">
+                <span className="w-16 shrink-0 text-xs text-[var(--color-ink)]/">
                   {r.direction === 'inbound' ? 'from' : 'to'} Roofr
                 </span>
-                <span className="flex-1 text-white/80">{r.what.replace(/_/g, ' ')}</span>
+                <span className="flex-1 text-[var(--color-ink)]/">{r.what.replace(/_/g, ' ')}</span>
                 <StatusPill status={r.status} />
-                <span className="w-20 shrink-0 text-right text-xs text-white/40">{ago(r.at)}</span>
+                <span className="w-20 shrink-0 text-right text-xs text-[var(--color-ink)]/">{ago(r.at)}</span>
                 {r.error !== null && (
                   <span className="w-full text-xs text-amber-300/70">{r.error}</span>
                 )}

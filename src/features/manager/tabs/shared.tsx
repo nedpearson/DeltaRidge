@@ -31,7 +31,7 @@ export function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <p className="text-[19px] font-semibold leading-tight tabular-nums">{value}</p>
-      <p className="text-[10.5px] uppercase tracking-wide text-white/35">{label}</p>
+      <p className="text-[10.5px] uppercase tracking-wide text-[var(--color-ink)]/">{label}</p>
     </div>
   )
 }
@@ -59,16 +59,16 @@ export function Figure({
   if (value === null) {
     return (
       <div>
-        <p className="text-[12.5px] font-medium text-white/40">Not enough yet</p>
-        <p className="text-[10.5px] uppercase tracking-wide text-white/30">{label}</p>
-        {unavailable && <p className="mt-0.5 text-[10.5px] leading-relaxed text-white/30">{unavailable}</p>}
+        <p className="text-[12.5px] font-medium text-[var(--color-ink)]/">Not enough yet</p>
+        <p className="text-[10.5px] uppercase tracking-wide text-[var(--color-ink)]/">{label}</p>
+        {unavailable && <p className="mt-0.5 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">{unavailable}</p>}
       </div>
     )
   }
   return (
     <div>
       <p className="text-[19px] font-semibold leading-tight tabular-nums">{value}</p>
-      <p className="text-[10.5px] uppercase tracking-wide text-white/35">{label}</p>
+      <p className="text-[10.5px] uppercase tracking-wide text-[var(--color-ink)]/">{label}</p>
     </div>
   )
 }

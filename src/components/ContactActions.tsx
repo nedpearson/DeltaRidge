@@ -108,20 +108,20 @@ export default function ContactActions({
           <a
             href={call.allowed ? `tel:${phone}` : undefined}
             onClick={call.allowed ? onCall : undefined}
-            className="text-[19px] font-semibold tracking-tight text-white"
+            className="text-[19px] font-semibold tracking-tight text-[var(--color-ink)]"
           >
             {phone}
           </a>
           {phoneNote !== null && (
-            <span className="text-[11.5px] text-white/45">{phoneNote}</span>
+            <span className="text-[11.5px] text-[var(--color-ink)]/">{phoneNote}</span>
           )}
         </div>
       ) : (
-        <p className="text-[13px] text-white/50">No phone number on this lead yet.</p>
+        <p className="text-[13px] text-[var(--color-ink)]/">No phone number on this lead yet.</p>
       )}
 
       {email !== null && (
-        <p className="mt-0.5 break-all text-[12.5px] text-white/55">{email}</p>
+        <p className="mt-0.5 break-all text-[12.5px] text-[var(--color-ink)]/">{email}</p>
       )}
 
       <div className="mt-2.5 grid grid-cols-3 gap-2">

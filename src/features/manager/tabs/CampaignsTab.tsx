@@ -113,20 +113,20 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
 
   return (
     <Card className="animate-in fade-in slide-in-from-top-2">
-      <h3 className="mb-4 text-sm font-semibold text-white">New Campaign Scope</h3>
+      <h3 className="mb-4 text-sm font-semibold text-[var(--color-ink)]">New Campaign Scope</h3>
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs text-white/50">Campaign Name</label>
+          <label className="mb-1 block text-xs text-[var(--color-ink)]/">Campaign Name</label>
           <input 
             type="text" 
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-xl bg-surface-3 px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-brand-500" 
+            className="w-full rounded-xl bg-surface-3 px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus:ring-2 focus:ring-brand-500" 
             placeholder="e.g., Spring Hail Storm - Area 4" 
           />
         </div>
         <div>
-          <label className="mb-1 flex items-center justify-between text-xs text-white/50">
+          <label className="mb-1 flex items-center justify-between text-xs text-[var(--color-ink)]/">
             <span>Target Area (Draw Polygon)</span>
             {!area && <span className="text-brand-400">Required</span>}
             {area && <span className="text-green-400">Area Defined</span>}

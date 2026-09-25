@@ -110,7 +110,7 @@ export default function NewInspectionPage() {
     <div className="space-y-4 pb-4">
       <div>
         <h1 className="font-display text-xl tracking-wide">New inspection</h1>
-        <p className="mt-1 text-[13px] leading-relaxed text-white/45">
+        <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-ink)]/">
           Address is all that is required to start. Everything else can be filled in from the roof.
         </p>
       </div>

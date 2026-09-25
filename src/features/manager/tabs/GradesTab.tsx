@@ -150,14 +150,14 @@ export default function GradesTab({
         <p className="text-[12.5px] font-semibold">
           Mode: {config.mode === 'manual' ? 'Manual' : config.mode === 'assisted' ? 'Assisted' : 'Automatic'}
         </p>
-        <p className="mt-1 text-[11.5px] leading-relaxed text-white/45">
+        <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
           {config.mode === 'manual'
             ? 'The figures are computed and the grade is entirely yours. Nothing is graded automatically.'
             : config.mode === 'assisted'
               ? 'A grade is suggested from the figures. It is not the rep’s grade until you accept or change it.'
               : 'A grade is computed automatically and stands until you change it. It stays labelled as computed.'}
         </p>
-        <p className="mt-2 border-t border-white/5 pt-2 text-[11px] leading-relaxed text-white/30">
+        <p className="mt-2 border-t border-white/5 pt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
           The suggestion is a published weighted rubric, not a language model — arithmetic you can check,
           with every weight and threshold on screen. It is never computed from {NEVER_GRADED_ON.join(', ')}.
         </p>
@@ -200,7 +200,7 @@ export default function GradesTab({
                 {verdict.letter ?? '—'}
               </span>
             </div>
-            <p className="mt-0.5 text-[11.5px] leading-relaxed text-white/40">{verdict.note}</p>
+            <p className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">{verdict.note}</p>
 
             {config.mode !== 'manual' && (
               <div className="mt-2 rounded-xl bg-white/4 px-3 py-2">
@@ -218,7 +218,7 @@ export default function GradesTab({
                   </p>
                 )}
                 {computed.unavailable && (
-                  <p className="mt-1 text-[11px] leading-relaxed text-white/45">{computed.unavailable}</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-[var(--color-ink)]/">{computed.unavailable}</p>
                 )}
               </div>
             )}
@@ -313,22 +313,22 @@ function Review({
   return (
     <div className="mt-3 space-y-3 border-t border-white/5 pt-3">
       <div>
-        <p className="text-[12px] font-semibold text-white/70">HOW THIS WAS WORKED OUT</p>
+        <p className="text-[12px] font-semibold text-[var(--color-ink)]/">HOW THIS WAS WORKED OUT</p>
         <div className="mt-2 space-y-1.5">
           {computed.categories.map((category) => (
             <div key={category.key} className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[12.5px]">{CATEGORY_LABEL[category.key]}</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-white/40">{category.evidence}</p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--color-ink)]/">{category.evidence}</p>
               </div>
-              <span className="shrink-0 text-[12px] tabular-nums text-white/60">
+              <span className="shrink-0 text-[12px] tabular-nums text-[var(--color-ink)]/">
                 {category.score === null ? 'dropped' : Math.round(category.score)}
-                <span className="ml-1 text-white/30">{category.weight}%</span>
+                <span className="ml-1 text-[var(--color-ink)]/">{category.weight}%</span>
               </span>
             </div>
           ))}
         </div>
-        <p className="mt-2 text-[11px] leading-relaxed text-white/30">
+        <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
           A category with too thin a sample is dropped and its weight removed from the denominator, never
           filled in with an assumption. {pct(computed.coverage)} of the rubric was scorable here.
         </p>
@@ -336,7 +336,7 @@ function Review({
 
       {computed.strengths.length > 0 && (
         <div>
-          <p className="text-[12px] font-semibold text-white/70">WHAT IS WORKING</p>
+          <p className="text-[12px] font-semibold text-[var(--color-ink)]/">WHAT IS WORKING</p>
           {computed.strengths.map((line) => (
             <p key={line} className="mt-1 text-[11.5px] leading-relaxed text-emerald-200/70">
               {line}
@@ -347,7 +347,7 @@ function Review({
 
       {computed.weaknesses.length > 0 && (
         <div>
-          <p className="text-[12px] font-semibold text-white/70">WHERE DEALS ARE GOING</p>
+          <p className="text-[12px] font-semibold text-[var(--color-ink)]/">WHERE DEALS ARE GOING</p>
           {computed.weaknesses.map((line) => (
             <p key={line} className="mt-1 text-[11.5px] leading-relaxed text-amber-200/70">
               {line}
@@ -358,9 +358,9 @@ function Review({
 
       {computed.coaching.length > 0 && (
         <div>
-          <p className="text-[12px] font-semibold text-white/70">WHAT TO DO ABOUT IT</p>
+          <p className="text-[12px] font-semibold text-[var(--color-ink)]/">WHAT TO DO ABOUT IT</p>
           {computed.coaching.map((line) => (
-            <p key={line} className="mt-1 text-[11.5px] leading-relaxed text-white/50">
+            <p key={line} className="mt-1 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
               {line}
             </p>
           ))}
@@ -374,7 +374,7 @@ function Review({
       )}
 
       {filed?.computed && (
-        <p className="text-[11px] leading-relaxed text-white/35">
+        <p className="text-[11px] leading-relaxed text-[var(--color-ink)]/">
           A computed grade is already on file for this period ({filed.computed.letter}, confidence{' '}
           {pct(filed.computed.confidence)}, engine {filed.computed.engine}). It is kept exactly as it was
           computed — the weights may have changed since, and an old grade has to keep saying what it said.
@@ -382,7 +382,7 @@ function Review({
       )}
 
       <div className="space-y-2">
-        <p className="text-[12px] font-semibold text-white/70">YOUR GRADE</p>
+        <p className="text-[12px] font-semibold text-[var(--color-ink)]/">YOUR GRADE</p>
         <Field label="Grade">
           <Select value={letter} onChange={(e) => setLetter(e.target.value)} disabled={!canManage}>
             {config.scale.map((step) => (
@@ -426,11 +426,11 @@ function Review({
         </Button>
 
         {!canManage && (
-          <p className="text-[11px] leading-relaxed text-white/35">
+          <p className="text-[11px] leading-relaxed text-[var(--color-ink)]/">
             Only a manager or admin can enter a grade. The server enforces that, not this screen.
           </p>
         )}
-        <p className="text-[11px] leading-relaxed text-white/30">
+        <p className="text-[11px] leading-relaxed text-[var(--color-ink)]/">
           Your grade is stored alongside the computed one, never over it. A year from now the useful
           question is whether the rubric matched what managers actually thought, and that is unanswerable
           if accepting a suggestion overwrites it.

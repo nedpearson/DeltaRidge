@@ -198,10 +198,10 @@ export default function LeadNotePanel({
         <ul className="mt-3 space-y-1.5 border-t border-white/8 pt-3">
           {pending.map((p, i) => (
             <li key={p.attachment.id} className="flex items-center justify-between gap-3">
-              <span className="truncate text-[12.5px] text-white/70">{p.label}</span>
+              <span className="truncate text-[12.5px] text-[var(--color-ink)]/">{p.label}</span>
               <button
                 onClick={() => setPending((prev) => prev.filter((_, j) => j !== i))}
-                className="shrink-0 text-[11px] text-white/35"
+                className="shrink-0 text-[11px] text-[var(--color-ink)]/"
               >
                 Remove
               </button>
@@ -216,7 +216,7 @@ export default function LeadNotePanel({
         {busy ? 'Saving…' : 'Add the note'}
       </Button>
 
-      <p className="mt-2 text-[10.5px] leading-relaxed text-white/25">
+      <p className="mt-2 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
         Recordings and photos here are your own notes on this lead. They are kept apart from
         inspection photos on purpose — nothing captured here goes into the package the office sends
         an adjuster.

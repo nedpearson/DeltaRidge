@@ -31,11 +31,11 @@ export default function RoofViewSheet({
         // escapes AppShell's max-width unless it is told not to — and a
         // full-bleed 1489-pixel sheet turns the 3:2 roof frame into a 3.4:1
         // letterbox the moment the max-height bites.
-        className="max-h-[92vh] w-full max-w-screen-sm overflow-y-auto rounded-t-3xl bg-[var(--color-surface-2)] p-4 pb-8 ring-1 ring-white/10"
+        className="max-h-[92vh] w-full max-w-screen-sm overflow-y-auto rounded-t-3xl bg-[var(--color-surface-2)] p-4 pb-8 ring-1 ring-slate-200"
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
-        <p className="text-[11px] uppercase tracking-wider text-white/35">Roof</p>
+        <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">Roof</p>
         <p className="mt-0.5 truncate text-[15px] font-semibold">{address}</p>
 
         <div className="mt-3">
@@ -48,7 +48,7 @@ export default function RoofViewSheet({
           />
         </div>
 
-        <p className="mt-2 text-[11px] leading-relaxed text-white/35">
+        <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
           Imagery is whatever Mapbox last flew, which can be a year or two old. A roof that looks
           original here may already have been replaced — the permit record is the better answer to
           that, and it is on the door card.

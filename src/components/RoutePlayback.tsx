@@ -160,22 +160,22 @@ export default function RoutePlayback({
               className="w-full accent-gold-400"
               aria-label="Route timeline"
             />
-            <div className="mt-0.5 flex justify-between text-[10.5px] text-white/35">
+            <div className="mt-0.5 flex justify-between text-[10.5px] text-[var(--color-ink)]/">
               <span>{clock(session.startedAt)}</span>
-              <span className="font-semibold text-white/60">{clock(cutoff)}</span>
+              <span className="font-semibold text-[var(--color-ink)]/">{clock(cutoff)}</span>
               <span>{session.endedAt ? clock(session.endedAt) : 'now'}</span>
             </div>
           </div>
         </div>
 
         <div className="mt-2 flex items-center gap-1">
-          <span className="text-[10.5px] uppercase tracking-wide text-white/30">Speed</span>
+          <span className="text-[10.5px] uppercase tracking-wide text-[var(--color-ink)]/">Speed</span>
           {SPEEDS.map((s) => (
             <button
               key={s}
               onClick={() => setSpeed(s)}
               className={`rounded px-2 py-0.5 text-[11px] ${
-                speed === s ? 'bg-white/15 text-white' : 'text-white/45'
+                speed === s ? 'bg-white/15 text-white' : 'text-[var(--color-ink)]/'
               }`}
             >
               {s}×
@@ -186,7 +186,7 @@ export default function RoutePlayback({
 
       <div
         ref={listRef}
-        className="max-h-80 overflow-y-auto rounded-2xl bg-[var(--color-surface-2)] p-1 ring-1 ring-white/5"
+        className="max-h-80 overflow-y-auto rounded-2xl bg-[var(--color-surface-2)] p-1 ring-1 ring-slate-200"
       >
         {timeline.map((entry, index) => {
           const reached = Date.parse(entry.at) <= startMs + offset
@@ -217,7 +217,7 @@ function TimelineRow({
         active ? 'bg-white/6' : ''
       } ${reached ? 'opacity-100' : 'opacity-35'}`}
     >
-      <span className="w-14 shrink-0 pt-0.5 text-[11px] tabular-nums text-white/40">
+      <span className="w-14 shrink-0 pt-0.5 text-[11px] tabular-nums text-[var(--color-ink)]/">
         {clock(entry.at)}
       </span>
       <span
@@ -227,7 +227,7 @@ function TimelineRow({
       <div className="min-w-0">
         <p className="truncate text-[13px] font-medium">{entry.title}</p>
         {entry.detail && (
-          <p className="mt-0.5 text-[11.5px] leading-relaxed text-white/45">{entry.detail}</p>
+          <p className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">{entry.detail}</p>
         )}
       </div>
     </div>

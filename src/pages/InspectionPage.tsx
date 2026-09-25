@@ -60,13 +60,13 @@ export default function InspectionPage() {
   )
 
   if (loading) {
-    return <p className="pt-10 text-center text-[13px] text-white/40">Loading inspection…</p>
+    return <p className="pt-10 text-center text-[13px] text-[var(--color-ink)]/">Loading inspection…</p>
   }
 
   if (!inspection) {
     return (
       <div className="pt-10 text-center">
-        <p className="text-[14px] text-white/60">That inspection is not on this device.</p>
+        <p className="text-[14px] text-[var(--color-ink)]/">That inspection is not on this device.</p>
         <Button variant="ghost" className="mt-3" onClick={() => navigate('/')}>
           Back to home
         </Button>
@@ -112,7 +112,7 @@ export default function InspectionPage() {
   return (
     <div>
       <div className="flex items-start justify-between gap-3">
-        <button onClick={() => navigate(-1)} className="-ml-2 !min-h-0 px-2 py-1 text-[13px] text-white/45">
+        <button onClick={() => navigate(-1)} className="-ml-2 !min-h-0 px-2 py-1 text-[13px] text-[var(--color-ink)]/">
           ← Back
         </button>
         <div className="flex items-center gap-2">
@@ -133,7 +133,7 @@ export default function InspectionPage() {
       </div>
 
       <h1 className="mt-1 font-display text-lg leading-tight tracking-wide">{inspection.addressLine1}</h1>
-      <p className="mt-0.5 text-[12px] text-white/40">
+      <p className="mt-0.5 text-[12px] text-[var(--color-ink)]/">
         {[inspection.city, inspection.parish && `${inspection.parish} Parish`].filter(Boolean).join(' · ')}
         {usable > 0 && ` · ${usable} photo${usable === 1 ? '' : 's'}`}
       </p>
@@ -145,7 +145,7 @@ export default function InspectionPage() {
               key={value}
               onClick={() => setTab(value)}
               className={`rounded-lg py-2 text-[13px] font-semibold transition-colors ${
-                tab === value ? 'bg-brand-500 text-white' : 'text-white/45'
+                tab === value ? 'bg-brand-500 text-[var(--color-ink)]' : 'text-[var(--color-ink)]/'
               }`}
             >
               {label}
