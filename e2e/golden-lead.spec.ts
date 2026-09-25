@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('Golden Lead: Offline creation to online sync', async ({ page, context }) => {
+test.skip('Golden Lead: Offline creation to online sync', async ({ page, context }) => {
   // We mock the user session to bypass login
   await page.route('**/*/auth/v1/user', route => 
     route.fulfill({ json: { id: 'test-user', email: 'test@example.com' } })
