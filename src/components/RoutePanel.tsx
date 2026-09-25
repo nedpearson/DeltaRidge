@@ -327,11 +327,11 @@ export default function RoutePanel() {
       <Card
         className={
           paused
-            ? '!bg-amber-100 ring-amber-300'
-            : '!bg-emerald-100 ring-emerald-300'
+            ? '!border-amber-300 !bg-amber-50 ring-amber-300'
+            : '!border-teal-300 !bg-teal-50 ring-teal-300'
         }
       >
-        <p className={`text-[13.5px] font-semibold ${paused ? 'text-amber-900' : 'text-emerald-900'}`}>
+        <p className={`text-[13.5px] font-semibold ${paused ? 'text-amber-900' : 'text-teal-900'}`}>
           {paused ? '⏸ Paused — nothing is being recorded.' : '● Recording your route.'}
         </p>
         <p className="mt-0.5 text-[11.5px] text-[var(--color-ink)]/">
@@ -348,7 +348,7 @@ export default function RoutePanel() {
           <Stat value={counts.queued === 0 ? 'clear' : String(counts.queued)} label="waiting to send" />
         </div>
 
-        {problem && <p className="mt-2 text-[12px] leading-relaxed text-amber-700/80">{problem}</p>}
+        {problem && <p className="mt-2 rounded-lg bg-amber-100 px-3 py-2 text-[12px] font-medium leading-relaxed text-amber-900">{problem}</p>}
 
         {confirmStop ? (
           <div className="mt-3">
@@ -428,7 +428,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <p className="text-[16px] font-semibold tabular-nums">{value}</p>
-      <p className="text-[10px] uppercase tracking-wide text-[var(--color-ink)]/">{label}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-600">{label}</p>
     </div>
   )
 }

@@ -112,9 +112,9 @@ function shortDate(iso: string): string {
 }
 
 function tone(score: number): string {
-  if (score >= 60) return 'text-emerald-400'
-  if (score >= 40) return 'text-gold-400'
-  return 'text-[var(--color-ink)]/'
+  if (score >= 60) return 'text-emerald-700'
+  if (score >= 40) return 'text-amber-700'
+  return 'text-slate-700'
 }
 
 function mapsHref(lat: number, lon: number): string {
@@ -468,9 +468,9 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
         <div className="flex items-baseline justify-between gap-3">
           <p className="text-[13px] text-[var(--color-ink)]/">Official ground reports</p>
           {official.kind === 'live' ? (
-            <p className="shrink-0 font-display text-[15px] text-emerald-400">{official.count}</p>
+            <p className="shrink-0 font-display text-[15px] text-emerald-700">{official.count}</p>
           ) : (
-            <p className="shrink-0 text-[11px] uppercase tracking-wider text-amber-300">
+            <p className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-amber-800">
               {official.kind === 'failed' ? 'unavailable' : 'off'}
             </p>
           )}
@@ -486,11 +486,11 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
         <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-slate-300 pt-3">
           <p className="text-[13px] text-[var(--color-ink)]/">Radar-estimated hail (NEXRAD)</p>
           {coverage.radar.kind === 'live' ? (
-            <p className="shrink-0 font-display text-[15px] text-emerald-400">
+            <p className="shrink-0 font-display text-[15px] text-emerald-700">
               {coverage.radar.count}
             </p>
           ) : (
-            <p className="shrink-0 text-[11px] uppercase tracking-wider text-amber-300">
+            <p className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-amber-800">
               {coverage.radar.kind === 'failed' ? 'unavailable' : 'not configured'}
             </p>
           )}
@@ -1019,7 +1019,7 @@ export default function LeadsPage() {
                   }}
                   className={`mt-2 w-full rounded-full px-4 py-2 text-[12.5px] ${
                     ownerOccupiedOnly
-                      ? 'bg-emerald-500/20 text-emerald-300'
+                      ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300'
                       : 'bg-slate-200 text-[var(--color-ink)]/'
                   }`}
                 >

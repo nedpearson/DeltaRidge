@@ -40,7 +40,7 @@ export function OnlinePill() {
   }, [])
 
   const label = !online ? 'Offline — saved on device' : pending > 0 ? `${pending} waiting to sync` : 'Saved on device'
-  const tone = !online ? 'bg-amber-50 text-amber-700 ring-amber-200' : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+  const tone = !online ? 'bg-amber-400/15 text-amber-200 ring-amber-300/30' : 'bg-emerald-400/15 text-emerald-200 ring-emerald-300/30'
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ${tone}`}>
@@ -139,13 +139,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
        */
       style={{ '--bottom-nav-height': `${navHeight}px` } as CSSProperties}
     >
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-200 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-brand-900 text-white shadow-lg shadow-brand-950/10">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <div className="grid size-8 place-items-center rounded-md bg-brand-500 font-display text-sm font-bold text-white shadow-sm">DR</div>
+            <div className="grid size-9 place-items-center rounded-lg bg-brand-500 font-display text-sm font-bold text-white shadow-md shadow-black/20 ring-1 ring-white/20">DR</div>
             <div className="leading-none">
-              <div className="font-display text-[15px] tracking-wide text-slate-900">Delta Ridge</div>
-              <div className="mt-0.5 text-[10px] uppercase tracking-widest text-slate-500">Field</div>
+              <div className="font-display text-[15px] tracking-wide text-white">Delta Ridge</div>
+              <div className="mt-0.5 text-[10px] uppercase tracking-widest text-slate-300">Field</div>
             </div>
           </div>
           <OnlinePill />
@@ -172,7 +172,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {!hideNav && (
         <nav
           ref={navRef}
-          className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-screen-sm border-t border-slate-300 bg-[var(--color-surface-2)]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur md:max-w-3xl lg:max-w-5xl"
+          className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-screen-sm border-t border-white/10 bg-brand-900 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(8,21,46,0.18)] md:max-w-3xl lg:max-w-5xl"
         >
           {/*
             The column count is DERIVED from NAV, not written down beside it.
@@ -186,7 +186,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             cannot generate a class name built at runtime.
           */}
           <div
-            className="grid bg-white border-t border-slate-200"
+            className="grid"
             style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}
           >
             {NAV.map((item) => (
@@ -195,8 +195,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 to={item.to}
                 end={item.to === '/'}
                 className={({ isActive }) =>
-                  `flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-                    isActive ? 'text-brand-600' : 'text-slate-400 hover:text-slate-500'
+                  `mx-1 my-1 flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-semibold transition-colors ${
+                    isActive ? 'bg-white/10 text-brand-300' : 'text-slate-300 hover:bg-white/5 hover:text-white'
                   }`
                 }
               >

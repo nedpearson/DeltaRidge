@@ -130,7 +130,7 @@ export default function HomePage() {
                       <p className="truncate text-[15px] font-semibold">{inspectionTitle(i)}</p>
                       <p className="mt-0.5 text-[12px] text-[var(--color-ink)]/">Updated {relative(i.updatedAt)}</p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-brand-500/15 px-2.5 py-1 text-[11px] font-medium text-brand-300 ring-1 ring-brand-500/25">
+                    <span className="shrink-0 rounded-full bg-brand-100 px-2.5 py-1 text-[11px] font-semibold text-brand-700 ring-1 ring-brand-300">
                       Resume
                     </span>
                   </div>

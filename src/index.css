@@ -1,12 +1,8 @@
 @import 'tailwindcss';
 
-/* ---------------------------------------------------------------------------
-   Delta Ridge brand tokens.
-   Sampled from the DDR logo at delta-ridge.com: steel navy (#1D5F80) and
-   warm gold (#B0A070). Type per the site: Oswald (display), Poppins (UI).
-   Designed dark-first: reps work outdoors, and a dark UI with high-contrast
-   controls reads better in glare than a white field app.
---------------------------------------------------------------------------- */
+/* Delta Ridge field palette: crisp neutral surfaces, a deep-navy frame and
+   saturated accents. Every text token below is chosen to remain readable in
+   bright outdoor light; pale colors are reserved for backgrounds, never copy. */
 @theme {
   --font-display: 'Oswald', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
@@ -14,30 +10,31 @@
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;
   --color-brand-200: #bfdbfe;
-  --color-brand-300: #93c5fd;
-  --color-brand-400: #60a5fa;
-  --color-brand-500: #1e40af; /* Deep Navy Blue */
-  --color-brand-600: #1e3a8a;
-  --color-brand-700: #172554;
-  --color-brand-800: #0f172a;
-  --color-brand-900: #020617;
-  --color-brand-950: #000000;
+  --color-brand-300: #7dd3fc;
+  --color-brand-400: #38bdf8;
+  --color-brand-500: #2563eb;
+  --color-brand-600: #1d4ed8;
+  --color-brand-700: #1e40af;
+  --color-brand-800: #172554;
+  --color-brand-900: #0b1f3a;
+  --color-brand-950: #08152e;
 
   --color-gold-50: #fffbeb;
   --color-gold-100: #fef3c7;
   --color-gold-200: #fde68a;
   --color-gold-300: #fcd34d;
-  --color-gold-400: #fbbf24;
-  --color-gold-500: #d97706; /* Professional Amber */
-  --color-gold-600: #b45309;
+  --color-gold-400: #d97706;
+  --color-gold-500: #b45309;
+  --color-gold-600: #92400e;
   --color-gold-700: #92400e;
   --color-gold-800: #78350f;
   --color-gold-900: #451a03;
 
-  --color-ink: #0f172a; /* Slate 900 for high-contrast primary text */
-  --color-surface: #f1f5f9; /* Slate 100 for cooler, professional background */
-  --color-surface-2: #ffffff; /* Pure white cards */
-  --color-surface-3: #cbd5e1; /* Slate 300 for visible borders */
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-surface: #f3f6fb;
+  --color-surface-2: #ffffff;
+  --color-surface-3: #cbd5e1;
 
   /* Status Colors: kept accessible for light background */
   --color-status-untouched: #64748b;
@@ -63,6 +60,8 @@
   body {
     margin: 0;
     background-color: var(--color-surface);
+    background-image: linear-gradient(180deg, #e8eef7 0, #f3f6fb 180px);
+    background-attachment: fixed;
     color: var(--color-ink);
     font-family: var(--font-sans);
     /* Respect notches and the iOS home indicator. */
@@ -75,6 +74,11 @@
     font-family: var(--font-display);
     letter-spacing: 0.01em;
     text-transform: uppercase;
+  }
+
+  ::selection {
+    background: #bfdbfe;
+    color: #08152e;
   }
 
   /* Field ergonomics: every interactive target clears 44px, the minimum
@@ -90,5 +94,44 @@
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+@layer utilities {
+  /* The first light-theme pass emitted this incomplete utility in hundreds of
+     places. Give it one explicit, accessible meaning while those call sites
+     are migrated to semantic tokens. #475569 clears 7:1 on white. */
+  [class~='text-[var(--color-ink)]/'] {
+    color: var(--color-muted);
+  }
+
+  /* Saturated display colors from the dark theme were too pale on white.
+     These aliases preserve their intent and raise them above WCAG AA. */
+  [class~='text-emerald-300'],
+  [class~='text-emerald-400'],
+  [class*='text-emerald-300/'],
+  [class*='text-emerald-400/'] {
+    color: #047857;
+  }
+
+  [class~='text-amber-300'],
+  [class~='text-gold-300'],
+  [class~='text-gold-400'],
+  [class*='text-amber-300/'],
+  [class*='text-gold-300/'],
+  [class*='text-gold-400/'] {
+    color: #92400e;
+  }
+
+  [class~='text-red-300'] {
+    color: #b91c1c;
+  }
+
+  [class~='text-sky-300'] {
+    color: #0369a1;
+  }
+
+  [class~='text-green-400'] {
+    color: #15803d;
   }
 }
