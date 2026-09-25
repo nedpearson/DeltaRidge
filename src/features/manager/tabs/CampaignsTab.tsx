@@ -40,7 +40,7 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
   const draw = useRef<MapboxDraw | null>(null)
   
   const [name, setName] = useState('')
-  const [area, setArea] = useState<any>(null)
+  const [area, setArea] = useState<{ features: { geometry: unknown }[] } | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -94,6 +94,7 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
 
       // Create campaign in Supabase with the drawn MultiPolygon
       const feature = area.features[0] // Assuming single polygon for MVP
+      if (!feature) throw new Error('No polygon drawn')
       const { error } = await client.from('campaigns').insert({
         name,
         is_active: true,

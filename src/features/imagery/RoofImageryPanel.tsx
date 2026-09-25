@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type WheelEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type WheelEvent } from 'react'
 import { assessImagery, captureLabel } from '@/features/claims/imagery-quality'
 import type { StormEvent } from '@/integrations/storm'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
@@ -153,7 +153,7 @@ export default function RoofImageryPanel({
     }
   }, [captures, selected])
 
-  const search = async () => {
+  const search = useCallback(async () => {
     if (searched || loading) return
     setLoading(true)
     setMessage(null)
@@ -165,13 +165,13 @@ export default function RoofImageryPanel({
     setMessage(result.message)
     setSearched(true)
     setLoading(false)
-  }
+  }, [latitude, longitude, searched, loading])
 
   useEffect(() => {
     if (autoFetch && !searched && !loading) {
       void search()
     }
-  }, [autoFetch, searched, loading])
+  }, [autoFetch, searched, loading, search])
 
   const verdict = selected === null
     ? null
