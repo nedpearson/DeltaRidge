@@ -15,6 +15,7 @@ import {
   type ManagerSnapshot,
 } from '@/features/manager/read'
 import RoutesTab from '@/features/manager/tabs/RoutesTab'
+import CampaignsTab from '@/features/manager/tabs/CampaignsTab'
 import {
   fieldToday,
   locationNote,
@@ -72,6 +73,7 @@ type Tab =
   | 'team'
   | 'field'
   | 'routes'
+  | 'campaigns'
   | 'performance'
   | 'grades'
   | 'leads'
@@ -86,6 +88,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'team', label: 'Team' },
   { id: 'field', label: 'Live field' },
   { id: 'routes', label: 'Routes' },
+  { id: 'campaigns', label: 'Campaigns' },
   { id: 'performance', label: 'Performance' },
   { id: 'grades', label: 'Grades' },
   { id: 'leads', label: 'Assign' },
@@ -313,6 +316,8 @@ export default function ManagerPage() {
           loading={loading}
         />
       )}
+
+      {tab === 'campaigns' && <CampaignsTab />}
 
       {tab === 'performance' && (
         <PerformanceTab
