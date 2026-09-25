@@ -11,33 +11,33 @@
   --font-display: 'Oswald', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50: #eef7fb;
-  --color-brand-100: #d5ebf4;
-  --color-brand-200: #abd6e8;
-  --color-brand-300: #74b8d6;
-  --color-brand-400: #3d90b5;
-  --color-brand-500: #1d5f80;
-  --color-brand-600: #17506e;
-  --color-brand-700: #133f57;
-  --color-brand-800: #102f41;
-  --color-brand-900: #0d2532;
-  --color-brand-950: #08171f;
+  --color-brand-50: #f0f9ff;
+  --color-brand-100: #e0f2fe;
+  --color-brand-200: #bae6fd;
+  --color-brand-300: #7dd3fc;
+  --color-brand-400: #38bdf8;
+  --color-brand-500: #0ea5e9;
+  --color-brand-600: #0284c7;
+  --color-brand-700: #0369a1;
+  --color-brand-800: #075985;
+  --color-brand-900: #0c4a6e;
+  --color-brand-950: #082f49;
 
-  --color-gold-50: #faf8f1;
-  --color-gold-100: #f2eddc;
-  --color-gold-200: #e4d9ba;
-  --color-gold-300: #d0be8d;
-  --color-gold-400: #bfa670;
-  --color-gold-500: #b0a070;
-  --color-gold-600: #94824f;
-  --color-gold-700: #766641;
-  --color-gold-800: #5b4f36;
-  --color-gold-900: #453c2c;
+  --color-gold-50: #fffbeb;
+  --color-gold-100: #fef3c7;
+  --color-gold-200: #fde68a;
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #fbbf24;
+  --color-gold-500: #f59e0b;
+  --color-gold-600: #d97706;
+  --color-gold-700: #b45309;
+  --color-gold-800: #92400e;
+  --color-gold-900: #78350f;
 
-  --color-ink: #272727;
-  --color-surface: #0f1a20;
-  --color-surface-2: #16242c;
-  --color-surface-3: #1e3139;
+  --color-ink: #0f172a;
+  --color-surface: #020617;
+  --color-surface-2: #0f172a;
+  --color-surface-3: #1e293b;
 
   /* Lead / pin status colors. Chosen for contrast against satellite imagery
      and to stay distinguishable for the most common forms of color blindness
@@ -65,7 +65,7 @@
   body {
     margin: 0;
     background-color: var(--color-surface);
-    color: #e8eef2;
+    color: #f8fafc;
     font-family: var(--font-sans);
     /* Respect notches and the iOS home indicator. */
     padding: env(safe-area-inset-top) env(safe-area-inset-right)
