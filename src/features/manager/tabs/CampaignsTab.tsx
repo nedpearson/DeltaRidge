@@ -4,7 +4,7 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { Button, Card, SectionTitle } from '@/components/ui'
 import { Nothing } from '@/features/manager/tabs/shared'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 
 export default function CampaignsTab() {
   const [isCreating, setIsCreating] = useState(false)
@@ -70,7 +70,7 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
     map.current.on('draw.delete', updateArea)
     map.current.on('draw.update', updateArea)
 
-    function updateArea(e: any) {
+    function updateArea() {
       const data = draw.current?.getAll()
       if (data && data.features.length > 0) {
         setArea(data)
@@ -89,9 +89,12 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
     setSaving(true)
     
     try {
+      const client = getSupabase()
+      if (!client) throw new Error('Supabase client not available')
+
       // Create campaign in Supabase with the drawn MultiPolygon
       const feature = area.features[0] // Assuming single polygon for MVP
-      const { error } = await supabase.from('campaigns').insert({
+      const { error } = await client.from('campaigns').insert({
         name,
         is_active: true,
         area: feature.geometry // PostGIS will cast this GeoJSON to geography if formatted correctly
