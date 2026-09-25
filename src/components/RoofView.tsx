@@ -9,6 +9,7 @@ import {
   spanFeet,
 } from '@/features/leads/basemap'
 import { project } from '@/features/leads/map-projection'
+import { EagleViewImageryProvider } from '@/features/imagery/eagleview'
 
 /**
  * One roof, from above, at a zoom the rep chooses.
@@ -88,20 +89,51 @@ export default function RoofView({
 
   const { width, height } = size
   const span = SPAN_STEPS_METRES[step] ?? HOUSE_SPAN_METRES
+  const tallSpan = height > 0 ? (span * height) / width : 0
+
+  const [eagleUrl, setEagleUrl] = useState<string | null>(null)
+  
+  useEffect(() => {
+    let active = true
+    if (width === 0 || height === 0) return
+    
+    const run = async () => {
+      try {
+        const provider = new EagleViewImageryProvider()
+        const search = await provider.searchCaptures({ latitude, longitude })
+        if (!active || search.captures.length === 0) return
+        
+        const ortho = search.captures.find(c => c.view === 'ortho') ?? search.captures[0]
+        if (!ortho) return
+        const blob = await provider.image(ortho, { latitude, longitude, radiusMetres: Math.max(span, tallSpan) })
+        if (active) {
+          setEagleUrl(URL.createObjectURL(blob))
+        }
+      } catch (err) {
+        // Fallback to Mapbox if EagleView fails
+      }
+    }
+    run()
+    
+    return () => {
+      active = false
+    }
+  }, [latitude, longitude, span, tallSpan, width, height])
 
   // The zoom control moves through spans either way; against a lot boundary it
   // widens from the lot rather than from a fixed distance.
   const zoomOut = span / HOUSE_SPAN_METRES
   const framed = boundary && width > 0 ? parcelFrame(boundary, size, zoomOut) : null
-  const url = framed
+  const mapboxUrl = framed
     ? framed.url
     : width > 0
       ? propertySpanUrl(latitude, longitude, size, span)
       : null
 
+  const url = eagleUrl ?? mapboxUrl
+
   // What the frame actually holds vertically, which is the dimension that
   // decides whether a whole roof is on screen.
-  const tallSpan = height > 0 ? (span * height) / width : 0
 
   const outline =
     framed && boundary
@@ -154,7 +186,7 @@ export default function RoofView({
 
         {/* The lot, as the parish recorded it. Drawn over the image rather than
             baked into the request, so the outline stays crisp at any size. */}
-        {outline && !failed && (
+        {outline && !failed && !eagleUrl && (
           <svg className="pointer-events-none absolute inset-0" width={width} height={height}>
             <polygon
               points={outline}
@@ -233,7 +265,7 @@ export default function RoofView({
         {framed
           ? 'Outline is the parish parcel record, not a survey.'
           : 'Centred on this address — the parish has no lot outline for it.'}{' '}
-        {BASEMAP_ATTRIBUTION}
+        {!eagleUrl && BASEMAP_ATTRIBUTION}
       </p>
     </div>
   )
