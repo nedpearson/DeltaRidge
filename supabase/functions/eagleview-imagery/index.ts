@@ -122,7 +122,14 @@ function validCoordinate(value: unknown, low: number, high: number): value is nu
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      headers: {
+        ...cors,
+        'access-control-allow-headers': req.headers.get('access-control-request-headers') ?? cors['access-control-allow-headers'],
+      },
+    })
+  }
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
   if (SUPABASE_URL === '' || ANON_KEY === '' || SERVICE_ROLE_KEY === '') return json({ error: 'server not configured' }, 500)
 

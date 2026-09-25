@@ -3,11 +3,11 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAt
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'gold'
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand-500 text-white hover:bg-brand-400 active:bg-brand-600',
-  gold: 'bg-gold-500 text-brand-950 hover:bg-gold-400 active:bg-gold-600',
-  secondary: 'bg-white/8 text-white ring-1 ring-white/10 hover:bg-white/12',
+  primary: 'bg-gradient-to-r from-brand-600 to-brand-400 text-white shadow-lg shadow-brand-500/25 hover:from-brand-500 hover:to-brand-300 active:scale-[0.98]',
+  gold: 'bg-gradient-to-r from-gold-600 to-gold-400 text-surface shadow-lg shadow-gold-500/25 hover:from-gold-500 hover:to-gold-300 active:scale-[0.98]',
+  secondary: 'bg-white/5 text-white ring-1 ring-white/10 hover:bg-white/10 backdrop-blur-sm',
   ghost: 'text-white/70 hover:bg-white/5 hover:text-white',
-  danger: 'bg-red-500/15 text-red-300 ring-1 ring-red-500/25 hover:bg-red-500/25',
+  danger: 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/20',
 }
 
 export function Button({
@@ -20,7 +20,7 @@ export function Button({
   return (
     <button
       {...rest}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${VARIANTS[variant]} ${full ? 'w-full' : ''} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 disabled:scale-100 ${VARIANTS[variant]} ${full ? 'w-full' : ''} ${className}`}
     >
       {children}
     </button>
@@ -37,7 +37,7 @@ export function Card({
   id?: string
 }) {
   return (
-    <div id={id} className={`rounded-2xl bg-[var(--color-surface-2)] p-4 ring-1 ring-white/5 ${className}`}>
+    <div id={id} className={`rounded-2xl bg-[var(--color-surface-2)] p-4 ring-1 ring-white/5 shadow-xl shadow-black/40 ${className}`}>
       {children}
     </div>
   )

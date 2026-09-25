@@ -37,11 +37,24 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const HOOK_URL = Deno.env.get('ZAPIER_ROOFR_HOOK_URL') ?? ''
 
+const cors = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 function json(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
+  return new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } })
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      headers: {
+        ...cors,
+        'access-control-allow-headers': req.headers.get('access-control-request-headers') ?? cors['access-control-allow-headers'],
+      },
+    })
+  }
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
   if (SUPABASE_URL === '' || SERVICE_ROLE_KEY === '' || ANON_KEY === '') {
     return json({ error: 'not configured' }, 500)
