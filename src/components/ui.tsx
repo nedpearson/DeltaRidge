@@ -20,7 +20,7 @@ export function Button({
   return (
     <button
       {...rest}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 disabled:scale-100 ${VARIANTS[variant]} ${full ? 'w-full' : ''} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-4 text-base font-bold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 disabled:scale-100 ${VARIANTS[variant]} ${full ? 'w-full' : ''} ${className}`}
     >
       {children}
     </button>

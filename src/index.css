@@ -11,30 +11,30 @@
   --font-display: 'Oswald', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50: #f0f9ff;
-  --color-brand-100: #e0f2fe;
-  --color-brand-200: #bae6fd;
-  --color-brand-300: #7dd3fc;
-  --color-brand-400: #38bdf8;
-  --color-brand-500: #0ea5e9;
-  --color-brand-600: #0284c7;
-  --color-brand-700: #0369a1;
-  --color-brand-800: #075985;
-  --color-brand-900: #0c4a6e;
-  --color-brand-950: #082f49;
+  --color-brand-50: #ecfeff;
+  --color-brand-100: #cffafe;
+  --color-brand-200: #a5f3fc;
+  --color-brand-300: #67e8f9;
+  --color-brand-400: #22d3ee;
+  --color-brand-500: #06b6d4;
+  --color-brand-600: #0891b2;
+  --color-brand-700: #0e7490;
+  --color-brand-800: #155e75;
+  --color-brand-900: #164e63;
+  --color-brand-950: #083344;
 
-  --color-gold-50: #fffbeb;
-  --color-gold-100: #fef3c7;
-  --color-gold-200: #fde68a;
-  --color-gold-300: #fcd34d;
-  --color-gold-400: #fbbf24;
-  --color-gold-500: #f59e0b;
-  --color-gold-600: #d97706;
-  --color-gold-700: #b45309;
-  --color-gold-800: #92400e;
-  --color-gold-900: #78350f;
+  --color-gold-50: #fefce8;
+  --color-gold-100: #fef9c3;
+  --color-gold-200: #fef08a;
+  --color-gold-300: #fde047;
+  --color-gold-400: #facc15;
+  --color-gold-500: #eab308;
+  --color-gold-600: #ca8a04;
+  --color-gold-700: #a16207;
+  --color-gold-800: #854d0e;
+  --color-gold-900: #713f12;
 
-  --color-ink: #0f172a;
+  --color-ink: #ffffff;
   --color-surface: #020617;
   --color-surface-2: #0f172a;
   --color-surface-3: #1e293b;
@@ -65,7 +65,7 @@
   body {
     margin: 0;
     background-color: var(--color-surface);
-    color: #f8fafc;
+    color: #ffffff;
     font-family: var(--font-sans);
     /* Respect notches and the iOS home indicator. */
     padding: env(safe-area-inset-top) env(safe-area-inset-right)
