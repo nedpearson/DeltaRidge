@@ -128,8 +128,8 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
         <div>
           <label className="mb-1 flex items-center justify-between text-xs text-[var(--color-ink)]/">
             <span>Target Area (Draw Polygon)</span>
-            {!area && <span className="text-brand-400">Required</span>}
-            {area && <span className="text-green-400">Area Defined</span>}
+            {!area && <span className="font-semibold text-brand-700">Required</span>}
+            {area && <span className="font-semibold text-green-700">Area Defined</span>}
           </label>
           <div className="overflow-hidden rounded-xl border border-slate-300">
             <div ref={mapContainer} className="h-64 w-full" />
