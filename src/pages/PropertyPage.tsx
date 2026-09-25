@@ -210,7 +210,7 @@ export default function PropertyPage() {
       </div>
 
       <div className="mt-3">
-        {tab === 'property' && <PropertyTab profile={profile} />}
+        {tab === 'property' && <PropertyTab profile={profile} latitude={lead.latitude} longitude={lead.longitude} />}
         {tab === 'owner' && <OwnerTab profile={profile} {...(lead.parcel ? { parcel: lead.parcel } : {})} />}
         {tab === 'roof' && (
           <RoofTab
@@ -280,7 +280,15 @@ const money = (n: number) => `$${n.toLocaleString()}`
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 
-function PropertyTab({ profile }: { profile: PropertyProfile }) {
+function PropertyTab({ 
+  profile,
+  latitude,
+  longitude
+}: { 
+  profile: PropertyProfile
+  latitude: number
+  longitude: number
+}) {
   return (
     <>
       <Card>
@@ -290,6 +298,8 @@ function PropertyTab({ profile }: { profile: PropertyProfile }) {
         <FactRow label="Assessed value" fact={profile.assessedValue} format={money} />
         <FactRow label="Land value" fact={profile.landValue} format={money} />
       </Card>
+
+      <RoofImageryPanel latitude={latitude} longitude={longitude} storms={profile.storms} autoFetch />
 
       <SectionTitle>NOT AVAILABLE</SectionTitle>
       <Card className="!py-3">
@@ -366,7 +376,6 @@ function RoofTab({
         <FactRow label="Roof age" fact={profile.roof.ageYears} format={(y) => `about ${y} years`} />
         <FactRow label="Last roofing contractor" fact={profile.roof.lastContractor} />
       </Card>
-      <RoofImageryPanel latitude={latitude} longitude={longitude} storms={profile.storms} />
     </>
   )
 }

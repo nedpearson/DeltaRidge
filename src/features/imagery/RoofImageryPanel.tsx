@@ -117,10 +117,12 @@ export default function RoofImageryPanel({
   latitude,
   longitude,
   storms,
+  autoFetch = false,
 }: {
   latitude: number
   longitude: number
   storms: readonly StormEvent[]
+  autoFetch?: boolean
 }) {
   const [all, setAll] = useState<readonly ImageryCapture[]>([])
   const [selected, setSelected] = useState<ImageryCapture | null>(null)
@@ -152,6 +154,7 @@ export default function RoofImageryPanel({
   }, [captures, selected])
 
   const search = async () => {
+    if (searched || loading) return
     setLoading(true)
     setMessage(null)
     setCompare(false)
@@ -163,6 +166,12 @@ export default function RoofImageryPanel({
     setSearched(true)
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (autoFetch && !searched && !loading) {
+      void search()
+    }
+  }, [autoFetch, searched, loading])
 
   const verdict = selected === null
     ? null
