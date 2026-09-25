@@ -35,7 +35,7 @@ export default function RoofViewSheet({
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
-        <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">Roof</p>
+        <p className="text-[11px] uppercase tracking-wider text-slate-600">Roof</p>
         <p className="mt-0.5 truncate text-[15px] font-semibold">{address}</p>
 
         <div className="mt-3">
@@ -48,7 +48,7 @@ export default function RoofViewSheet({
           />
         </div>
 
-        <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
           Imagery is whatever Mapbox last flew, which can be a year or two old. A roof that looks
           original here may already have been replaced — the permit record is the better answer to
           that, and it is on the door card.

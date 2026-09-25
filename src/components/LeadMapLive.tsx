@@ -307,7 +307,7 @@ export default function LeadMapLive({
 
         <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-slate-300 px-3 py-2">
           {LEGEND.map((l) => (
-            <span key={l.status} className="flex items-center gap-1.5 text-[10.5px] text-[var(--color-ink)]/">
+            <span key={l.status} className="flex items-center gap-1.5 text-[10.5px] text-slate-600">
               <span
                 className="size-1.5 rounded-full"
                 style={{ backgroundColor: LEGEND_COLOUR[l.status] }}
@@ -319,8 +319,8 @@ export default function LeadMapLive({
 
         {selected && (
           <div className="border-t border-slate-300 px-3 py-2.5">
-            <p className="truncate text-[13px] text-[var(--color-ink)]/">{selected.label}</p>
-            <p className="mt-0.5 text-[11px] text-[var(--color-ink)]/">
+            <p className="truncate text-[13px] text-slate-600">{selected.label}</p>
+            <p className="mt-0.5 text-[11px] text-slate-600">
               {selected.status === 'door'
                 ? 'Not knocked yet'
                 : STATUS_LABEL[selected.status as LeadStatus]}

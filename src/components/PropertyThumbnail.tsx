@@ -131,7 +131,7 @@ export default function PropertyThumbnail({
       </div>
 
       {onOpen && (
-        <span className="pointer-events-none absolute right-2 top-2 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-ink)]/ backdrop-blur-sm">
+        <span className="pointer-events-none absolute right-2 top-2 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 backdrop-blur-sm">
           Zoom
         </span>
       )}

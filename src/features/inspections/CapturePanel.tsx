@@ -145,7 +145,7 @@ export default function CapturePanel({
                         )}
                         {satisfied && <span className="text-[13px] text-emerald-400">✓</span>}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-[var(--color-ink)]/">
+                      <p className="mt-0.5 text-[11px] text-slate-600">
                         {shots.length === 0
                           ? 'No photo yet'
                           : `${usable.length} usable${shots.length > usable.length ? ` · ${shots.length - usable.length} flagged` : ''}`}
@@ -173,7 +173,7 @@ export default function CapturePanel({
                           <button
                             onClick={() => void remove(p.id)}
                             aria-label="Delete photo"
-                            className="absolute -right-1 -top-1 grid size-6 !min-h-0 !min-w-0 place-items-center rounded-full bg-black/80 text-[13px] text-[var(--color-ink)]/ ring-1 ring-slate-200"
+                            className="absolute -right-1 -top-1 grid size-6 !min-h-0 !min-w-0 place-items-center rounded-full bg-black/80 text-[13px] text-slate-600 ring-1 ring-slate-200"
                           >
                             ×
                           </button>

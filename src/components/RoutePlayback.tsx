@@ -160,22 +160,22 @@ export default function RoutePlayback({
               className="w-full accent-gold-400"
               aria-label="Route timeline"
             />
-            <div className="mt-0.5 flex justify-between text-[10.5px] text-[var(--color-ink)]/">
+            <div className="mt-0.5 flex justify-between text-[10.5px] text-slate-600">
               <span>{clock(session.startedAt)}</span>
-              <span className="font-semibold text-[var(--color-ink)]/">{clock(cutoff)}</span>
+              <span className="font-semibold text-slate-600">{clock(cutoff)}</span>
               <span>{session.endedAt ? clock(session.endedAt) : 'now'}</span>
             </div>
           </div>
         </div>
 
         <div className="mt-2 flex items-center gap-1">
-          <span className="text-[10.5px] uppercase tracking-wide text-[var(--color-ink)]/">Speed</span>
+          <span className="text-[10.5px] uppercase tracking-wide text-slate-600">Speed</span>
           {SPEEDS.map((s) => (
             <button
               key={s}
               onClick={() => setSpeed(s)}
               className={`rounded px-2 py-0.5 text-[11px] ${
-                speed === s ? 'bg-slate-200 text-white' : 'text-[var(--color-ink)]/'
+                speed === s ? 'bg-slate-200 text-white' : 'text-slate-600'
               }`}
             >
               {s}×
@@ -217,7 +217,7 @@ function TimelineRow({
         active ? 'bg-slate-200' : ''
       } ${reached ? 'opacity-100' : 'opacity-35'}`}
     >
-      <span className="w-14 shrink-0 pt-0.5 text-[11px] tabular-nums text-[var(--color-ink)]/">
+      <span className="w-14 shrink-0 pt-0.5 text-[11px] tabular-nums text-slate-600">
         {clock(entry.at)}
       </span>
       <span
@@ -227,7 +227,7 @@ function TimelineRow({
       <div className="min-w-0">
         <p className="truncate text-[13px] font-medium">{entry.title}</p>
         {entry.detail && (
-          <p className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">{entry.detail}</p>
+          <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-600">{entry.detail}</p>
         )}
       </div>
     </div>

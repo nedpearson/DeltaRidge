@@ -116,7 +116,7 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
       <h3 className="mb-4 text-sm font-semibold text-[var(--color-ink)]">New Campaign Scope</h3>
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs text-[var(--color-ink)]/">Campaign Name</label>
+          <label className="mb-1 block text-xs text-slate-600">Campaign Name</label>
           <input 
             type="text" 
             value={name}
@@ -126,7 +126,7 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
           />
         </div>
         <div>
-          <label className="mb-1 flex items-center justify-between text-xs text-[var(--color-ink)]/">
+          <label className="mb-1 flex items-center justify-between text-xs text-slate-600">
             <span>Target Area (Draw Polygon)</span>
             {!area && <span className="font-semibold text-brand-700">Required</span>}
             {area && <span className="font-semibold text-green-700">Area Defined</span>}

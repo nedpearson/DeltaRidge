@@ -229,7 +229,7 @@ export default function EstimatePage() {
     }
   }
 
-  if (loading) return <p className="text-[13px] text-[var(--color-ink)]/">Loading…</p>
+  if (loading) return <p className="text-[13px] text-slate-600">Loading…</p>
 
   const hasArea = num(form.areaSqFt) > 0
   const ready = isUsable(costs)
@@ -240,7 +240,7 @@ export default function EstimatePage() {
     <div className="space-y-4 pb-4">
       <div>
         <h1 className="font-display text-xl tracking-wide">Estimate</h1>
-        <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-1 text-[13px] leading-relaxed text-slate-600">
           {inspection?.addressLine1
             ? inspection.addressLine1
             : 'Every number is explainable and every line says why it is there.'}
@@ -261,7 +261,7 @@ export default function EstimatePage() {
 
       {saved && (
         <Card>
-          <p className="text-[13px] leading-relaxed text-[var(--color-ink)]/">
+          <p className="text-[13px] leading-relaxed text-slate-600">
             Version {saved.versionNumber} saved {new Date(saved.createdAt).toLocaleString()} at{' '}
             <span className="font-semibold text-[var(--color-ink)]">{money(saved.sellPriceCents as Cents)}</span>.
           </p>
@@ -273,7 +273,7 @@ export default function EstimatePage() {
             </p>
           )}
           {estimate && estimate.versions.length > 1 && (
-            <p className="mt-2 text-[12px] text-[var(--color-ink)]/">
+            <p className="mt-2 text-[12px] text-slate-600">
               {estimate.versions.length} versions kept. Nothing is overwritten.
             </p>
           )}
@@ -286,23 +286,23 @@ export default function EstimatePage() {
             WHAT THE ROOF SAID
           </SectionTitle>
           <Card>
-            <p className="mb-3 text-[12px] leading-relaxed text-[var(--color-ink)]/">
+            <p className="mb-3 text-[12px] leading-relaxed text-slate-600">
               Derived from what was actually recorded. These are suggestions, not scope — confirm
               each one before it reaches a customer.
             </p>
             <div className="space-y-3">
               {suggestions.map((s) => (
                 <div key={s.key} className="border-l-2 border-sky-400/30 pl-3">
-                  <p className="text-[13px] font-semibold text-[var(--color-ink)]/">
+                  <p className="text-[13px] font-semibold text-slate-600">
                     {s.description}
                     {s.quantity > 0 && (
-                      <span className="ml-2 font-normal text-[var(--color-ink)]/">
+                      <span className="ml-2 font-normal text-slate-600">
                         {s.quantity.toFixed(s.unit === 'EA' ? 0 : 2)} {s.unit}
                       </span>
                     )}
                   </p>
-                  <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--color-ink)]/">{s.rationale}</p>
-                  <p className="mt-0.5 text-[11px] uppercase tracking-wide text-[var(--color-ink)]/">
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-slate-600">{s.rationale}</p>
+                  <p className="mt-0.5 text-[11px] uppercase tracking-wide text-slate-600">
                     {s.confidence} confidence
                     {s.needsQuantity ? ' · needs a quantity from you' : ''}
                     {s.evidence[0] ? ` · ${s.evidence[0].kind.replace(/_/g, ' ')}` : ''}
@@ -341,18 +341,18 @@ export default function EstimatePage() {
           </SectionTitle>
           <Card>
             {built.lines.length === 0 ? (
-              <p className="text-[13px] text-[var(--color-ink)]/">
+              <p className="text-[13px] text-slate-600">
                 Nothing could be priced yet.
               </p>
             ) : (
               <div className="space-y-2">
                 {built.lines.map((line) => (
                   <div key={line.id} className="flex items-baseline gap-3 text-[13px]">
-                    <span className="flex-1 text-[var(--color-ink)]/">{line.description}</span>
-                    <span className="tabular-nums text-[var(--color-ink)]/">
+                    <span className="flex-1 text-slate-600">{line.description}</span>
+                    <span className="tabular-nums text-slate-600">
                       {line.quantity.toFixed(line.unit === 'EA' ? 0 : 2)} {line.unit}
                     </span>
-                    <span className="w-20 text-right tabular-nums text-[var(--color-ink)]/">
+                    <span className="w-20 text-right tabular-nums text-slate-600">
                       {money(line.cost)}
                     </span>
                   </div>
@@ -366,7 +366,7 @@ export default function EstimatePage() {
               <p className="text-[13px] font-semibold text-amber-700">
                 {built.gaps.length} item{built.gaps.length === 1 ? '' : 's'} could not be priced
               </p>
-              <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-ink)]/">
+              <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
                 These are measured and needed. They are left out rather than priced at zero, so the
                 total below is short by whatever they cost.
               </p>
@@ -374,7 +374,7 @@ export default function EstimatePage() {
                 {built.gaps.map((gap) => (
                   <div key={gap.key} className="flex items-baseline gap-3 text-[13px]">
                     <span className="flex-1 text-amber-100/80">{gap.description}</span>
-                    <span className="tabular-nums text-[var(--color-ink)]/">
+                    <span className="tabular-nums text-slate-600">
                       {gap.quantity.toFixed(gap.unit === 'EA' ? 0 : 2)} {gap.unit}
                     </span>
                   </div>
@@ -403,12 +403,12 @@ export default function EstimatePage() {
                             ? 'shrink-0 font-semibold text-rose-300'
                             : flag.severity === 'warning'
                               ? 'shrink-0 font-semibold text-amber-300'
-                              : 'shrink-0 font-semibold text-[var(--color-ink)]/'
+                              : 'shrink-0 font-semibold text-slate-600'
                         }
                       >
                         {flag.severity === 'blocker' ? 'STOP' : flag.severity === 'warning' ? 'CHECK' : 'NOTE'}
                       </span>
-                      <span className="text-[var(--color-ink)]/">{flag.message}</span>
+                      <span className="text-slate-600">{flag.message}</span>
                     </div>
                   ))}
                 </div>
@@ -441,7 +441,7 @@ export default function EstimatePage() {
               <Row label="Manager floor" value={money(built.ladder.floor)} />
               <Row label="Stop — decline below this" value={money(built.ladder.stop)} strong />
             </div>
-            <p className="mt-3 text-[12px] leading-relaxed text-[var(--color-ink)]/">
+            <p className="mt-3 text-[12px] leading-relaxed text-slate-600">
               Every rung already has commission taken out of it, so each one leaves the margin it
               is named for. A rung priced without commission would look lower and quietly miss its
               margin by the whole commission.
@@ -453,10 +453,10 @@ export default function EstimatePage() {
             <div className="space-y-2">
               {built.lines.map((line) => (
                 <div key={line.id} className="text-[12px] leading-relaxed">
-                  <span className="text-[var(--color-ink)]/">{line.description}</span>
-                  <span className="text-[var(--color-ink)]/"> — {line.reason.replace(/_/g, ' ')}</span>
+                  <span className="text-slate-600">{line.description}</span>
+                  <span className="text-slate-600"> — {line.reason.replace(/_/g, ' ')}</span>
                   {line.evidence[0] && (
-                    <span className="text-[var(--color-ink)]/"> · {line.evidence[0].summary}</span>
+                    <span className="text-slate-600"> · {line.evidence[0].summary}</span>
                   )}
                 </div>
               ))}
@@ -467,7 +467,7 @@ export default function EstimatePage() {
 
       {!hasArea && (
         <Card>
-          <p className="text-[13px] text-[var(--color-ink)]/">
+          <p className="text-[13px] text-slate-600">
             Enter the roof area to price it.
           </p>
         </Card>
@@ -501,14 +501,14 @@ export default function EstimatePage() {
                     onClick={() => reopen(s)}
                     className="flex w-full items-baseline gap-3 text-left text-[13px]"
                   >
-                    <span className={`flex-1 truncate ${open ? 'text-sky-700' : 'text-[var(--color-ink)]/'}`}>
+                    <span className={`flex-1 truncate ${open ? 'text-sky-700' : 'text-slate-600'}`}>
                       {s.label}
                       {open && ' · open'}
                     </span>
-                    <span className="shrink-0 text-[11px] text-[var(--color-ink)]/">
+                    <span className="shrink-0 text-[11px] text-slate-600">
                       v{v?.versionNumber ?? 0} · {new Date(s.updatedAt).toLocaleDateString()}
                     </span>
-                    <span className="w-20 shrink-0 text-right tabular-nums text-[var(--color-ink)]/">
+                    <span className="w-20 shrink-0 text-right tabular-nums text-slate-600">
                       {v ? money(v.sellPriceCents as Cents) : '—'}
                     </span>
                   </button>
@@ -525,9 +525,9 @@ export default function EstimatePage() {
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="flex items-baseline gap-3">
-      <span className={`flex-1 ${strong ? 'text-[var(--color-ink)]/' : 'text-[var(--color-ink)]/'}`}>{label}</span>
+      <span className={`flex-1 ${strong ? 'text-slate-600' : 'text-slate-600'}`}>{label}</span>
       <span
-        className={`tabular-nums ${strong ? 'font-semibold text-[var(--color-ink)]' : 'text-[var(--color-ink)]/'}`}
+        className={`tabular-nums ${strong ? 'font-semibold text-[var(--color-ink)]' : 'text-slate-600'}`}
       >
         {value}
       </span>

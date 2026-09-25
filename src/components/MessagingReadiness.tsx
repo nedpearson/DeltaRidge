@@ -84,13 +84,13 @@ export default function MessagingReadiness({ leads }: { leads: readonly ManagedL
         BULK MESSAGING
       </SectionTitle>
       <Card className="!py-3">
-        <p className="text-[12.5px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="text-[12.5px] leading-relaxed text-slate-600">
           There is no send-to-everyone button, and that is deliberate. One at a time, from your own
           phone, to someone who said yes — that works today.
         </p>
         <button
           onClick={() => setOpen((v) => !v)}
-          className="mt-2 w-full !min-h-0 py-1 text-[11px] text-[var(--color-ink)]/"
+          className="mt-2 w-full !min-h-0 py-1 text-[11px] text-slate-600"
         >
           {open ? 'Hide what bulk sending would need' : 'What bulk sending would need'}
         </button>
@@ -104,8 +104,8 @@ export default function MessagingReadiness({ leads }: { leads: readonly ManagedL
                   }`}
                 />
                 <div>
-                  <p className="text-[12.5px] font-semibold text-[var(--color-ink)]/">{r.label}</p>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--color-ink)]/">{r.detail}</p>
+                  <p className="text-[12.5px] font-semibold text-slate-600">{r.label}</p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">{r.detail}</p>
                 </div>
               </li>
             ))}

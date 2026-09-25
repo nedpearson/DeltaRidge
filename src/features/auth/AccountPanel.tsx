@@ -40,7 +40,7 @@ export default function AccountPanel() {
             </p>
           ) : (
             <>
-              <p className="text-[12.5px] leading-relaxed text-[var(--color-ink)]/">
+              <p className="text-[12.5px] leading-relaxed text-slate-600">
                 Inspections are saved on this device either way. Sign in to push them to the office.
               </p>
               <Field label="Work email">
@@ -69,7 +69,7 @@ export default function AccountPanel() {
       <Card>
         <p className="text-[14px] font-semibold">{session.user.email}</p>
         {membership ? (
-          <p className="mt-0.5 text-[12px] text-[var(--color-ink)]/">
+          <p className="mt-0.5 text-[12px] text-slate-600">
             {membership.organizationName} · {membership.role}
           </p>
         ) : awaitingAccess ? (

@@ -56,8 +56,8 @@ function ago(iso: string | null): string {
 function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-1.5">
-      <span className="text-[12px] text-[var(--color-ink)]/">{label}</span>
-      <span className={`text-right text-[12.5px] ${muted ? 'text-[var(--color-ink)]/' : 'text-[var(--color-ink)]/'}`}>{value}</span>
+      <span className="text-[12px] text-slate-600">{label}</span>
+      <span className={`text-right text-[12.5px] ${muted ? 'text-slate-600' : 'text-slate-600'}`}>{value}</span>
     </div>
   )
 }
@@ -135,7 +135,7 @@ export default function DiagnosticsPage() {
         <Row label="Leads the server holds" value={server ? String(server.leads) : '—'} />
         <Row label="Knocks the server holds" value={server ? String(server.activities) : '—'} muted />
         {!server && (
-          <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-ink)]/">
+          <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
             {orgId ? 'Could not reach the server just now.' : 'Sign in to see what the server holds.'}
           </p>
         )}
@@ -194,13 +194,13 @@ export default function DiagnosticsPage() {
               return (
                 <li key={item.id} className="py-2 text-[12px] leading-relaxed">
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="font-semibold text-[var(--color-ink)]/">{ENTITY_LABEL[item.entity]}</span>
-                    <span className="text-[var(--color-ink)]/">{STATUS_LABEL[status]}</span>
+                    <span className="font-semibold text-slate-600">{ENTITY_LABEL[item.entity]}</span>
+                    <span className="text-slate-600">{STATUS_LABEL[status]}</span>
                   </div>
-                  <p className="text-[var(--color-ink)]/">
+                  <p className="text-slate-600">
                     queued {ago(item.queuedAt)} · {item.attempts} attempt{item.attempts === 1 ? '' : 's'}
                   </p>
-                  {item.lastError && <p className="mt-0.5 break-words text-[var(--color-ink)]/">{item.lastError}</p>}
+                  {item.lastError && <p className="mt-0.5 break-words text-slate-600">{item.lastError}</p>}
                 </li>
               )
             })}
@@ -209,7 +209,7 @@ export default function DiagnosticsPage() {
       )}
 
       {items.length === 0 && (
-        <p className="px-1 text-[12px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="px-1 text-[12px] leading-relaxed text-slate-600">
           The queue is empty. That means everything captured on this device has been accepted by the server — not
           that nothing was captured. Check "last accepted by server" above.
         </p>

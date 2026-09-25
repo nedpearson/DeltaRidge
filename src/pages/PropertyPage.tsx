@@ -126,7 +126,7 @@ export default function PropertyPage() {
   }, [lead, permits, run])
 
   if (!run) {
-    return <p className="mt-8 text-center text-[13px] text-[var(--color-ink)]/">Opening the property…</p>
+    return <p className="mt-8 text-center text-[13px] text-slate-600">Opening the property…</p>
   }
 
   if (!lead || !profile) {
@@ -142,7 +142,7 @@ export default function PropertyPage() {
     <div>
       <button
         onClick={() => navigate('/leads')}
-        className="!min-h-0 py-1 text-[12px] text-[var(--color-ink)]/"
+        className="!min-h-0 py-1 text-[12px] text-slate-600"
       >
         ← Doors
       </button>
@@ -163,7 +163,7 @@ export default function PropertyPage() {
           />
         </div>
         <p className="text-[17px] font-semibold leading-tight">{lead.address}</p>
-        <p className="mt-0.5 text-[12px] text-[var(--color-ink)]/">
+        <p className="mt-0.5 text-[12px] text-slate-600">
           {[lead.subdivision, lead.city].filter(Boolean).join(' · ') || 'East Baton Rouge Parish'}
         </p>
         <OwnerLine parcel={lead.parcel} />
@@ -189,7 +189,7 @@ export default function PropertyPage() {
           </a>
           {/* Honest about why there is nothing to dial: no number has been
               collected here, rather than a broken or empty control. */}
-          <p className="min-w-0 flex-1 text-[11.5px] leading-tight text-[var(--color-ink)]/">
+          <p className="min-w-0 flex-1 text-[11.5px] leading-tight text-slate-600">
             Nobody has knocked here yet, so there is no phone number to call.
           </p>
         </div>
@@ -201,7 +201,7 @@ export default function PropertyPage() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] ${
-              tab === t.key ? 'bg-gold-500/20 text-gold-300' : 'bg-slate-200 text-[var(--color-ink)]/'
+              tab === t.key ? 'bg-gold-500/20 text-gold-300' : 'bg-slate-200 text-slate-600'
             }`}
           >
             {t.label}
@@ -258,16 +258,16 @@ function FactRow<T>({
         rep cannot tell what was cut off.
       */}
       <div className="flex items-baseline justify-between gap-3">
-        <p className="min-w-0 shrink-0 text-[12.5px] text-[var(--color-ink)]/">{label}</p>
+        <p className="min-w-0 shrink-0 text-[12.5px] text-slate-600">{label}</p>
         <p
-          className={`min-w-0 break-words text-right text-[13.5px] ${known ? 'text-[var(--color-ink)]/' : 'text-[var(--color-ink)]/'}`}
+          className={`min-w-0 break-words text-right text-[13.5px] ${known ? 'text-slate-600' : 'text-slate-600'}`}
         >
           {known ? format(fact.value as T) : 'Not on record'}
         </p>
       </div>
-      <p className="mt-0.5 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
+      <p className="mt-0.5 text-[10.5px] leading-relaxed text-slate-600">
         {known && (
-          <span className="uppercase tracking-wider text-[var(--color-ink)]/">{fact.certainty} · </span>
+          <span className="uppercase tracking-wider text-slate-600">{fact.certainty} · </span>
         )}
         {fact.source.label}
         {fact.basis ? ` — ${fact.basis}` : ''}
@@ -306,15 +306,15 @@ function PropertyTab({
         {/* Named, with a reason each. An empty row reads as a loading state or
             a zero; a stated gap reads as a gap, and tells Ned exactly what a
             licensed data contract would buy him. */}
-        <p className="text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="text-[11.5px] leading-relaxed text-slate-600">
           These are not published by the parish and are not in the permit feed. Filling them needs a
           licensed property-data provider under contract.
         </p>
         <ul className="mt-2 space-y-1">
           {profile.unavailable.map((f) => (
             <li key={f.field} className="flex justify-between gap-3 text-[12px]">
-              <span className="text-[var(--color-ink)]/">{f.label}</span>
-              <span className="text-right text-[11px] text-[var(--color-ink)]/">{f.reason}</span>
+              <span className="text-slate-600">{f.label}</span>
+              <span className="text-right text-[11px] text-slate-600">{f.reason}</span>
             </li>
           ))}
         </ul>
@@ -340,7 +340,7 @@ function OwnerTab({ profile, parcel }: { profile: PropertyProfile; parcel?: Parc
         }
       />
       {parcel && (
-        <p className="mt-2 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-2 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-slate-600">
           {occupancyEvidence(parcel)}
         </p>
       )}
@@ -350,7 +350,7 @@ function OwnerTab({ profile, parcel }: { profile: PropertyProfile; parcel?: Parc
         a contact editor. A stale reassurance is worse than none: it describes a
         guarantee the software no longer makes.
       */}
-      <p className="mt-2 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+      <p className="mt-2 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-slate-600">
         No phone or email is appended to this parcel from a data broker. A number appears here only
         when a homeowner gave it at the door, and calling it is gated on consent and on Louisiana’s
         solicitation hours.
@@ -390,14 +390,14 @@ function StormsTab({ profile }: { profile: PropertyProfile }) {
       {profile.storms.map((s: StormEvent) => (
         <div key={s.externalId} className="border-t border-slate-300 py-2 first:border-t-0 first:pt-0">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="text-[13px] text-[var(--color-ink)]/">
+            <p className="text-[13px] text-slate-600">
               {[s.city, s.countyParish].filter(Boolean).join(', ') || 'Unnamed location'}
             </p>
             <p className="shrink-0 font-display text-[15px] text-gold-400">
               {s.hailSizeInches !== undefined ? `${s.hailSizeInches}"` : '—'}
             </p>
           </div>
-          <p className="mt-0.5 text-[10.5px] text-[var(--color-ink)]/">
+          <p className="mt-0.5 text-[10.5px] text-slate-600">
             {shortDate(s.occurredAt)} · official ground report · NWS
           </p>
         </div>
@@ -424,7 +424,7 @@ function PermitsTab({
     )
   }
   if (permits === null) {
-    return <p className="text-center text-[13px] text-[var(--color-ink)]/">Reading the permit record…</p>
+    return <p className="text-center text-[13px] text-slate-600">Reading the permit record…</p>
   }
   if (permits.length === 0) {
     return (
@@ -442,15 +442,15 @@ function PermitsTab({
         .map((p) => (
           <div key={p.externalId} className="border-t border-slate-300 py-2 first:border-t-0 first:pt-0">
             <div className="flex items-baseline justify-between gap-3">
-              <p className="min-w-0 text-[13px] text-[var(--color-ink)]/">{p.permitType}</p>
-              <p className="shrink-0 text-[11.5px] text-[var(--color-ink)]/">{shortDate(p.issuedAt)}</p>
+              <p className="min-w-0 text-[13px] text-slate-600">{p.permitType}</p>
+              <p className="shrink-0 text-[11.5px] text-slate-600">{shortDate(p.issuedAt)}</p>
             </div>
             {p.contractorName && (
-              <p className="mt-0.5 truncate text-[11px] text-[var(--color-ink)]/">{p.contractorName}</p>
+              <p className="mt-0.5 truncate text-[11px] text-slate-600">{p.contractorName}</p>
             )}
           </div>
         ))}
-      <p className="mt-2 border-t border-slate-300 pt-2 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
+      <p className="mt-2 border-t border-slate-300 pt-2 text-[10.5px] leading-relaxed text-slate-600">
         {profile.roof.lastReroofAt.value === null
           ? 'No re-roof permit appears above. A roof replaced without a permit leaves no record here, so this is strong evidence rather than proof.'
           : 'A re-roof permit records that work was authorised, not that it was finished.'}

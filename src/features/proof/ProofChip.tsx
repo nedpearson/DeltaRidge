@@ -19,8 +19,8 @@ export default function ProofChip({ proof }: { proof: Proof }) {
   if (!proof.established) {
     return (
       <div className="rounded-xl bg-slate-200 px-3 py-2">
-        <p className="text-[12.5px] text-[var(--color-ink)]/">{proof.claim}</p>
-        <p className="mt-0.5 text-[11.5px] text-[var(--color-ink)]/">{proof.because}</p>
+        <p className="text-[12.5px] text-slate-600">{proof.claim}</p>
+        <p className="mt-0.5 text-[11.5px] text-slate-600">{proof.because}</p>
       </div>
     )
   }
@@ -34,22 +34,22 @@ export default function ProofChip({ proof }: { proof: Proof }) {
         className="!min-h-0 flex w-full items-baseline justify-between gap-3 py-0.5 text-left"
         aria-expanded={open}
       >
-        <span className="min-w-0 break-words text-[13px] text-[var(--color-ink)]/">{proof.claim}</span>
+        <span className="min-w-0 break-words text-[13px] text-slate-600">{proof.claim}</span>
         <span className="shrink-0 text-[11.5px] text-gold-300">
           {open ? 'Hide' : 'Show proof'}
         </span>
       </button>
 
       {!open && (
-        <p className="mt-0.5 text-[11px] text-[var(--color-ink)]/">{headline(proof)}</p>
+        <p className="mt-0.5 text-[11px] text-slate-600">{headline(proof)}</p>
       )}
 
       {open && (
         <div className="mt-2 space-y-2 border-t border-slate-300 pt-2">
           {proof.records.map((record, index) => (
             <div key={`${record.label}-${index}`} className="text-[12px] leading-relaxed">
-              <p className="text-[var(--color-ink)]/">{record.detail}</p>
-              <p className="text-[var(--color-ink)]/">
+              <p className="text-slate-600">{record.detail}</p>
+              <p className="text-slate-600">
                 {record.label}
                 {record.observedAt !== undefined && ` · observed ${shortDate(record.observedAt)}`}
                 {` · retrieved ${shortDate(record.source.retrievedAt)}`}
@@ -70,12 +70,12 @@ export default function ProofChip({ proof }: { proof: Proof }) {
           */}
           {proof.gaps.length > 0 && (
             <div className="border-t border-slate-300 pt-2">
-              <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">
+              <p className="text-[11px] uppercase tracking-wider text-slate-600">
                 What this does not show
               </p>
               <ul className="mt-1 space-y-0.5">
                 {proof.gaps.map((gap) => (
-                  <li key={gap} className="text-[12px] leading-relaxed text-[var(--color-ink)]/">
+                  <li key={gap} className="text-[12px] leading-relaxed text-slate-600">
                     {gap}
                   </li>
                 ))}
@@ -84,7 +84,7 @@ export default function ProofChip({ proof }: { proof: Proof }) {
           )}
 
           {oldest !== null && (
-            <p className="border-t border-slate-300 pt-2 text-[11px] text-[var(--color-ink)]/">
+            <p className="border-t border-slate-300 pt-2 text-[11px] text-slate-600">
               {/* The oldest, not the newest. A case is only as current as its
                   weakest-dated record, and the flattering number is the one
                   nobody should be quoting. */}

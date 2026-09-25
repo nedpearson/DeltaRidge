@@ -138,7 +138,7 @@ export default function RouteHistoryPage() {
         <div className="flex items-baseline justify-between gap-3">
           <SectionTitle>{day(open.startedAt).toUpperCase()}</SectionTitle>
           <button
-            className="text-[12px] text-[var(--color-ink)]/ underline underline-offset-2"
+            className="text-[12px] text-slate-600 underline underline-offset-2"
             onClick={() => setOpenId(null)}
           >
             Back
@@ -161,7 +161,7 @@ export default function RouteHistoryPage() {
             the difference between no distance and no measurement.
           */}
           {!hasTrail && (
-            <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+            <p className="mt-2 text-[11.5px] leading-relaxed text-slate-600">
               No GPS was recorded on this route, so there is no distance to report — 0.0 mi means
               nothing was measured, not that nobody moved.
             </p>
@@ -199,28 +199,28 @@ export default function RouteHistoryPage() {
           <>
             {outcomes.length > 0 && (
               <Card className="mb-3">
-                <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">Doors worked</p>
+                <p className="text-[11px] uppercase tracking-wider text-slate-600">Doors worked</p>
                 <ul className="mt-2 space-y-1">
                   {outcomes.map((row) => (
                     <li key={row.outcome} className="flex items-baseline justify-between gap-3">
-                      <span className="text-[12.5px] text-[var(--color-ink)]/">{row.label}</span>
-                      <span className="font-display text-[13px] text-[var(--color-ink)]/">{row.count}</span>
+                      <span className="text-[12.5px] text-slate-600">{row.label}</span>
+                      <span className="font-display text-[13px] text-slate-600">{row.count}</span>
                     </li>
                   ))}
                 </ul>
               </Card>
             )}
             <Card>
-              <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">
+              <p className="text-[11px] uppercase tracking-wider text-slate-600">
                 How the day converted
               </p>
               <ul className="mt-2 space-y-1">
                 {funnel.stages.map((stage) => (
                   <li key={stage.key} className="flex items-baseline justify-between gap-3">
-                    <span className="text-[12.5px] text-[var(--color-ink)]/">{stage.label}</span>
+                    <span className="text-[12.5px] text-slate-600">{stage.label}</span>
                     <span className="flex items-baseline gap-2">
-                      <span className="font-display text-[13px] text-[var(--color-ink)]/">{stage.count}</span>
-                      <span className="w-10 text-right text-[11px] text-[var(--color-ink)]/">
+                      <span className="font-display text-[13px] text-slate-600">{stage.count}</span>
+                      <span className="w-10 text-right text-[11px] text-slate-600">
                         {rateLabel(stage.rate)}
                       </span>
                     </span>
@@ -245,7 +245,7 @@ export default function RouteHistoryPage() {
             onClick={() => setWindowKey(w.key)}
             className={
               'rounded-full px-3 py-1.5 text-[11.5px] ' +
-              (w.key === windowKey ? 'bg-gold-400/20 text-gold-700' : 'bg-slate-200 text-[var(--color-ink)]/')
+              (w.key === windowKey ? 'bg-gold-400/20 text-gold-700' : 'bg-slate-200 text-slate-600')
             }
           >
             {w.label}
@@ -254,7 +254,7 @@ export default function RouteHistoryPage() {
       </div>
 
       {loading ? (
-        <p className="py-10 text-center text-[13px] text-[var(--color-ink)]/">Loading…</p>
+        <p className="py-10 text-center text-[13px] text-slate-600">Loading…</p>
       ) : summaries.length === 0 ? (
         <Empty
           title={`No routes ${window.label.toLowerCase()}`}
@@ -267,7 +267,7 @@ export default function RouteHistoryPage() {
               <Card>
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="text-[13.5px] font-semibold">{day(s.startedAt)}</p>
-                  <p className="text-[12px] text-[var(--color-ink)]/">
+                  <p className="text-[12px] text-slate-600">
                     {clock(s.startedAt)}
                     {s.endedAt ? ` → ${clock(s.endedAt)}` : ' — running'}
                   </p>
@@ -284,7 +284,7 @@ export default function RouteHistoryPage() {
                   <p className="mt-2 text-[11px] text-amber-700/60">Doors matched by time of day</p>
                 )}
                 {(pointsBySession[s.sessionId]?.length ?? 0) === 0 && (
-                  <p className="mt-1 text-[11px] text-[var(--color-ink)]/">No GPS recorded — nothing to replay</p>
+                  <p className="mt-1 text-[11px] text-slate-600">No GPS recorded — nothing to replay</p>
                 )}
 
                 <Button
@@ -312,7 +312,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <p className="text-[15px] font-semibold tabular-nums">{value}</p>
-      <p className="text-[10px] uppercase tracking-wide text-[var(--color-ink)]/">{label}</p>
+      <p className="text-[10px] uppercase tracking-wide text-slate-600">{label}</p>
     </div>
   )
 }

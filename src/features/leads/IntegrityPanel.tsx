@@ -10,11 +10,11 @@ import { integrityChecks, summarise, type CheckState, type IntegrityEvidence } f
  */
 
 const TONE: Record<CheckState, { dot: string; text: string; word: string }> = {
-  established: { dot: 'bg-emerald-400', text: 'text-[var(--color-ink)]/', word: 'Established' },
-  reported: { dot: 'bg-slate-200', text: 'text-[var(--color-ink)]/', word: 'Reported' },
-  stale: { dot: 'bg-amber-400', text: 'text-[var(--color-ink)]/', word: 'Ageing' },
-  absent: { dot: 'bg-slate-200', text: 'text-[var(--color-ink)]/', word: 'None' },
-  attention: { dot: 'bg-red-400', text: 'text-[var(--color-ink)]/', word: 'Needs attention' },
+  established: { dot: 'bg-emerald-400', text: 'text-slate-600', word: 'Established' },
+  reported: { dot: 'bg-slate-200', text: 'text-slate-600', word: 'Reported' },
+  stale: { dot: 'bg-amber-400', text: 'text-slate-600', word: 'Ageing' },
+  absent: { dot: 'bg-slate-200', text: 'text-slate-600', word: 'None' },
+  attention: { dot: 'bg-red-400', text: 'text-slate-600', word: 'Needs attention' },
 }
 
 /** Problems first. Nothing else about the order is meaningful, so nothing else is sorted. */
@@ -37,7 +37,7 @@ export default function IntegrityPanel({ evidence }: { evidence: IntegrityEviden
       </SectionTitle>
 
       <p
-        className={`mt-2 text-sm ${summary.needsAttention > 0 ? 'text-red-300' : 'text-[var(--color-ink)]/'}`}
+        className={`mt-2 text-sm ${summary.needsAttention > 0 ? 'text-red-300' : 'text-slate-600'}`}
       >
         {summary.sentence}
       </p>
@@ -57,9 +57,9 @@ export default function IntegrityPanel({ evidence }: { evidence: IntegrityEviden
                   {/* The state is spelled out rather than left to the colour, so it
                       survives a screen in sunlight and a reader who cannot tell
                       amber from green. */}
-                  <span className="text-xs text-[var(--color-ink)]/">{tone.word}</span>
+                  <span className="text-xs text-slate-600">{tone.word}</span>
                 </div>
-                <p className="text-xs text-[var(--color-ink)]/">{check.basis}</p>
+                <p className="text-xs text-slate-600">{check.basis}</p>
               </div>
             </li>
           )

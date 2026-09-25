@@ -161,7 +161,7 @@ export default function LeadMapStatic({
       <>
         <SectionTitle>MAP</SectionTitle>
         <Card>
-          <p className="text-[12.5px] leading-relaxed text-[var(--color-ink)]/">
+          <p className="text-[12.5px] leading-relaxed text-slate-600">
             Nothing to plot yet. Build the door list and the map fills in.
           </p>
         </Card>
@@ -314,7 +314,7 @@ export default function LeadMapStatic({
 
         <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-slate-300 px-3 py-2">
           {LEGEND.map((l) => (
-            <span key={l.status} className="flex items-center gap-1.5 text-[10.5px] text-[var(--color-ink)]/">
+            <span key={l.status} className="flex items-center gap-1.5 text-[10.5px] text-slate-600">
               <span
                 className="size-1.5 rounded-full"
                 style={{ backgroundColor: LEGEND_COLOUR[l.status] }}
@@ -326,8 +326,8 @@ export default function LeadMapStatic({
 
         {selected && (
           <div className="border-t border-slate-300 px-3 py-2.5">
-            <p className="truncate text-[13px] text-[var(--color-ink)]/">{selected.label}</p>
-            <p className="mt-0.5 text-[11px] text-[var(--color-ink)]/">
+            <p className="truncate text-[13px] text-slate-600">{selected.label}</p>
+            <p className="mt-0.5 text-[11px] text-slate-600">
               {selected.status === 'door' ? 'Not knocked yet' : STATUS_LABEL[selected.status]}
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -353,7 +353,7 @@ export default function LeadMapStatic({
         )}
 
         {!hasBasemap() && (
-          <p className="border-t border-slate-300 px-3 py-2 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
+          <p className="border-t border-slate-300 px-3 py-2 text-[10.5px] leading-relaxed text-slate-600">
             Positions only — there are no streets under these dots. Add a Mapbox public token as
             VITE_MAPBOX_PUBLIC_TOKEN and the street map appears here.
           </p>

@@ -122,7 +122,7 @@ function Attachment({ item }: { item: LeadAttachment }) {
   return (
     <div className="mt-1.5">
       <audio controls src={url} className="h-9 w-full" />
-      <p className="mt-0.5 text-[10.5px] text-[var(--color-ink)]/">
+      <p className="mt-0.5 text-[10.5px] text-slate-600">
         {item.durationSeconds}s recording. Not transcribed — this is the audio itself.
       </p>
     </div>
@@ -323,7 +323,7 @@ export default function LeadPage() {
   }, [lead, navigate])
 
   if (loading) {
-    return <p className="py-16 text-center text-[13px] text-[var(--color-ink)]/">Loading…</p>
+    return <p className="py-16 text-center text-[13px] text-slate-600">Loading…</p>
   }
 
   if (!lead) {
@@ -398,14 +398,14 @@ export default function LeadPage() {
       />
 
       <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 text-[var(--color-ink)] p-5 ring-1 ring-slate-200">
-        <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink)]/">
+        <p className="text-[11px] uppercase tracking-wider text-slate-600">
           {STATUS_LABEL[lead.status]}
         </p>
         <p className="mt-1 font-display text-lg leading-tight tracking-wide">
           {lead.contactName ?? lead.address}
         </p>
-        {lead.contactName && <p className="mt-1 text-[12.5px] text-[var(--color-ink)]/">{lead.address}</p>}
-        <p className="mt-2 text-[12.5px] text-[var(--color-ink)]/">
+        {lead.contactName && <p className="mt-1 text-[12.5px] text-slate-600">{lead.address}</p>}
+        <p className="mt-2 text-[12.5px] text-slate-600">
           {due ?? 'Nothing scheduled'} · knocked {lead.knockCount}x
         </p>
 
@@ -432,7 +432,7 @@ export default function LeadPage() {
             {phoneSource && (
               <p
                 className={`mt-0.5 text-[11.5px] ${
-                  isFromHomeowner(phoneSource) ? 'text-[var(--color-ink)]/' : 'text-amber-700/70'
+                  isFromHomeowner(phoneSource) ? 'text-slate-600' : 'text-amber-700/70'
                 }`}
               >
                 {CONTACT_SOURCE_LABEL[phoneSource]}
@@ -440,7 +440,7 @@ export default function LeadPage() {
             )}
           </>
         ) : (
-          <p className="text-[13px] text-[var(--color-ink)]/">No phone number on this lead.</p>
+          <p className="text-[13px] text-slate-600">No phone number on this lead.</p>
         )}
 
         {!window.allowed && lead.contactPhone && (
@@ -482,7 +482,7 @@ export default function LeadPage() {
           <p className="mt-2 text-[12px] leading-relaxed text-amber-700/80">{blockReason}</p>
         )}
 
-        <p className="mt-2 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-2 text-[10.5px] leading-relaxed text-slate-600">
           Recorded as placed and initiated. The app hands the number to your phone and cannot see
           whether it was answered or delivered, so it does not say that it was.
         </p>
@@ -496,7 +496,7 @@ export default function LeadPage() {
                 placeholder="225…"
               />
             </Field>
-            <p className="mt-3 text-[11.5px] font-medium text-[var(--color-ink)]/">Where did it come from?</p>
+            <p className="mt-3 text-[11.5px] font-medium text-slate-600">Where did it come from?</p>
             <div className="mt-2 space-y-1.5">
               {NUMBER_SOURCES.map((source) => (
                 <button
@@ -515,7 +515,7 @@ export default function LeadPage() {
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+            <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
               A number they did not hand over is stored and shown, and the call and text buttons
               stay off for it. Confirm it with them and record it again to change that.
             </p>
@@ -539,7 +539,7 @@ export default function LeadPage() {
         )}
 
         {window.allowed && window.requires.length > 0 && (
-          <p className="mt-1 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
+          <p className="mt-1 text-[10.5px] leading-relaxed text-slate-600">
             The hour is allowed. It does not clear the number — the state and national do-not-call
             lists are screened outside this app, and legal holidays are not in it.
           </p>
@@ -555,7 +555,7 @@ export default function LeadPage() {
           </p>
         ) : (
           <>
-            <p className="text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+            <p className="text-[11.5px] leading-relaxed text-slate-600">
               Tick only what they actually said you could do. Having their number is not permission
               to use it.
             </p>
@@ -572,10 +572,10 @@ export default function LeadPage() {
                         : 'bg-slate-100 hover:bg-slate-200 ring-slate-200'
                     }`}
                   >
-                    <span className="text-[13px] text-[var(--color-ink)]/">{CHANNEL_LABEL[channel]}</span>
+                    <span className="text-[13px] text-slate-600">{CHANNEL_LABEL[channel]}</span>
                     <span
                       className={`text-[11px] uppercase tracking-wider ${
-                        granted ? 'text-emerald-300' : 'text-[var(--color-ink)]/'
+                        granted ? 'text-emerald-300' : 'text-slate-600'
                       }`}
                     >
                       {granted ? 'said yes' : 'not asked'}
@@ -640,14 +640,14 @@ export default function LeadPage() {
           <ol className="space-y-3">
             {history.map((event) => (
               <li key={event.id} className="border-l-2 border-slate-300 pl-3">
-                <p className="text-[12.5px] font-semibold text-[var(--color-ink)]/">
+                <p className="text-[12.5px] font-semibold text-slate-600">
                   {event.outcome ? OUTCOME_LABEL[event.outcome] : CONTACT_KIND_LABEL[event.kind]}
                 </p>
-                <p className="text-[10.5px] text-[var(--color-ink)]/">
+                <p className="text-[10.5px] text-slate-600">
                   {when(event.at)} · {CONTACT_KIND_LABEL[event.kind]}
                 </p>
                 {event.note && (
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--color-ink)]/">{event.note}</p>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-slate-600">{event.note}</p>
                 )}
                 {attachments
                   .filter((a) => a.eventId === event.id)
@@ -693,13 +693,13 @@ export default function LeadPage() {
       <Card>
         <ul className="space-y-1">
           {lead.reasons.map((reason) => (
-            <li key={reason} className="flex gap-2 text-[12.5px] leading-snug text-[var(--color-ink)]/">
+            <li key={reason} className="flex gap-2 text-[12.5px] leading-snug text-slate-600">
               <span className="mt-1.5 size-1 shrink-0 rounded-full bg-brand-400" />
               {reason}
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-2 text-[10.5px] leading-relaxed text-slate-600">
           Priority {lead.score} as it stood when you knocked. It is kept as it was, not recomputed,
           so this still says what you were looking at that day.
         </p>

@@ -104,7 +104,7 @@ export default function PerformanceTab({
             label="inspections sold"
           />
         </div>
-        <p className="mt-3 border-t border-slate-300 pt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-3 border-t border-slate-300 pt-2 text-[11px] leading-relaxed text-slate-600">
           Pooled across the team, not averaged across reps — averaging lets somebody with four doors count
           as much as somebody with four hundred. There is no industry benchmark anywhere on this screen:
           Delta Ridge's own numbers are the only honest expectation for a Delta Ridge rep.
@@ -120,7 +120,7 @@ export default function PerformanceTab({
               <Card className={selected === rep.repId ? 'ring-gold-400/40' : ''}>
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="truncate text-[14px] font-semibold">{nameOf(rep.repId)}</p>
-                  <span className="shrink-0 text-[11px] text-[var(--color-ink)]/">
+                  <span className="shrink-0 text-[11px] text-slate-600">
                     {rep.field.routesCompleted} route{rep.field.routesCompleted === 1 ? '' : 's'}
                   </span>
                 </div>
@@ -167,7 +167,7 @@ function RepDetail({
       <SectionTitle>{nameOf(rep.repId).toUpperCase()}</SectionTitle>
 
       <Card>
-        <p className="text-[12px] font-semibold text-[var(--color-ink)]/">FIELD</p>
+        <p className="text-[12px] font-semibold text-slate-600">FIELD</p>
         <div className="mt-2 grid grid-cols-3 gap-3 text-center">
           <Stat value={String(rep.field.routesStarted)} label="routes" />
           <Stat value={duration(rep.field.fieldSeconds)} label="field time" />
@@ -184,14 +184,14 @@ function RepDetail({
             label="doors per field hour"
           />
         </div>
-        <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
           Field time is start-to-stop on completed routes. It is not "time worked" and is never graded on
           directly — a longer timer is not more selling.
         </p>
       </Card>
 
       <Card>
-        <p className="text-[12px] font-semibold text-[var(--color-ink)]/">DOORS</p>
+        <p className="text-[12px] font-semibold text-slate-600">DOORS</p>
         <div className="mt-2 grid grid-cols-2 gap-3">
           <Figure
             value={rep.doors.contactRate.value === null ? null : pct(rep.doors.contactRate.value)}
@@ -204,7 +204,7 @@ function RepDetail({
             label={`booked of ${rep.doors.appointmentRate.denominator} conversations`}
           />
         </div>
-        <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
           Booking rate is measured against conversations, not knocks. Dividing by knocks would make a rep
           who works empty streets look like a poor closer. Team: {teamRates.contact.value === null ? 'no rate yet' : pct(teamRates.contact.value)} answered,{' '}
           {teamRates.appointment.value === null ? 'no rate yet' : pct(teamRates.appointment.value)} booked.
@@ -212,7 +212,7 @@ function RepDetail({
       </Card>
 
       <Card>
-        <p className="text-[12px] font-semibold text-[var(--color-ink)]/">SALES</p>
+        <p className="text-[12px] font-semibold text-slate-600">SALES</p>
         <div className="mt-2 grid grid-cols-2 gap-3">
           <Figure
             value={rep.sales.inspectionRate.value === null ? null : pct(rep.sales.inspectionRate.value)}
@@ -225,7 +225,7 @@ function RepDetail({
             label="inspections sold"
           />
         </div>
-        <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
           Revenue and gross profit are not here. They live on the estimate, and no estimate in this system
           has been tied to a lead outcome yet — showing a currency figure that nothing computed would be
           worse than showing none.
@@ -233,13 +233,13 @@ function RepDetail({
       </Card>
 
       <Card>
-        <p className="text-[12px] font-semibold text-[var(--color-ink)]/">FOLLOW-UP</p>
+        <p className="text-[12px] font-semibold text-slate-600">FOLLOW-UP</p>
         <div className="mt-2 grid grid-cols-3 gap-3 text-center">
           <Stat value={String(rep.followUp.due)} label="came due" />
           <Stat value={String(rep.followUp.completed)} label="done" />
           <Stat value={String(rep.followUp.overdue)} label="still open" />
         </div>
-        <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
           A follow-up counts as done when something was recorded against that lead after the date the rep
           set themselves. It says nothing about how the conversation went — the app cannot see a phone
           call.
@@ -247,7 +247,7 @@ function RepDetail({
       </Card>
 
       <Card>
-        <p className="text-[12px] font-semibold text-[var(--color-ink)]/">THE DOORS THEY WERE GIVEN</p>
+        <p className="text-[12px] font-semibold text-slate-600">THE DOORS THEY WERE GIVEN</p>
         <div className="mt-2 grid grid-cols-2 gap-3">
           <Figure
             value={rep.quality.averageScore === null ? null : rep.quality.averageScore.toFixed(0)}
@@ -263,7 +263,7 @@ function RepDetail({
         {rep.quality.efficiency.contributions.length > 0 && (
           <div className="mt-3 space-y-1 border-t border-slate-300 pt-2">
             {rep.quality.efficiency.contributions.map((c) => (
-              <p key={c.label} className="text-[11.5px] text-[var(--color-ink)]/">
+              <p key={c.label} className="text-[11.5px] text-slate-600">
                 Score {c.label}: {c.decided} decided, {c.actual} won
                 {c.expected === null
                   ? ' — the team has no rate at this score to compare against'
@@ -272,7 +272,7 @@ function RepDetail({
             ))}
           </div>
         )}
-        <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
           1.00 means they did exactly what those doors were worth. This is the only figure here that holds
           lead quality constant, which is why the score is frozen at the moment a door is handed over.
         </p>
@@ -280,26 +280,26 @@ function RepDetail({
 
       {(bands.length > 0 || areas.length > 0) && (
         <Card>
-          <p className="text-[12px] font-semibold text-[var(--color-ink)]/">WHERE THEY ARE STRONGEST</p>
+          <p className="text-[12px] font-semibold text-slate-600">WHERE THEY ARE STRONGEST</p>
           {best.strongest && best.weakest ? (
             <div className="mt-2 space-y-1">
               <p className="text-[12.5px]">
                 Strongest: {best.strongest.label} — {best.strongest.won} of {best.strongest.decided} decided
               </p>
-              <p className="text-[12.5px] text-[var(--color-ink)]/">
+              <p className="text-[12.5px] text-slate-600">
                 Weakest: {best.weakest.label} — {best.weakest.won} of {best.weakest.decided} decided
               </p>
             </div>
           ) : (
-            <p className="mt-2 text-[12px] text-[var(--color-ink)]/">
+            <p className="mt-2 text-[12px] text-slate-600">
               Not enough decided doors in two different segments to say where they are strongest. One
               qualifying segment reads like a finding and contains none.
             </p>
           )}
           <div className="mt-3 border-t border-slate-300 pt-2">
-            <p className="text-[11px] font-medium text-[var(--color-ink)]/">Splits this system cannot make yet</p>
+            <p className="text-[11px] font-medium text-slate-600">Splits this system cannot make yet</p>
             {MISSING_SEGMENTS.map((missing) => (
-              <p key={missing.name} className="mt-1 text-[11px] leading-relaxed text-[var(--color-ink)]/">
+              <p key={missing.name} className="mt-1 text-[11px] leading-relaxed text-slate-600">
                 {missing.name} — needs {missing.needs}
               </p>
             ))}
@@ -329,7 +329,7 @@ function RepDetail({
         time a rep has two comparable months; until then a rising arrow would
         be decoration.
       */}
-      <p className="text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
+      <p className="text-[10.5px] leading-relaxed text-slate-600">
         No trend yet: comparing windows needs two of them, both above their sample floors. This is the
         first.
       </p>

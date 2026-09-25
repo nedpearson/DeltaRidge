@@ -28,7 +28,7 @@ export function OwnerLine({ parcel }: { parcel: ParcelRecord | undefined }) {
     // Stated, not blank. "No owner shown" and "we did not look" are different
     // things and a rep should be able to tell which one he is looking at.
     return (
-      <p className="mt-2 text-[12.5px] text-[var(--color-ink)]/">
+      <p className="mt-2 text-[12.5px] text-slate-600">
         No parish parcel matched this address — no owner on record to show.
       </p>
     )
@@ -38,11 +38,11 @@ export function OwnerLine({ parcel }: { parcel: ParcelRecord | undefined }) {
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-      <p className="min-w-0 truncate text-[13.5px] font-semibold text-[var(--color-ink)]/">
+      <p className="min-w-0 truncate text-[13.5px] font-semibold text-slate-600">
         {parcel.ownerName}
       </p>
       {entity && (
-        <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-[10.5px] uppercase tracking-wider text-[var(--color-ink)]/">
+        <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-[10.5px] uppercase tracking-wider text-slate-600">
           {entity}
         </span>
       )}

@@ -77,7 +77,7 @@ function ImagePane({
 
   return (
     <div className="min-w-0">
-      {label && <p className="mb-1 font-display text-[10px] tracking-widest text-[var(--color-ink)]/">{label}</p>}
+      {label && <p className="mb-1 font-display text-[10px] tracking-widest text-slate-600">{label}</p>}
       <div
         className="relative aspect-[4/3] overflow-auto rounded-xl bg-slate-100 ring-1 ring-slate-200 ring-1 ring-slate-200"
         onWheel={wheel}
@@ -91,11 +91,11 @@ function ImagePane({
             draggable={false}
           />
         ) : (
-          <div className="flex size-full items-center justify-center px-4 text-center text-[12px] text-[var(--color-ink)]/">
+          <div className="flex size-full items-center justify-center px-4 text-center text-[12px] text-slate-600">
             {error ?? 'Opening full-resolution image…'}
           </div>
         )}
-        <div className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-1 text-[10px] text-[var(--color-ink)]/">
+        <div className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-1 text-[10px] text-slate-600">
           {zoom.toFixed(1)}× · native detail only
         </div>
       </div>
@@ -185,7 +185,7 @@ export default function RoofImageryPanel({
       <Card>
         {!searched ? (
           <div className="text-center">
-            <p className="text-[12.5px] leading-relaxed text-[var(--color-ink)]/">
+            <p className="text-[12.5px] leading-relaxed text-slate-600">
               Search your EagleView imagery entitlement for the freshest captures at this roof.
             </p>
             <div className="mt-3"><Button variant="gold" onClick={() => void search()} disabled={loading}>SEARCH EAGLEVIEW</Button></div>
@@ -202,7 +202,7 @@ export default function RoofImageryPanel({
                 <button
                   key={value}
                   onClick={() => setFilter(value)}
-                  className={`rounded-full px-3 py-1 text-[11px] ${filter === value ? 'bg-gold-500/20 text-gold-300' : 'bg-slate-200 text-[var(--color-ink)]/'}`}
+                  className={`rounded-full px-3 py-1 text-[11px] ${filter === value ? 'bg-gold-500/20 text-gold-300' : 'bg-slate-200 text-slate-600'}`}
                 >
                   {label}
                 </button>
@@ -210,7 +210,7 @@ export default function RoofImageryPanel({
             </div>
 
             {captures.length === 0 ? (
-              <p className="mt-4 text-[12.5px] text-[var(--color-ink)]/">
+              <p className="mt-4 text-[12.5px] text-slate-600">
                 No image satisfies that freshness window. Best available: {date(all[0]?.capturedFrom ?? null)}.
               </p>
             ) : selected !== null ? (
@@ -226,8 +226,8 @@ export default function RoofImageryPanel({
 
                 <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-[13px] text-[var(--color-ink)]/">{captureLabel(captureFacts(selected))}</p>
-                    <p className="text-[11px] text-[var(--color-ink)]/">
+                    <p className="text-[13px] text-slate-600">{captureLabel(captureFacts(selected))}</p>
+                    <p className="text-[11px] text-slate-600">
                       {resolutionLabel(selected.gsdMetres)} · {selected.view.toUpperCase()} · {freshnessLabel(selected)}
                       {selected.disaster ? ' · post-disaster capture' : ''}
                     </p>
@@ -242,8 +242,8 @@ export default function RoofImageryPanel({
                 {verdict !== null && !verdict.ok && (
                   <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2.5">
                     <p className="font-display text-[10px] tracking-widest text-amber-300">FIELD VERIFICATION REQUIRED</p>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">{verdict.reason}</p>
-                    <p className="mt-1 text-[11px] text-[var(--color-ink)]/">Use instead: {verdict.instead}</p>
+                    <p className="mt-1 text-[11.5px] leading-relaxed text-slate-600">{verdict.reason}</p>
+                    <p className="mt-1 text-[11px] text-slate-600">Use instead: {verdict.instead}</p>
                   </div>
                 )}
 
@@ -254,8 +254,8 @@ export default function RoofImageryPanel({
                       onClick={() => { setSelected(capture); setCompare(false) }}
                       className={`flex w-full justify-between gap-3 rounded-lg px-2 py-2 text-left ${selected.imageUrn === capture.imageUrn ? 'bg-slate-200' : 'hover:bg-slate-100 hover:bg-slate-200'}`}
                     >
-                      <span className="text-[11.5px] text-[var(--color-ink)]/">{date(capture.capturedUntil ?? capture.capturedFrom)} · {capture.view}</span>
-                      <span className="shrink-0 text-[10.5px] text-[var(--color-ink)]/">{resolutionLabel(capture.gsdMetres)}</span>
+                      <span className="text-[11.5px] text-slate-600">{date(capture.capturedUntil ?? capture.capturedFrom)} · {capture.view}</span>
+                      <span className="shrink-0 text-[10.5px] text-slate-600">{resolutionLabel(capture.gsdMetres)}</span>
                     </button>
                   ))}
                 </div>

@@ -51,22 +51,22 @@ export default function HomePage() {
   return (
     <div>
       {topDoors.length > 0 ? (
-        <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 ring-1 ring-slate-200">
-          <p className="font-display text-lg leading-tight tracking-wide">
+        <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 shadow-lg ring-1 ring-brand-900/20">
+          <p className="font-display text-lg leading-tight tracking-wide text-white">
             {run?.leads.length} door{run?.leads.length === 1 ? '' : 's'} worth knocking.
           </p>
-          <p className="mt-1 text-[12px] text-[var(--color-ink)]/">
+          <p className="mt-1 text-[12px] text-brand-100/90">
             Built {relative(run?.ranAt ?? new Date().toISOString())} · hail, roof age, nothing already re-roofed
           </p>
 
           <ul className="mt-3 space-y-2">
             {topDoors.map((lead) => (
-              <li key={lead.addressKey} className="rounded-xl bg-slate-50 px-3 py-2.5">
+              <li key={lead.addressKey} className="rounded-xl bg-white px-3 py-2.5 shadow-sm ring-1 ring-slate-200">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="truncate text-[13.5px] font-semibold">{lead.address}</p>
-                  <span className="shrink-0 font-display text-[15px] text-gold-400">{lead.score}</span>
+                  <p className="truncate text-[13.5px] font-semibold text-slate-900">{lead.address}</p>
+                  <span className="shrink-0 font-display text-[15px] text-gold-500">{lead.score}</span>
                 </div>
-                <p className="mt-0.5 truncate text-[11.5px] text-[var(--color-ink)]/">{lead.reasons[0]}</p>
+                <p className="mt-0.5 truncate text-[11.5px] text-slate-600">{lead.reasons[0]}</p>
               </li>
             ))}
           </ul>
@@ -74,7 +74,7 @@ export default function HomePage() {
           <Button variant="gold" full className="mt-4" onClick={() => navigate('/leads')}>
             Open the door list
           </Button>
-          <Button variant="secondary" full className="mt-2" onClick={() => navigate('/new')}>
+          <Button variant="secondary" full className="mt-2 text-slate-900" onClick={() => navigate('/new')}>
             Start an inspection
           </Button>
         </div>
@@ -85,7 +85,7 @@ export default function HomePage() {
             <br />
             Leave with nothing missing.
           </p>
-          <p className="mt-2 max-w-xs text-[13px] leading-relaxed text-[var(--color-ink)]/">
+          <p className="mt-2 max-w-xs text-[13px] leading-relaxed text-slate-600">
             Guided capture, on-device quality checks, and a completeness review before you drive away.
           </p>
           <Button variant="gold" full className="mt-4" onClick={() => navigate('/new')}>
@@ -112,7 +112,7 @@ export default function HomePage() {
       <Link to="/manager" className="block">
         <Card>
           <p className="text-[13.5px] font-semibold">Team</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-ink)]/">
+          <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
             Who knocked what, who is out on a route, how doors were handed out and why.
           </p>
         </Card>
@@ -128,7 +128,7 @@ export default function HomePage() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-[15px] font-semibold">{inspectionTitle(i)}</p>
-                      <p className="mt-0.5 text-[12px] text-[var(--color-ink)]/">Updated {relative(i.updatedAt)}</p>
+                      <p className="mt-0.5 text-[12px] text-slate-600">Updated {relative(i.updatedAt)}</p>
                     </div>
                     <span className="shrink-0 rounded-full bg-brand-100 px-2.5 py-1 text-[11px] font-semibold text-brand-700 ring-1 ring-brand-300">
                       Resume
@@ -159,7 +159,7 @@ export default function HomePage() {
               <Link key={i.id} to={`/inspection/${i.id}`} className="block">
                 <Card>
                   <p className="truncate text-[15px] font-semibold">{inspectionTitle(i)}</p>
-                  <p className="mt-0.5 text-[12px] text-[var(--color-ink)]/">
+                  <p className="mt-0.5 text-[12px] text-slate-600">
                     {i.sentToOfficeAt
                       ? `Sent to office ${relative(i.sentToOfficeAt)}`
                       : `Completed ${relative(i.completedAt ?? i.updatedAt)}`}
@@ -172,7 +172,7 @@ export default function HomePage() {
       )}
 
       {footprint > 0 && (
-        <p className="mt-6 text-center text-[11px] text-[var(--color-ink)]/">
+        <p className="mt-6 text-center text-[11px] text-slate-600">
           {formatBytes(footprint)} of photos stored on this device
         </p>
       )}

@@ -118,7 +118,7 @@ export default function RoofView({
   if (!hasBasemap()) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 px-5 py-8 text-center">
-        <p className="text-[13px] text-[var(--color-ink)]/">No satellite imagery is configured for this app.</p>
+        <p className="text-[13px] text-slate-600">No satellite imagery is configured for this app.</p>
       </div>
     )
   }
@@ -146,7 +146,7 @@ export default function RoofView({
 
         {failed && (
           <div className="flex size-full items-center justify-center px-6 text-center">
-            <p className="text-[12.5px] leading-relaxed text-[var(--color-ink)]/">
+            <p className="text-[12.5px] leading-relaxed text-slate-600">
               The imagery for this address did not load. Everything else about the door is unaffected.
             </p>
           </div>
@@ -221,7 +221,7 @@ export default function RoofView({
           roof against a number they already think in.
         */}
         <div
-          className="pointer-events-none absolute top-2 rounded bg-black/60 px-2 py-1 text-[10.5px] text-[var(--color-ink)]/ backdrop-blur-sm"
+          className="pointer-events-none absolute top-2 rounded bg-black/60 px-2 py-1 text-[10.5px] text-slate-600 backdrop-blur-sm"
           // Clear of the close button when there is one.
           style={{ left: onClose ? '3.25rem' : '0.5rem' }}
         >
@@ -229,7 +229,7 @@ export default function RoofView({
         </div>
       </div>
 
-      <p className="mt-1.5 text-[10.5px] leading-relaxed text-[var(--color-ink)]/">
+      <p className="mt-1.5 text-[10.5px] leading-relaxed text-slate-600">
         {framed
           ? 'Outline is the parish parcel record, not a survey.'
           : 'Centred on this address — the parish has no lot outline for it.'}{' '}

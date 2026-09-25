@@ -113,15 +113,15 @@ export default function ContactActions({
             {phone}
           </a>
           {phoneNote !== null && (
-            <span className="text-[11.5px] text-[var(--color-ink)]/">{phoneNote}</span>
+            <span className="text-[11.5px] text-slate-600">{phoneNote}</span>
           )}
         </div>
       ) : (
-        <p className="text-[13px] text-[var(--color-ink)]/">No phone number on this lead yet.</p>
+        <p className="text-[13px] text-slate-600">No phone number on this lead yet.</p>
       )}
 
       {email !== null && (
-        <p className="mt-0.5 break-all text-[12.5px] text-[var(--color-ink)]/">{email}</p>
+        <p className="mt-0.5 break-all text-[12.5px] text-slate-600">{email}</p>
       )}
 
       <div className="mt-2.5 grid grid-cols-3 gap-2">

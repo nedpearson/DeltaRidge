@@ -70,7 +70,7 @@ export default function UpdateBanner() {
       }}
     >
       <div className="flex items-center gap-3 rounded-xl bg-[#1b2740] px-4 py-3 shadow-lg ring-1 ring-sky-300">
-        <p className="flex-1 text-[13px] leading-snug text-[var(--color-ink)]/">
+        <p className="flex-1 text-[13px] leading-snug text-slate-600">
           {held ? (
             <>
               A new version is ready. It will install by itself when you finish
@@ -85,7 +85,7 @@ export default function UpdateBanner() {
         {!held && !deferred && (
           <button
             onClick={() => setDeferred(true)}
-            className="shrink-0 rounded-lg px-2 py-2 text-[13px] text-[var(--color-ink)]/"
+            className="shrink-0 rounded-lg px-2 py-2 text-[13px] text-slate-600"
           >
             Not now
           </button>

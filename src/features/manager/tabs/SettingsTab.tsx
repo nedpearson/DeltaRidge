@@ -75,7 +75,7 @@ export default function SettingsTab({
 
       {isDefault && (
         <Card>
-          <p className="text-[12px] leading-relaxed text-[var(--color-ink)]/">
+          <p className="text-[12px] leading-relaxed text-slate-600">
             Nothing is saved for this organisation yet, so these are the app's published defaults. They
             take effect as written; saving simply makes them yours to change.
           </p>
@@ -83,7 +83,7 @@ export default function SettingsTab({
       )}
 
       <Card>
-        <p className="text-[12px] font-semibold text-[var(--color-ink)]/">MODE</p>
+        <p className="text-[12px] font-semibold text-slate-600">MODE</p>
         <div className="mt-2 space-y-2">
           {MODES.map((mode) => (
             <button
@@ -98,14 +98,14 @@ export default function SettingsTab({
               }`}
             >
               <p className="text-[13px] font-semibold">{mode.label}</p>
-              <p className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">{mode.detail}</p>
+              <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-600">{mode.detail}</p>
             </button>
           ))}
         </div>
       </Card>
 
       <Card>
-        <p className="text-[12px] font-semibold text-[var(--color-ink)]/">WEIGHTS</p>
+        <p className="text-[12px] font-semibold text-slate-600">WEIGHTS</p>
         <div className="mt-2 space-y-2">
           {(Object.keys(draft.weights) as CategoryKey[]).map((key) => (
             <div key={key} className="flex items-center gap-3">
@@ -120,14 +120,14 @@ export default function SettingsTab({
                 onChange={(e) => setWeight(key, Number(e.target.value))}
                 className="w-32 accent-gold-400"
               />
-              <span className="w-10 shrink-0 text-right text-[12px] tabular-nums text-[var(--color-ink)]/">
+              <span className="w-10 shrink-0 text-right text-[12px] tabular-nums text-slate-600">
                 {draft.weights[key]}%
               </span>
             </div>
           ))}
         </div>
         <p
-          className={`mt-2 text-[11.5px] ${balanced ? 'text-[var(--color-ink)]/' : 'text-amber-700/80'}`}
+          className={`mt-2 text-[11.5px] ${balanced ? 'text-slate-600' : 'text-amber-700/80'}`}
         >
           {balanced
             ? 'Adds to 100%.'
@@ -148,7 +148,7 @@ export default function SettingsTab({
       </Card>
 
       <Card>
-        <p className="text-[12px] font-semibold text-[var(--color-ink)]/">THRESHOLDS</p>
+        <p className="text-[12px] font-semibold text-slate-600">THRESHOLDS</p>
         <div className="mt-2 space-y-2">
           <Field
             label="Confidence floor"
@@ -184,15 +184,15 @@ export default function SettingsTab({
       </Card>
 
       <Card>
-        <p className="text-[12px] font-semibold text-[var(--color-ink)]/">WHAT IS NEVER GRADED ON</p>
-        <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="text-[12px] font-semibold text-slate-600">WHAT IS NEVER GRADED ON</p>
+        <p className="mt-1 text-[11.5px] leading-relaxed text-slate-600">
           These are not options. Each one rewards something other than selling roofs — miles rewards living
           far away, app-open time rewards leaving it open, leads received rewards whoever is already
           favoured — so they appear in this system as context a person reads and never as a term in a score.
         </p>
         <ul className="mt-2 space-y-0.5">
           {NEVER_GRADED_ON.map((item) => (
-            <li key={item} className="text-[11.5px] text-[var(--color-ink)]/">
+            <li key={item} className="text-[11.5px] text-slate-600">
               · {item}
             </li>
           ))}
@@ -226,7 +226,7 @@ export default function SettingsTab({
       </Button>
 
       {!canManage && (
-        <p className="text-[11px] leading-relaxed text-[var(--color-ink)]/">
+        <p className="text-[11px] leading-relaxed text-slate-600">
           Only a manager or admin can change this. The server refuses the write regardless of what this
           screen shows.
         </p>
