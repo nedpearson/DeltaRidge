@@ -35,9 +35,9 @@
   --color-gold-900: #713f12;
 
   --color-ink: #ffffff;
-  --color-surface: #020617;
-  --color-surface-2: #0f172a;
-  --color-surface-3: #1e293b;
+  --color-surface: #1e293b;
+  --color-surface-2: #334155;
+  --color-surface-3: #475569;
 
   /* Lead / pin status colors. Chosen for contrast against satellite imagery
      and to stay distinguishable for the most common forms of color blindness
