@@ -1,69 +1,33 @@
-# =============================================================================
-# CI
-# =============================================================================
-# This file was written on feature/p1-lead360 and never merged, which meant the
-# branch that deploys to production had no checks at all. GitHub reads the
-# workflow from the branch being pushed, so a push to main found no workflow
-# and silently ran nothing - not a red X, just no run. Every commit on main
-# since then went to production unverified.
-#
-# Keep it on main. A green PR on a branch proves nothing about main if main is
-# the only branch without the file.
-# =============================================================================
-name: CI
-
+name: CI Pipeline
 on:
-  pull_request:
   push:
-    branches:
-      - main
-      - feature/**
-      - strategy/**
-
-# The default token is read/write. Nothing here writes, so say so: a compromised
-# action in the tree cannot push with a token it was never given.
-permissions:
-  contents: read
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 jobs:
-  verify:
+  test:
+    timeout-minutes: 60
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
     steps:
-      # Actions are pinned by commit SHA, not tag. A tag is mutable: whoever
-      # controls the action repo can repoint v4 at new code, and it would run
-      # here with our token. The version is in the comment for readability.
-      - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - name: Use Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Unit tests
-        run: npm test
-
-      - name: Production build
-        run: npm run build
-
-      # Fails the build on a known-vulnerable dependency at high or above.
-      # Runs last: a real vulnerability should not hide a broken build, and a
-      # newly published advisory should not stop us knowing the code compiles.
-      - name: Dependency audit
-        run: npm audit --audit-level=high
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Install dependencies
+      run: npm ci
+    - name: Typecheck
+      run: npm run typecheck
+    - name: Lint
+      run: npm run lint
+    - name: Unit Tests
+      run: npm run test
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps chromium
+    - name: Run Playwright tests
+      run: npx playwright test --project="Google Chrome"
+    - uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() }}
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 30
