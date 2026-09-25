@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { OwnerLine, occupancyEvidence } from '@/components/OwnerLine'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import ContactActions from '@/components/ContactActions'
+import ResidentPhoneCard from '@/components/ResidentPhoneCard'
+import { saveResidentPhone } from '@/features/leads/contact-enrichment'
 import { findByAddress } from '@/features/leads/lead-store'
 import {
   CONTACT_SOURCE_LABEL,
@@ -204,7 +206,16 @@ export default function PropertyPage() {
 
       <div className="mt-3">
         {tab === 'property' && <PropertyTab profile={profile} />}
-        {tab === 'owner' && <OwnerTab profile={profile} {...(lead.parcel ? { parcel: lead.parcel } : {})} />}
+        {tab === 'owner' && (
+          <OwnerTab
+            profile={profile}
+            parcel={lead?.parcel}
+            address={lead?.address || decodeURIComponent(addressKey)}
+            managed={managed}
+            lead={lead}
+            onPhoneSaved={() => void findByAddress(addressKey).then(setManaged)}
+          />
+        )}
         {tab === 'roof' && (
           <RoofTab
             profile={profile}
@@ -310,7 +321,21 @@ function PropertyTab({
   )
 }
 
-function OwnerTab({ profile, parcel }: { profile: PropertyProfile; parcel?: ParcelRecord }) {
+function OwnerTab({
+  profile,
+  parcel,
+  address,
+  managed,
+  lead,
+  onPhoneSaved,
+}: {
+  profile: PropertyProfile
+  parcel?: ParcelRecord | undefined
+  address: string
+  managed: ManagedLead | null
+  lead?: ScoredLead | undefined
+  onPhoneSaved?: (() => void) | undefined
+}) {
   return (
     <Card>
       <FactRow label="Recorded owner" fact={profile.owner.name} />
@@ -331,17 +356,20 @@ function OwnerTab({ profile, parcel }: { profile: PropertyProfile; parcel?: Parc
           {occupancyEvidence(parcel)}
         </p>
       )}
-      {/*
-        This used to read "contact details are not collected ... no number is
-        dialled from here", which stopped being true when the door sheet gained
-        a contact editor. A stale reassurance is worse than none: it describes a
-        guarantee the software no longer makes.
-      */}
-      <p className="mt-2 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-slate-600">
-        No phone or email is appended to this parcel from a data broker. A number appears here only
-        when a homeowner gave it at the door, and calling it is gated on consent and on Louisiana’s
-        solicitation hours.
-      </p>
+
+      <ResidentPhoneCard
+        address={address}
+        ownerName={typeof profile.owner.name.value === 'string' ? profile.owner.name.value : parcel?.ownerName}
+        phone={managed?.contactPhone}
+        onPhoneSaved={async (phone, name) => {
+          if (lead) {
+            await saveResidentPhone(lead, phone, name)
+          } else if (managed) {
+            await saveResidentPhone(managed, phone, name)
+          }
+          onPhoneSaved?.()
+        }}
+      />
     </Card>
   )
 }

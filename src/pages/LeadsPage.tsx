@@ -5,6 +5,8 @@ import LeadMap from '@/components/LeadMap'
 import MessagingReadiness from '@/components/MessagingReadiness'
 import { OwnerLine } from '@/components/OwnerLine'
 import RoofViewSheet from '@/components/RoofViewSheet'
+import ResidentPhoneCard from '@/components/ResidentPhoneCard'
+import { saveResidentPhone } from '@/features/leads/contact-enrichment'
 import { Button, Card, Empty, Field, SectionTitle, Select } from '@/components/ui'
 import RoutePanel from '@/components/RoutePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
@@ -125,10 +127,12 @@ function DoorCard({
   lead,
   managed,
   onKnock,
+  onPhoneSaved,
 }: {
   lead: ScoredLead
   managed: ManagedLead | undefined
   onKnock: (lead: ScoredLead) => void
+  onPhoneSaved?: () => void
 }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -160,6 +164,17 @@ function DoorCard({
       </div>
 
       <OwnerLine parcel={parcel} />
+
+      <ResidentPhoneCard
+        address={lead.address}
+        city={lead.city || 'Baton Rouge'}
+        ownerName={parcel?.ownerName}
+        phone={managed?.contactPhone}
+        onPhoneSaved={async (phone, name) => {
+          await saveResidentPhone(lead, phone, name)
+          onPhoneSaved?.()
+        }}
+      />
 
       {managed && (
         <p className="mt-2 inline-block rounded-full bg-slate-200 px-2.5 py-1 text-[11px] text-slate-600">
@@ -1052,6 +1067,7 @@ export default function LeadsPage() {
                       lead={lead}
                       managed={managedByAddress.get(lead.addressKey)}
                       onKnock={setKnocking}
+                      onPhoneSaved={() => void readLeads().then(setManaged)}
                     />
                   ))}
                 </div>
