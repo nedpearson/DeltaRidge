@@ -4,7 +4,6 @@ import DoorOutcomeSheet from '@/components/DoorOutcomeSheet'
 import LeadMap from '@/components/LeadMap'
 import MessagingReadiness from '@/components/MessagingReadiness'
 import { OwnerLine } from '@/components/OwnerLine'
-import PropertyThumbnail from '@/components/PropertyThumbnail'
 import RoofViewSheet from '@/components/RoofViewSheet'
 import { Button, Card, Empty, Field, SectionTitle, Select } from '@/components/ui'
 import RoutePanel from '@/components/RoutePanel'
@@ -142,19 +141,10 @@ function DoorCard({
         <RoofViewSheet
           latitude={lead.latitude}
           longitude={lead.longitude}
-          boundary={parcel?.boundary}
           address={lead.address}
           onClose={() => setRoofOpen(false)}
         />
       )}
-
-      <PropertyThumbnail
-        latitude={lead.latitude}
-        longitude={lead.longitude}
-        boundary={parcel?.boundary}
-        alt={`Aerial view of ${lead.address}`}
-        onOpen={() => setRoofOpen(true)}
-      />
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -192,7 +182,7 @@ function DoorCard({
       <Button variant="gold" full className="mt-3" onClick={() => onKnock(lead)}>
         Knocked it
       </Button>
-      <div className="mt-2 grid grid-cols-2 gap-2">
+      <div className="mt-2 grid grid-cols-3 gap-2">
         <a
           href={mapsHref(lead.latitude, lead.longitude)}
           target="_blank"
@@ -201,6 +191,12 @@ function DoorCard({
         >
           <Button variant="secondary">Navigate</Button>
         </a>
+        <Button
+          variant="secondary"
+          onClick={() => setRoofOpen(true)}
+        >
+          EagleView
+        </Button>
         <Button
           variant="secondary"
           onClick={() => navigate(`/property/${encodeURIComponent(lead.addressKey)}`)}
