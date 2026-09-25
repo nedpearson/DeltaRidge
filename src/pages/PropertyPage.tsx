@@ -156,8 +156,8 @@ export default function PropertyPage() {
         */}
         <div className="mb-3">
           <RoofView
-            
-            
+            latitude={lead.latitude}
+            longitude={lead.longitude}
             address={lead.address}
             boundary={lead.parcel?.boundary}
           />
@@ -481,8 +481,8 @@ function PropertyContactBar({ lead }: { lead: ManagedLead }) {
       phone={lead.contactPhone ?? null}
       phoneNote={source === null ? null : CONTACT_SOURCE_LABEL[source]}
       email={null}
-      
-      
+      latitude={lead.latitude}
+      longitude={lead.longitude}
       call={{
         allowed: callBlock.allowed && window.allowed,
         reason: !callBlock.allowed
