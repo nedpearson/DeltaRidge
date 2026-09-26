@@ -123,6 +123,50 @@ export default function HealthTab({ organizationId }: { organizationId: string |
       ),
     })
 
+    if (supabase !== null) {
+      const { data: mrms } = await supabase
+        .from('mrms_health')
+        .select('latest_success_at, latest_failure_at, successful_runs, failed_runs, coverage_started_at')
+        .eq('product', 'MESH_Max_30min')
+        .maybeSingle()
+
+      const mrmsRow = (mrms ?? null) as Record<string, unknown> | null
+      built.push({
+        key: 'mrms',
+        label: 'NOAA MRMS MESH',
+        detail:
+          'Server-decoded MESH Max 30-minute GRIB2. Radar-estimated hail only; not a ground report.',
+        health: assessHealth(
+          {
+            configured: mrmsRow !== null,
+            successes: Number(mrmsRow?.['successful_runs'] ?? 0),
+            failures: Number(mrmsRow?.['failed_runs'] ?? 0),
+            lastSuccessAt: (mrmsRow?.['latest_success_at'] as string | null | undefined) ?? null,
+            lastFailureAt: (mrmsRow?.['latest_failure_at'] as string | null | undefined) ?? null,
+            expectedWithinHours: 0.5,
+          },
+          now,
+        ),
+      })
+    } else {
+      built.push({
+        key: 'mrms',
+        label: 'NOAA MRMS MESH',
+        detail: 'Server connection unavailable; MRMS ingest health cannot be read.',
+        health: assessHealth(
+          {
+            configured: false,
+            successes: 0,
+            failures: 0,
+            lastSuccessAt: null,
+            lastFailureAt: null,
+            expectedWithinHours: null,
+          },
+          now,
+        ),
+      })
+    }
+
     if (supabase !== null && organizationId !== null) {
       const [settings, events, outbox, imagery, contactSettings, contactEvents, propertyEvents, acquisitionSettings] = await Promise.all([
         supabase
@@ -304,24 +348,6 @@ export default function HealthTab({ organizationId }: { organizationId: string |
             lastFailureAt: null,
             expectedWithinHours: null,
           },
-          now,
-        ),
-      })
-    }
-
-    // Not built yet, and listed so the absence is visible rather than implied.
-    for (const [key, label, detail] of [
-      // Gridded MRMS MESH is still not built and still needs a server to decode
-      // GRIB2. Radar-estimated hail itself IS running, from NCEI SWDI's NEXRAD
-      // Level-III detections, which is keyless, CORS-open and needs no server.
-      ['mrms', 'NOAA MRMS grids', 'Gridded MESH — not built; radar hail runs from NCEI SWDI'],
-    ] as const) {
-      built.push({
-        key,
-        label,
-        detail,
-        health: assessHealth(
-          { configured: false, successes: 0, failures: 0, lastSuccessAt: null, lastFailureAt: null, expectedWithinHours: null },
           now,
         ),
       })
