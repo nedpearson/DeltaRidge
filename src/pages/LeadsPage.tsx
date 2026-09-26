@@ -505,8 +505,8 @@ function PipelineCard({ lead, now, scored }: { lead: ManagedLead; now: string; s
         <Button variant="gold" onClick={() => navigate(`/lead/${lead.id}`)}>
           Open lead
         </Button>
-      <AppointmentBriefPanel lead={lead} {...(scored ? { scored } : {})} />
       </div>
+      <AppointmentBriefPanel lead={lead} {...(scored ? { scored } : {})} />
     </Card>
   )
 }
@@ -999,20 +999,19 @@ export default function LeadsPage() {
             />
           ) : (
             <div className="space-y-2">
-              {pipeline.map((lead) => (
-                <PipelineCard
-                  key={lead.id}
-                  lead={lead}
-                  now={now}
-                  {...(run?.leads.find((candidate) => candidate.addressKey === lead.addressKey)
-                    ? {
-                        scored: run.leads.find(
-                          (candidate) => candidate.addressKey === lead.addressKey,
-                        ) as ScoredLead,
-                      }
-                    : {})}
-                />
-              ))}
+              {pipeline.map((lead) => {
+                const scored = run?.leads.find(
+                  (candidate) => candidate.addressKey === lead.addressKey,
+                )
+                return (
+                  <PipelineCard
+                    key={lead.id}
+                    lead={lead}
+                    now={now}
+                    {...(scored ? { scored } : {})}
+                  />
+                )
+              })}
             </div>
           )}
 
