@@ -72,7 +72,11 @@ create policy lead_acquisition_events_org_insert
   on lead_acquisition_events for insert
   with check (
     organization_id in (select app.current_org_ids())
-    and (created_by is null or created_by = auth.uid())
+    and created_by = auth.uid()
+    and (
+      source_channel in ('door','referral','manual','other')
+      or app.has_org_role(organization_id, array['admin','manager','office']::app_role[])
+    )
   );
 
 create policy lead_acquisition_events_manager_update
@@ -134,8 +138,14 @@ create policy lead_action_tasks_org_insert
 
 create policy lead_action_tasks_org_update
   on lead_action_tasks for update
-  using (organization_id in (select app.current_org_ids()))
-  with check (organization_id in (select app.current_org_ids()));
+  using (
+    app.has_org_role(organization_id, array['admin','manager','office']::app_role[])
+    or assigned_to = auth.uid()
+  )
+  with check (
+    app.has_org_role(organization_id, array['admin','manager','office']::app_role[])
+    or assigned_to = auth.uid()
+  );
 
 drop trigger if exists lead_action_tasks_touch_updated_at on lead_action_tasks;
 create trigger lead_action_tasks_touch_updated_at
