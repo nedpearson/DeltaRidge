@@ -65,7 +65,7 @@ async function lookupBatchData(
       body: JSON.stringify({
         requests: [
           {
-            address: {
+            propertyAddress: {
               street,
               city,
               state,
@@ -79,15 +79,23 @@ async function lookupBatchData(
 
     if (!res.ok) return null
     const data = await res.json()
-    const match = data?.results?.persons?.[0]
+    const persons =
+      data?.results?.persons ||
+      data?.results?.properties?.[0]?.persons ||
+      data?.results?.[0]?.persons ||
+      data?.data?.results?.persons ||
+      []
+
+    const match = Array.isArray(persons) ? persons[0] : null
     if (!match) return null
 
     const residentName = `${match.name?.first ?? ''} ${match.name?.last ?? ''}`.trim() || null
-    const phones = (match.phoneNumbers ?? []).map((p: Record<string, unknown>) => ({
-      phone: cleanPhone(String(p.number ?? '')),
+    const rawPhones = match.phoneNumbers || match.phones || []
+    const phones = (Array.isArray(rawPhones) ? rawPhones : []).map((p: Record<string, unknown>) => ({
+      phone: cleanPhone(String(p.number || p.phone || '')),
       type: String(p.type ?? 'Unknown').toLowerCase().includes('mobile') ? 'Wireless' : 'Landline',
       carrier: String(p.carrier ?? ''),
-    }))
+    })).filter((p: { phone: string }) => p.phone.length >= 10)
 
     if (phones.length === 0) return null
 
