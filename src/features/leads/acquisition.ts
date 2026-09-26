@@ -226,3 +226,51 @@ export async function saveAcquisitionWebhookToken(
   )
   return { error: error?.message ?? null }
 }
+
+export interface AcquisitionWebhookSettings {
+  enabled: boolean
+  secretHint: string | null
+  rotatedAt: string | null
+  lastReceivedAt: string | null
+}
+
+export async function readAcquisitionWebhookSettings(
+  organizationId: string | null,
+): Promise<{ settings: AcquisitionWebhookSettings | null; error: string | null }> {
+  const supabase = getSupabase()
+  if (!supabase || !organizationId) return { settings: null, error: null }
+
+  const { data, error } = await supabase
+    .from('acquisition_webhook_settings')
+    .select('enabled, webhook_secret_hint, webhook_rotated_at, last_received_at')
+    .eq('organization_id', organizationId)
+    .maybeSingle()
+
+  if (error) return { settings: null, error: error.message }
+  if (!data) return { settings: null, error: null }
+
+  return {
+    settings: {
+      enabled: data.enabled === true,
+      secretHint: (data.webhook_secret_hint as string | null) ?? null,
+      rotatedAt: (data.webhook_rotated_at as string | null) ?? null,
+      lastReceivedAt: (data.last_received_at as string | null) ?? null,
+    },
+    error: null,
+  }
+}
+
+export async function setAcquisitionWebhookEnabled(
+  organizationId: string,
+  enabled: boolean,
+): Promise<{ error: string | null }> {
+  const supabase = getSupabase()
+  if (!supabase) return { error: 'Server connection is unavailable.' }
+
+  const { error } = await supabase
+    .from('acquisition_webhook_settings')
+    .update({ enabled })
+    .eq('organization_id', organizationId)
+
+  return { error: error?.message ?? null }
+}
