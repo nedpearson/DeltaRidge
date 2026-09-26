@@ -15,6 +15,7 @@ import {
 } from '@/features/leads/map-projection'
 import { STATUS_LABEL, type LeadStatus, type ManagedLead } from '@/features/leads/pipeline'
 import type { ScoredLead } from '@/features/leads/scoring'
+import { bboxAround, type SearchCenter } from '@/features/leads/search-area'
 import type { StormEvent } from '@/integrations/storm'
 
 /**
@@ -80,11 +81,15 @@ export default function LeadMapStatic({
   doors,
   leads,
   storms,
+  searchCenter,
+  searchRadiusMiles = 5,
   onOpenLead,
 }: {
   doors: readonly ScoredLead[]
   leads: readonly ManagedLead[]
   storms: readonly StormEvent[]
+  searchCenter?: SearchCenter
+  searchRadiusMiles?: number
   onOpenLead: (leadId: string) => void
 }) {
   const [size, setSize] = useState<Size>(FALLBACK_SIZE)
@@ -144,8 +149,13 @@ export default function LeadMapStatic({
 
   const fitted = useMemo(() => {
     const base = workingBounds(markers.map((m) => m.point))
-    return base ? viewForBounds(padBounds(base), size) : null
-  }, [markers, size])
+    if (base) return viewForBounds(padBounds(base), size)
+    if (searchCenter) {
+      const [west, south, east, north] = bboxAround(searchCenter, searchRadiusMiles)
+      return viewForBounds(padBounds({ west, south, east, north }, 0.05), size)
+    }
+    return null
+  }, [markers, searchCenter, searchRadiusMiles, size])
 
   const [view, setView] = useState<View | null>(null)
   const [drag, setDrag] = useState({ x: 0, y: 0 })
@@ -238,6 +248,46 @@ export default function LeadMapStatic({
             className="absolute inset-0 h-full w-full"
           >
             <g transform={`translate(${drag.x} ${drag.y})`}>
+              {searchCenter && (() => {
+                const centerPx = project(searchCenter, current, size)
+                const northEdge = project(
+                  { latitude: bboxAround(searchCenter, searchRadiusMiles)[3], longitude: searchCenter.longitude },
+                  current,
+                  size,
+                )
+                const eastEdge = project(
+                  { latitude: searchCenter.latitude, longitude: bboxAround(searchCenter, searchRadiusMiles)[2] },
+                  current,
+                  size,
+                )
+                const rx = Math.abs(eastEdge.x - centerPx.x)
+                const ry = Math.abs(northEdge.y - centerPx.y)
+                return (
+                  <>
+                    <ellipse
+                      cx={centerPx.x}
+                      cy={centerPx.y}
+                      rx={Math.max(1, rx)}
+                      ry={Math.max(1, ry)}
+                      fill="#27C6E8"
+                      fillOpacity={0.055}
+                      stroke="#27C6E8"
+                      strokeOpacity={0.7}
+                      strokeWidth={2}
+                      strokeDasharray="6 4"
+                    />
+                    <circle
+                      cx={centerPx.x}
+                      cy={centerPx.y}
+                      r={7}
+                      fill="#27C6E8"
+                      stroke="#F7FAFC"
+                      strokeWidth={2}
+                    />
+                  </>
+                )
+              })()}
+
               {/* Storm reports underneath: they are context, not the work. */}
               {stormPoints.map((s) => (
                 <circle
