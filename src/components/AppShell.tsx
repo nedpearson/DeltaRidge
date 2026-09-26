@@ -119,7 +119,7 @@ function useNavHeight(active: boolean) {
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
-  const hideNav = pathname.startsWith('/inspection/')
+  const hideNav = pathname.startsWith('/inspection/') || pathname.startsWith('/evidence/')
   const { ref: navRef, height: navHeight } = useNavHeight(!hideNav)
 
   return (
@@ -143,7 +143,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
        */
       style={{ '--bottom-nav-height': `${navHeight}px` } as CSSProperties}
     >
-      <header className="sticky top-0 z-20 border-b border-border-subtle bg-brand-pressed text-text-primary shadow-lg shadow-brand-950/10">
+      {!pathname.startsWith('/evidence/') && (<header className="sticky top-0 z-20 border-b border-border-subtle bg-brand-pressed text-text-primary shadow-lg shadow-brand-950/10">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
             <div className="grid size-9 place-items-center rounded-lg bg-brand-primary font-display text-sm font-bold text-text-primary shadow-md shadow-black/20 ring-1 ring-white/20">DR</div>
@@ -158,7 +158,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <OnlinePill />
           </div>
         </div>
-      </header>
+      </header>)}
 
       {/*
         The bottom padding is the nav's measured height plus the safe-area inset
@@ -218,3 +218,4 @@ export default function AppShell({ children }: { children: ReactNode }) {
     </div>
   )
 }
+
