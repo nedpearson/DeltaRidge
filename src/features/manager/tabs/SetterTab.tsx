@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import {
+  generateAcquisitionWebhookToken,
+  readAcquisitionWebhookSettings,
   readSetterTasks,
   readSourceOutcomes,
+  saveAcquisitionWebhookToken,
+  setAcquisitionWebhookEnabled,
   setSetterTaskStatus,
   type SetterTask,
   type SourceOutcome,
@@ -53,9 +57,11 @@ function SourceOutcomeCard({ row }: { row: SourceOutcome }) {
 
 export default function SetterTab({
   organizationId,
+  canConfigure,
   onOpenLead,
 }: {
   organizationId: string | null
+  canConfigure: boolean
   onOpenLead: (leadClientId: string) => void
 }) {
   const [tasks, setTasks] = useState<SetterTask[]>([])
@@ -63,20 +69,66 @@ export default function SetterTab({
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [webhookEnabled, setWebhookEnabled] = useState(false)
+  const [webhookHint, setWebhookHint] = useState<string | null>(null)
+  const [lastReceivedAt, setLastReceivedAt] = useState<string | null>(null)
+  const [newToken, setNewToken] = useState<string | null>(null)
+  const [webhookBusy, setWebhookBusy] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [taskResult, sourceResult] = await Promise.all([
+    const [taskResult, sourceResult, webhookResult] = await Promise.all([
       readSetterTasks(organizationId),
       readSourceOutcomes(organizationId),
+      canConfigure
+        ? readAcquisitionWebhookSettings(organizationId)
+        : Promise.resolve({ settings: null, error: null }),
     ])
     setTasks(taskResult.rows)
     setSources(sourceResult.rows)
-    setError(taskResult.error ?? sourceResult.error)
+    if (webhookResult.settings) {
+      setWebhookEnabled(webhookResult.settings.enabled)
+      setWebhookHint(webhookResult.settings.secretHint)
+      setLastReceivedAt(webhookResult.settings.lastReceivedAt)
+    }
+    setError(taskResult.error ?? sourceResult.error ?? webhookResult.error)
     setLoading(false)
-  }, [organizationId])
+  }, [canConfigure, organizationId])
 
   useEffect(() => { void load() }, [load])
+
+  const rotateWebhook = async () => {
+    if (!organizationId || !canConfigure) return
+    setWebhookBusy(true)
+    setError(null)
+    const generated = await generateAcquisitionWebhookToken()
+    const saved = await saveAcquisitionWebhookToken(
+      organizationId,
+      generated.hash,
+      generated.hint,
+    )
+    setWebhookBusy(false)
+    if (saved.error) {
+      setError(saved.error)
+      return
+    }
+    setNewToken(generated.token)
+    setWebhookEnabled(true)
+    setWebhookHint(generated.hint)
+    await load()
+  }
+
+  const toggleWebhook = async () => {
+    if (!organizationId || !canConfigure) return
+    setWebhookBusy(true)
+    const result = await setAcquisitionWebhookEnabled(organizationId, !webhookEnabled)
+    setWebhookBusy(false)
+    if (result.error) {
+      setError(result.error)
+      return
+    }
+    setWebhookEnabled(!webhookEnabled)
+  }
 
   const change = async (
     task: SetterTask,
@@ -104,6 +156,81 @@ export default function SetterTab({
           gates before any communication.
         </p>
       </Card>
+
+      {canConfigure && (
+        <>
+          <SectionTitle hint="Signed server-to-server ingest">INBOUND LEAD API</SectionTitle>
+          <Card>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-text-primary">
+                  Acquisition webhook
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-text-secondary">
+                  Use this single endpoint for Google/Meta lead forms, Zapier, partners or other
+                  approved sources. Each delivery is deduplicated by source + external lead id.
+                </p>
+              </div>
+              <span className={
+                webhookEnabled
+                  ? 'shrink-0 rounded-full bg-status-success/10 px-2 py-1 text-[9.5px] text-status-success ring-1 ring-status-success/20'
+                  : 'shrink-0 rounded-full bg-bg-elevated px-2 py-1 text-[9.5px] text-text-secondary ring-1 ring-border-subtle'
+              }>
+                {webhookEnabled ? 'ENABLED' : 'OFF'}
+              </span>
+            </div>
+
+            <div className="mt-3 rounded-xl bg-bg-elevated p-3 ring-1 ring-border-subtle">
+              <p className="text-[10px] uppercase tracking-wider text-text-secondary">Endpoint</p>
+              <code className="mt-1 block break-all text-[11px] text-brand-live">
+                /functions/v1/lead-acquisition
+              </code>
+              <p className="mt-2 text-[10px] uppercase tracking-wider text-text-secondary">
+                Header
+              </p>
+              <code className="mt-1 block break-all text-[11px] text-text-secondary">
+                x-delta-ridge-token: &lt;secret&gt;
+              </code>
+              <p className="mt-2 text-[10.5px] text-text-secondary">
+                Token {webhookHint ? `ends in …${webhookHint}` : 'has not been generated'}
+                {lastReceivedAt ? ` · last inbound ${new Date(lastReceivedAt).toLocaleString()}` : ''}
+              </p>
+            </div>
+
+            {newToken && (
+              <div className="mt-3 rounded-xl border border-warning-border bg-warning-surface p-3">
+                <p className="text-[11px] font-semibold text-warning-highlight">
+                  Copy this token now. It will not be shown again.
+                </p>
+                <code className="mt-2 block break-all text-[11px] text-text-primary">{newToken}</code>
+                <Button
+                  variant="secondary"
+                  full
+                  className="mt-2"
+                  onClick={() => void navigator.clipboard?.writeText(newToken)}
+                >
+                  Copy token
+                </Button>
+              </div>
+            )}
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button variant="secondary" disabled={webhookBusy} onClick={() => void rotateWebhook()}>
+                {webhookHint ? 'Rotate token' : 'Generate token'}
+              </Button>
+              <Button variant="ghost" disabled={webhookBusy || !webhookHint} onClick={() => void toggleWebhook()}>
+                {webhookEnabled ? 'Disable' : 'Enable'}
+              </Button>
+            </div>
+
+            <p className="mt-3 text-[10.5px] leading-relaxed text-text-secondary">
+              The webhook creates/links the property and CRM lead, records source attribution and
+              creates a human setter task for high-intent events. It does not send outreach or
+              manufacture consent.
+            </p>
+          </Card>
+        </>
+      )}
 
       <SectionTitle hint={`${tasks.length} open/review tasks`}>APPOINTMENT SETTER</SectionTitle>
 
