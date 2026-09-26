@@ -5,7 +5,6 @@
 -- Edge Function whenever specific business conditions are met.
 -- =============================================================================
 
--- Enable the pg_net extension if it is not already active
 create extension if not exists pg_net;
 
 create or replace function queue_neighborhood_blast()
@@ -15,42 +14,65 @@ security definer
 as $func
 declare
   edge_function_url text;
-  auth_header text;
   nearby_addresses jsonb;
+  won_property record;
+  target_property record;
+  addresses_array jsonb[] := array[]::jsonb[];
 begin
-  -- Only trigger when a lead is officially marked 'won'
   if NEW.status = 'won' and OLD.status is distinct from 'won' then
     
-    -- In a full implementation, this query would find all properties within 
-    -- 0.25 miles of the sold property. For this trigger, we mock the payload 
-    -- format that the edge function expects.
-    nearby_addresses := jsonb_build_array(
-      jsonb_build_object(
-        'name', 'Current Resident',
-        'address_line1', 'Neighbor of ' || NEW.id, -- Placeholder
-        'city', 'Local',
-        'state', 'TX',
-        'zip', '78701'
-      )
-    );
+    -- Find the location of the won property
+    select p.location, p.address_line1, p.city, p.state, p.zip
+    into won_property
+    from properties p
+    where p.id = NEW.property_id;
 
-    -- Retrieve webhook credentials from vault or environment (mocked here for structure)
-    -- Supabase provides edge functions at a deterministic URL structure
-    edge_function_url := 'https://' || current_setting('request.headers')::json->>'host' || '/functions/v1/trigger-direct-mail';
-    
-    -- Send async POST via pg_net
-    perform net.http_post(
-      url := edge_function_url,
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json',
-        -- In production, inject actual service role key here securely
-        'Authorization', 'Bearer MOCK_SERVICE_KEY'
-      ),
-      body := jsonb_build_object(
-        'campaign_type', 'neighborhood_blast',
-        'addresses', nearby_addresses
-      )
-    );
+    if won_property.location is null then
+      return NEW;
+    end if;
+
+    -- Query properties within ~400 meters (0.25 miles)
+    for target_property in
+      select p.address_line1, p.city, p.state, p.zip
+      from properties p
+      where st_dwithin(p.location, won_property.location, 402.336)
+        and p.id != NEW.property_id
+      limit 100
+    loop
+      addresses_array := array_append(
+        addresses_array,
+        jsonb_build_object(
+          'name', 'Current Resident',
+          'address_line1', target_property.address_line1,
+          'city', target_property.city,
+          'state', target_property.state,
+          'zip', target_property.zip
+        )
+      );
+    end loop;
+
+    -- Only send if we found neighbors
+    if array_length(addresses_array, 1) > 0 then
+      nearby_addresses := to_jsonb(addresses_array);
+
+      -- Supabase edge function URL
+      edge_function_url := 'https://' || current_setting('request.headers', true)::json->>'host' || '/functions/v1/trigger-direct-mail';
+      
+      -- Send async POST via pg_net
+      -- NOTE: In production, the authorization token must be stored securely (e.g. Supabase Vault)
+      -- Using a placeholder token for safety. The edge function will reject this unless configured.
+      perform net.http_post(
+        url := edge_function_url,
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'Authorization', 'Bearer PENDING_CONFIGURATION_SECRET'
+        ),
+        body := jsonb_build_object(
+          'campaign_type', 'neighborhood_blast',
+          'addresses', nearby_addresses
+        )
+      );
+    end if;
   end if;
 
   return NEW;

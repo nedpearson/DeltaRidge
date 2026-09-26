@@ -100,7 +100,7 @@ export default function EstimatePage() {
       setTimeout(() => setRoofrState('created'), 2000)
     } catch (e) {
       setRoofrState('idle')
-      alert('Failed to send to Roofr.')
+      console.error('Failed to send to Roofr.')
     }
   }
   const [photos, setPhotos] = useState<LocalPhoto[]>([])
@@ -591,6 +591,8 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
     </div>
   )
 }
+
+
 
 
 

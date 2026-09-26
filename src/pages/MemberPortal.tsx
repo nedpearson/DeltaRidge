@@ -32,12 +32,13 @@ export default function MemberPortal() {
 
       <div className="max-w-md mx-auto p-4 space-y-4">
         <div className="mb-6">
-          <h2 className="text-[22px] font-bold text-text-primary">Welcome back, {member.name.split(' ')[0]}</h2>
+          <h2 className="text-[22px] font-bold text-text-primary">Welcome back, {member.name.split(' ')[0]} (DEMO PREVIEW)</h2>
           <p className="text-[13px] text-text-secondary">{member.address}</p>
         </div>
 
         {/* Status Card */}
         <Card className="p-5 border-2 border-brand-gold relative overflow-hidden">
+          <div className="absolute right-2 top-2"><span className="bg-status-warning text-bg-app px-2 py-0.5 rounded text-[10px] font-bold uppercase">Demo Mode</span></div>
           <div className="absolute -right-6 -top-6 text-brand-gold/10">
             <ShieldCheck className="w-32 h-32" />
           </div>
@@ -45,7 +46,7 @@ export default function MemberPortal() {
             <span className="inline-block px-2 py-0.5 bg-status-success/20 text-status-success text-[10px] font-bold uppercase rounded-sm mb-2">Active</span>
             <h3 className="text-[18px] font-bold text-text-primary">{member.tier}</h3>
             <p className="text-[13px] text-text-secondary mt-1">
-              Your roof is fully protected. Next annual renewal: {member.renewsAt}.
+              RoofCare membership active through {member.renewsAt}.
             </p>
             <div className="mt-4 pt-4 border-t border-border-subtle/50 flex gap-2">
               <Button variant="primary" className="text-[12px] bg-brand-gold text-bg-app hover:bg-brand-goldHighlight w-full">
@@ -64,8 +65,9 @@ export default function MemberPortal() {
             <div>
               <h4 className="text-[14px] font-bold text-text-primary">Storm Monitoring Active</h4>
               <p className="text-[12px] text-text-secondary mt-1 leading-relaxed">
-                We are actively monitoring your property via NOAA satellite. No severe weather (1.75"+ hail or 60mph+ winds) has been detected at your address recently.
+                No qualifying storm event is currently attached to this property record.
               </p>
+              <Button variant="secondary" className="text-[10px] uppercase tracking-widest mt-2">Show Evidence</Button>
             </div>
           </div>
         </Card>
@@ -97,4 +99,7 @@ export default function MemberPortal() {
     </div>
   )
 }
+
+
+
 

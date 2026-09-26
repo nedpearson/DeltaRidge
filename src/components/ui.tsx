@@ -46,8 +46,8 @@ export function Card({
 export function SectionTitle({ children, hint }: { children: ReactNode; hint?: string }) {
   return (
     <div className="mb-2.5 mt-6 flex items-baseline justify-between first:mt-0">
-      <h2 className="font-display text-xs tracking-[0.14em] text-slate-60060">{children}</h2>
-      {hint && <span className="text-[11px] text-slate-60040">{hint}</span>}
+      <h2 className="font-display text-xs tracking-[0.14em] text-text-muted">{children}</h2>
+      {hint && <span className="text-[11px] text-text-muted">{hint}</span>}
     </div>
   )
 }
@@ -65,13 +65,13 @@ export function Field({
     <label className="block">
       <span className="mb-1.5 block text-[12px] font-medium text-text-secondary">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-[11px] text-slate-60040">{hint}</span>}
+      {hint && <span className="mt-1 block text-[11px] text-text-muted">{hint}</span>}
     </label>
   )
 }
 
 const CONTROL =
-  'w-full rounded-xl bg-bg-card px-3.5 py-3 text-[15px] text-text-primary ring-1 ring-[var(--color-surface-3)] outline-none placeholder:text-slate-60030 focus:ring-2 focus:ring-brand-primary shadow-sm'
+  'w-full rounded-xl bg-bg-card px-3.5 py-3 text-[15px] text-text-primary ring-1 ring-[var(--color-surface-3)] outline-none placeholder:text-text-muted focus:ring-2 focus:ring-brand-primary shadow-sm'
 
 export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${CONTROL} ${props.className ?? ''}`} />
@@ -88,8 +88,9 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
 export function Empty({ title, body }: { title: string; body: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-border-subtle bg-bg-app/50 px-5 py-10 text-center">
-      <p className="font-display text-sm tracking-wide text-slate-60080">{title}</p>
-      <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-slate-60050">{body}</p>
+      <p className="font-display text-sm tracking-wide text-text-secondary">{title}</p>
+      <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-text-muted">{body}</p>
     </div>
   )
 }
+
