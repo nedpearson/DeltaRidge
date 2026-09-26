@@ -1,6 +1,9 @@
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 
-const BATCHDATA_API_KEY = Deno.env.get('BATCHDATA_API_KEY') || ''
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
+const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+const BATCHDATA_API_KEY = Deno.env.get('BATCHDATA_API_KEY') ?? ''
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +26,48 @@ Deno.serve(async (req) => {
   }
 
   try {
+    if (SUPABASE_URL === '' || ANON_KEY === '') {
+      return new Response(JSON.stringify({ error: 'Server authentication is not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const authorization = req.headers.get('authorization')
+    if (!authorization) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const caller = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authorization } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const { data: auth, error: authError } = await caller.auth.getUser()
+    if (authError || !auth?.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { data: membership } = await caller
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', auth.user.id)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle()
+
+    if (!membership?.organization_id) {
+      return new Response(JSON.stringify({ error: 'No active organization membership' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const { street, city, state } = await req.json()
 
     if (!street || !city || !state) {
