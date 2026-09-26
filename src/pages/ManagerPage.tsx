@@ -1220,49 +1220,57 @@ function CommandCenterTab() {
   )
 }
 
+import { useLeadEconomics } from '@/features/dashboard/useLeadEconomics';
+
 function LeadEconomicsPanel() {
+  const { data, loading } = useLeadEconomics();
+
+  if (loading || !data) {
+    return <div className="text-[13px] text-text-secondary py-4 text-center">Loading economics...</div>;
+  }
+
   return (
     <div className="space-y-3">
       <Card>
         <p className="text-[12px] leading-relaxed text-text-secondary mb-3">
-          Funnel Metrics across all generated opportunities.
+          Funnel Metrics across all generated opportunities. (Server-backed)
         </p>
         <div className="grid grid-cols-4 gap-2 mb-4">
-          <Stat value="500" label="Assigned" />
-          <Stat value="350" label="Attempted" />
-          <Stat value="120" label="Conv" />
-          <Stat value="45" label="Interested" />
-          <Stat value="30" label="Appts" />
-          <Stat value="25" label="Inspections" />
-          <Stat value="15" label="Proposals" />
-          <Stat value="8" label="Won" />
+          <Stat value={data.assigned.toString()} label="Assigned" />
+          <Stat value={data.attempted.toString()} label="Attempted" />
+          <Stat value={data.conversations.toString()} label="Conv" />
+          <Stat value={data.interested.toString()} label="Interested" />
+          <Stat value={data.appointments.toString()} label="Appts" />
+          <Stat value={data.inspections.toString()} label="Inspections" />
+          <Stat value={data.proposals.toString()} label="Proposals" />
+          <Stat value={data.won.toString()} label="Won" />
         </div>
         <div className="border-t border-border-subtle pt-3 grid grid-cols-2 gap-2">
-          <Stat value="$145,000" label="Contract Value" />
-          <Stat value="$58,000" label="Estimated GP" />
+          <Stat value={`$${data.contractValue.toLocaleString()}`} label="Contract Value" />
+          <Stat value={`$${data.estimatedGp.toLocaleString()}`} label="Estimated GP" />
         </div>
       </Card>
     </div>
   )
 }
 
+import { useSourceAttribution } from '@/features/dashboard/useSourceAttribution';
+
 function SourceAttributionPanel() {
-  const sources = [
-    { name: 'Delta Ridge Intelligence', appts: 15, closeRate: '30%', revenue: '$75k', gp: '$30k', gpPerOpp: '$2,000' },
-    { name: 'Referrals', appts: 5, closeRate: '50%', revenue: '$40k', gp: '$16k', gpPerOpp: '$3,200' },
-    { name: 'Google', appts: 8, closeRate: '20%', revenue: '$20k', gp: '$8k', gpPerOpp: '$1,000' },
-    { name: 'Meta', appts: 2, closeRate: '10%', revenue: '$10k', gp: '$4k', gpPerOpp: '$500' },
-    { name: 'Campaigns', appts: 4, closeRate: '25%', revenue: '$20k', gp: '$8k', gpPerOpp: '$1,500' },
-  ]
+  const { data, loading } = useSourceAttribution();
+
+  if (loading || !data) {
+    return <div className="text-[13px] text-text-secondary py-4 text-center">Loading sources...</div>;
+  }
   
   return (
     <div className="space-y-2">
       <Card>
         <p className="text-[12px] leading-relaxed text-text-secondary mb-3">
-          Performance breakdown by lead source. The ultimate metric is GROSS PROFIT PER GENERATED OPPORTUNITY.
+          Performance breakdown by lead source (Server-backed). The ultimate metric is GROSS PROFIT PER GENERATED OPPORTUNITY.
         </p>
         <div className="space-y-3">
-          {sources.map(src => (
+          {data.map(src => (
             <div key={src.name} className="border border-border-subtle rounded p-3">
               <div className="flex items-baseline justify-between gap-3 mb-2">
                 <p className="text-[13.5px] font-semibold text-text-primary">{src.name}</p>
@@ -1298,6 +1306,8 @@ function TerritoryIntelligencePanel() {
     </div>
   )
 }
+
+
 
 
 
