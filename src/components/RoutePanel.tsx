@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Card, SectionTitle } from '@/components/ui'
 import { useRouteTracking } from '@/features/routes/useRouteTracking'
-import { pausedSeconds } from '@/features/routes/route-store'
+import { pausedSeconds, type RoutePoint } from '@/features/routes/route-store'
 import { routeStats, type DoorEvent } from '@/features/routes/route-stats'
+import RouteMap from './RouteMap'
 import {
   buildFunnel,
   outcomeBreakdown,
@@ -74,6 +75,7 @@ export default function RoutePanel() {
     // second read that could disagree with them.
     events: DoorEvent[]
     open: OpenItem[]
+    points: RoutePoint[]
   } | null>(null)
   const [counts, setCounts] = useState<LiveCounts>(EMPTY_COUNTS)
   /**
@@ -165,6 +167,7 @@ export default function RoutePanel() {
       stats: routeStats({ ...session, endedAt: at }, points, events),
       counts: finalCounts,
       events,
+      points,
       // Read again at the closing instant rather than reusing what the confirm
       // screen showed: the rep may have gone and fixed something, and the
       // report should say what is true now, not what was true a minute ago.
@@ -183,14 +186,20 @@ export default function RoutePanel() {
     return (
       <>
         <SectionTitle>ROUTE SUMMARY</SectionTitle>
-        <Card>
-          <p className="text-[13.5px] font-semibold">Route saved.</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
-            Everything below is on this phone already. It reaches the office as soon as there is signal —
-            you do not have to wait here for it.
-          </p>
+        <Card className="!p-0 overflow-hidden">
+          {summary.points.length > 0 && (
+            <div className="h-48 w-full border-b border-border-subtle bg-background-app">
+              <RouteMap points={summary.points} style="streets" height={192} />
+            </div>
+          )}
+          <div className="p-4">
+            <p className="text-[13.5px] font-semibold">Route saved.</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
+              Everything below is on this phone already. It reaches the office as soon as there is signal —
+              you do not have to wait here for it.
+            </p>
 
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <Stat value={duration(stats.routeSeconds)} label="start to stop" />
             <Stat value={duration(stats.pausedSeconds)} label="paused" />
             <Stat value={miles(stats.distanceMeters)} label="recorded" />
@@ -284,9 +293,10 @@ export default function RoutePanel() {
             </div>
           )}
 
-          <Button variant="gold" full className="mt-3" onClick={() => setSummary(null)}>
-            Done
-          </Button>
+            <Button variant="gold" full className="mt-4" onClick={() => setSummary(null)}>
+              Done
+            </Button>
+          </div>
         </Card>
       </>
     )
