@@ -65,6 +65,7 @@ export default function ResidentPhoneCard({
     return () => {
       active = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, autoEnrich, city, ownerName, phone, email, state, zip])
 
   const freeSearchUrl = buildFreeSearchUrl(address, city, state, zip)

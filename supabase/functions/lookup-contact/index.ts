@@ -221,6 +221,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
 
+  // Security Vulnerability Fix: Require Supabase Auth JWT
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    return json({ error: 'Unauthorized: Missing Authorization header' }, 401)
+  }
+
+  const supabaseClient = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  })
+
+  const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
+
+  if (authError || !user) {
+    return json({ error: 'Unauthorized: Invalid token' }, 401)
+  }
+
   let body: Record<string, unknown>
   try {
     body = (await req.json()) as Record<string, unknown>
