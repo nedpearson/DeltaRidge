@@ -327,6 +327,7 @@ export default function ManagerPage() {
       {tab === 'setter' && (
         <SetterTab
           organizationId={orgId}
+          canConfigure={membership?.role === 'admin'}
           onOpenLead={(leadClientId) => navigate(`/lead/${leadClientId}`)}
         />
       )}
