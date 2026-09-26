@@ -10,7 +10,6 @@ A green build is necessary, but it is not proof that the live roofing workflow w
   - EAGLEVIEW_CLIENT_SECRET
   - EAGLEVIEW_ENV=production
 - No server credential has a VITE_ prefix.
-- Mapbox browser token is a public pk.* token restricted to approved production origins.
 - Supabase service-role key never reaches the browser bundle.
 - Contact-provider keys remain Edge Function secrets.
 - Roofr/Zapier hook remains server-side only.
@@ -38,27 +37,26 @@ Cached data may remain visible only when labelled as previous/cached data. It mu
 
 ## 3. Map certification
 
-### Mapbox
+### EagleView map imagery
 
-- Street map renders.
-- Satellite map renders.
-- Public token is accepted on production origin.
-- Current-location marker appears after geolocation permission.
+- EagleView WMTS entitlement/configuration is present in production.
+- A real authenticated WMTS tile request succeeds.
+- Current-location marker appears after browser/device geolocation permission.
 - Search-radius ring is centered on the same GPS fix used by the lead engine.
-- Door pins stay aligned while panning/zooming.
+- Door pins stay aligned while panning/zooming over EagleView ortho imagery.
 - Storm overlays remain below actionable door markers.
 - Fit control includes the active lead set/search area.
-- Attribution remains visible.
-- Location control behaves correctly when permission is denied.
+- EagleView provenance/availability language remains visible.
+- Location behavior is correct when permission is denied.
 
-Mapbox GL JS current documentation confirms GeolocateControl uses the browser Geolocation API, requires secure HTTPS in modern browsers, supports high-accuracy positioning, user tracking and an accuracy circle.
+EagleView's developer platform documents a WMTS web map tile service for high-resolution top-down imagery. The exact production tile URL/template is account/entitlement specific and must be configured from EagleView's approved production setup rather than guessed in source code.
 
-### Static fallback
+### Imagery-unavailable fallback
 
-- Disable WebGL or Mapbox GL intentionally.
-- Verify the static map still plots the same property coordinates.
+- Temporarily remove/disable the EagleView WMTS entitlement.
+- Verify property/storm/GPS overlays still render on the neutral map surface.
 - Verify search radius and current-location context remain understandable.
-- Offline/failed tiles must not be represented as a live map refresh.
+- Unavailable/failed imagery must never be represented as a live EagleView map refresh.
 
 ## 4. Lead-engine data sources
 
@@ -248,7 +246,7 @@ A release may be called **Live Production** only when:
 - CI is green;
 - production migrations are applied;
 - production Edge Functions are deployed;
-- browser Mapbox + GPS search passes on a physical phone;
+- EagleView WMTS + GPS search passes on a physical phone;
 - Golden Lead two-device sync passes;
 - EagleView succeeds against a real production-entitled property;
 - Roofr inbound/outbound flows are proven if enabled;
