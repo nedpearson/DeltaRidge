@@ -92,6 +92,19 @@ for (const name of requiredAuthFunctions) {
   }
 }
 
+// lead-acquisition is also an external webhook. It must authenticate the
+// organization with the per-org acquisition token before invoking the
+// service-role ingest RPC.
+{
+  const body = fs.readFileSync(path.join(functionsDir, 'lead-acquisition', 'index.ts'), 'utf8')
+  if (!/acquisition_webhook_settings|sha256Hex|x-delta-ridge-token/.test(body)) {
+    failures.push('lead-acquisition must validate the per-organisation webhook credential')
+  }
+  if (!/ingest_acquisition_lead/.test(body)) {
+    failures.push('lead-acquisition must use the atomic acquisition ingest RPC')
+  }
+}
+
 if (failures.length > 0) {
   console.error('Production contract checks failed:')
   for (const failure of failures) console.error(`- ${failure}`)
