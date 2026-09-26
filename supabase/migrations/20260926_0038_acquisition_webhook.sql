@@ -44,6 +44,9 @@ as $$
 declare
   task_kind_value text;
   task_reason text;
+  lead_status_value text;
+  task_status_value text := 'open';
+  block_reason_value text := null;
 begin
   if new.lead_id is null then
     return new;
@@ -60,6 +63,16 @@ begin
 
   if task_kind_value is null then
     return new;
+  end if;
+
+  select l.status::text into lead_status_value
+  from leads l
+  where l.id = new.lead_id
+    and l.organization_id = new.organization_id;
+
+  if lead_status_value = 'do_not_contact' then
+    task_status_value := 'blocked';
+    block_reason_value := 'Existing do-not-contact record. A new inbound event does not automatically revoke the suppression; review the new request and applicable consent before any outreach.';
   end if;
 
   task_reason := case new.event_type
@@ -88,17 +101,19 @@ begin
       due_at,
       reason,
       created_from,
-      acquisition_event_id
+      acquisition_event_id,
+      blocked_reason
     )
     values (
       new.organization_id,
       new.lead_id,
       task_kind_value,
-      'open',
+      task_status_value,
       now(),
       task_reason,
       'acquisition_event',
-      new.id
+      new.id,
+      block_reason_value
     );
   end if;
 
