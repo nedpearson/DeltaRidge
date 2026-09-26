@@ -25,6 +25,8 @@ interface Props {
   doors: readonly ScoredLead[]
   leads: readonly ManagedLead[]
   storms: readonly StormEvent[]
+  searchCenter?: { latitude: number; longitude: number; accuracyMeters?: number } | null
+  searchRadiusMiles?: number
   onOpenLead: (leadId: string) => void
 }
 
