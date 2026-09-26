@@ -5,6 +5,7 @@ import type { ScoredLead } from './scoring'
 
 export interface EnrichedContact {
   readonly success: boolean
+  readonly message?: string
   readonly residentName?: string | null | undefined
   readonly phone?: string | null | undefined
   readonly email?: string | null | undefined
