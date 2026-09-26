@@ -6,6 +6,7 @@ import { openSessionId } from '@/features/routes/route-store'
 import { mayCallAt } from '@/features/compliance/engine'
 import { ALL_SOLICITATION_RULES } from '@/features/compliance/solicitation'
 import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/components/ui'
+import DocumentCenter from '@/features/documents/DocumentCenter'
 import ContactActions from '@/components/ContactActions'
 import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
 import IntegrityPanel from '@/features/leads/IntegrityPanel'
@@ -781,6 +782,10 @@ export default function LeadPage() {
 
       <RoofrPanel leadId={lead.id} />
 
+      <SectionTitle>DOCUMENT CENTER</SectionTitle>
+      <DocumentCenter leadId={lead.id}  />
+
+      <div className="my-6" />
       <SectionTitle>WHY IT WAS ON THE LIST</SectionTitle>
       <Card>
         <ul className="space-y-1">
