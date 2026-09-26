@@ -1,3 +1,4 @@
+import { useManagerCommandCenter } from '@/features/dashboard/useManagerCommandCenter';
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import { useSession } from '@/features/auth/session'
@@ -1146,80 +1147,73 @@ function LogTab({
 }
 
 function CommandCenterTab() {
+  const { data, loading } = useManagerCommandCenter();
+
   return (
     <div className="space-y-4">
       <Card className="bg-bg-card p-4 ring-1 ring-border-subtle shadow-sm">
-        <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">TEAM TODAY</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-4">
-          <div className="flex items-center gap-2 text-[13px] text-text-primary">
-            <span className="font-bold">7</span> reps scheduled
-          </div>
-          <div className="flex items-center gap-2 text-[13px] text-text-primary">
-            <span className="font-bold">5</span> routes ready
-          </div>
-          <div className="flex items-center gap-2 text-[13px] text-text-primary">
-            <span className="font-bold text-status-success">13</span> appointments
-          </div>
-          <div className="flex items-center gap-2 text-[13px] text-status-warning">
-            <span className="font-bold">2</span> inspections incomplete from yesterday
-          </div>
-          <div className="flex items-center gap-2 text-[13px] text-status-error">
-            <span className="font-bold">24</span> overdue follow-ups
-          </div>
-          <div className="flex items-center gap-2 text-[13px] text-brand-500">
-            <span className="font-bold">87</span> untouched high-opportunity properties
-          </div>
-          <div className="flex items-center gap-2 text-[13px] text-gold-400">
-            <span className="font-bold">3</span> proposals viewed overnight
-          </div>
-          <div className="flex items-center gap-2 text-[13px] text-text-secondary">
-            <span className="font-bold text-status-error">1</span> sync issue
-          </div>
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">TEAM NOW</h3>
+          {data?.lastUpdated && <span className="text-[10px] text-text-secondary">Data through {data.lastUpdated} • Server-backed</span>}
         </div>
+        
+        {loading ? (
+          <div className="text-[13px] text-text-secondary py-4 text-center">Loading live team data...</div>
+        ) : data?.teamNow.length === 0 ? (
+          <div className="text-[13px] text-text-secondary py-4 text-center">No active team data found.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[13px] text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border-subtle text-text-secondary">
+                  <th className="py-2 font-medium">Rep</th>
+                  <th className="py-2 font-medium">State</th>
+                  <th className="py-2 font-medium">Last activity</th>
+                  <th className="py-2 font-medium text-right">Doors</th>
+                  <th className="py-2 font-medium text-right">Appts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.teamNow.map(rep => (
+                  <tr key={rep.repId} className="border-b border-border-subtle last:border-0 hover:bg-bg-app">
+                    <td className="py-2 font-semibold text-text-primary">{rep.repName}</td>
+                    <td className="py-2">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${rep.status === "ACTIVE ROUTE" ? "bg-status-success/20 text-status-success" : "bg-border-subtle text-text-secondary"}`}>
+                        {rep.status}
+                      </span>
+                    </td>
+                    <td className="py-2 text-text-secondary">{rep.lastActivityAgo}</td>
+                    <td className="py-2 text-right font-medium">{rep.doors}</td>
+                    <td className="py-2 text-right font-medium">{rep.appts}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
-      <Card className="bg-bg-app border-l-4 border-status-warning shadow-sm p-4">
-        <h3 className="text-[11px] font-bold uppercase tracking-widest text-status-warning/90 mb-3">RECOMMENDED ATTENTION</h3>
-        <ul className="space-y-3">
-          <li className="text-[13.5px]">
-            <span className="font-bold text-text-primary">Oak Hills</span> <span className="text-text-secondary">— 31 high-opportunity homes, only 19% coverage</span>
-          </li>
-          <li className="text-[13.5px]">
-            <span className="font-bold text-text-primary">Jake</span> <span className="text-text-secondary">— 4 proposals need follow-up</span>
-          </li>
-          <li className="text-[13.5px]">
-            <span className="font-bold text-text-primary">Michael</span> <span className="text-text-secondary">— current route completed, 2 appointments created</span>
-          </li>
-          <li className="text-[13.5px]">
-            <span className="font-bold text-text-primary">Sarah</span> <span className="text-text-secondary">— first appointment 8:30 AM, 22-minute drive</span>
-          </li>
-        </ul>
-      </Card>
-
-      <Card className="bg-bg-elevated p-4">
-        <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">YESTERDAY</h3>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-[13px] font-medium text-text-primary mb-3">
-          <span className="bg-bg-app px-2 py-1 rounded border border-border-subtle shadow-sm">214 knocks</span>
-          <span className="text-text-secondary">→</span>
-          <span className="bg-bg-app px-2 py-1 rounded border border-border-subtle shadow-sm">51 convs</span>
-          <span className="text-text-secondary">→</span>
-          <span className="bg-bg-app px-2 py-1 rounded border border-border-subtle shadow-sm">18 appts</span>
-          <span className="text-text-secondary">→</span>
-          <span className="bg-bg-app px-2 py-1 rounded border border-border-subtle shadow-sm">9 inspects</span>
-          <span className="text-text-secondary">→</span>
-          <span className="bg-bg-app px-2 py-1 rounded border border-border-subtle shadow-sm">5 props</span>
-          <span className="text-text-secondary">→</span>
-          <span className="bg-status-success/20 text-status-success font-bold px-2 py-1 rounded shadow-sm">3 sold</span>
-        </div>
-        <div className="flex gap-6 border-t border-border-subtle pt-3">
-          <div>
-            <div className="text-[16px] font-bold text-text-primary">,400</div>
-            <div className="text-[11px] text-text-secondary uppercase tracking-wider">Signed</div>
-          </div>
-          <div>
-            <div className="text-[16px] font-bold text-text-primary">,800</div>
-            <div className="text-[11px] text-text-secondary uppercase tracking-wider">Estimated GP</div>
-          </div>
+      <Card className="bg-bg-card p-4 ring-1 ring-border-subtle shadow-sm">
+        <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">ATTENTION NEEDED</h3>
+        <div className="space-y-2">
+          {loading ? (
+            <div className="text-[13px] text-text-secondary py-4 text-center">Checking exceptions...</div>
+          ) : data?.attentionNeeded.length === 0 ? (
+            <div className="text-[13px] text-text-secondary py-4 text-center">No active exceptions!</div>
+          ) : (
+            data?.attentionNeeded.map(ex => (
+              <div key={ex.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-bg-app rounded-md border border-border-subtle">
+                <div className="flex items-start gap-3">
+                  <div className={`mt-0.5 size-2 rounded-full shrink-0 ${ex.type === "critical" ? "bg-status-error" : ex.type === "opportunity" ? "bg-status-success" : "bg-status-warning"}`} />
+                  <div>
+                    <h4 className="text-[13px] font-bold text-text-primary">{ex.title}</h4>
+                    <p className="text-[12px] text-text-secondary">{ex.body}</p>
+                  </div>
+                </div>
+                <Button variant="secondary" className="text-[11px] shrink-0">{ex.actionLabel}</Button>
+              </div>
+            ))
+          )}
         </div>
       </Card>
     </div>
@@ -1304,5 +1298,8 @@ function TerritoryIntelligencePanel() {
     </div>
   )
 }
+
+
+
 
 
