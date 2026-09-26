@@ -797,9 +797,13 @@ export default function LeadPage() {
         </p>
       </Card>
 
+      <Button variant="ghost" full className="mt-6" onClick={() => navigate(`/evidence/${lead.id}`)}>Generate Evidence Package</Button>
       <Button variant="ghost" full className="mt-6" onClick={() => navigate('/leads')}>
         Back to the list
       </Button>
     </div>
   )
 }
+
+
+

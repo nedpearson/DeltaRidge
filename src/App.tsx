@@ -8,6 +8,7 @@ import InspectionPage from '@/pages/InspectionPage'
 import LeadsPage from '@/pages/LeadsPage'
 import PropertyPage from '@/pages/PropertyPage'
 import LeadPage from '@/pages/LeadPage'
+import EvidencePackagePage from '@/pages/EvidencePackagePage'
 import EstimatePage from '@/pages/EstimatePage'
 import CostBookPage from '@/pages/CostBookPage'
 import DiagnosticsPage from '@/pages/DiagnosticsPage'
@@ -34,7 +35,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/leads" element={<LeadsPage />} />
-          <Route path="/lead/:id" element={<LeadPage />} />
+          <Route path="/lead/:id" element={<LeadPage />} />`r`n          <Route path="/evidence/:id" element={<EvidencePackagePage />} />
           <Route path="/property/:addressKey" element={<PropertyPage />} />
           <Route path="/estimate" element={<EstimatePage />} />
           <Route path="/estimate/:id" element={<EstimatePage />} />
@@ -53,3 +54,4 @@ export default function App() {
     </SessionProvider>
   )
 }
+
