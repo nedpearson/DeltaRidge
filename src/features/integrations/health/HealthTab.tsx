@@ -124,7 +124,7 @@ export default function HealthTab({ organizationId }: { organizationId: string |
     })
 
     if (supabase !== null && organizationId !== null) {
-      const [settings, events, outbox, imagery, contactSettings, contactEvents, propertyEvents] = await Promise.all([
+      const [settings, events, outbox, imagery, contactSettings, contactEvents, propertyEvents, acquisitionSettings] = await Promise.all([
         supabase
           .from('roofr_settings')
           .select('webhook_secret_hash, push_enabled, last_inbound_at, last_outbound_at')
@@ -166,6 +166,11 @@ export default function HealthTab({ organizationId }: { organizationId: string |
           .eq('organization_id', organizationId)
           .order('requested_at', { ascending: false })
           .limit(200),
+        supabase
+          .from('acquisition_webhook_settings')
+          .select('enabled, webhook_secret_hash, last_received_at')
+          .eq('organization_id', organizationId)
+          .maybeSingle(),
       ])
 
       const s = (settings.data ?? null) as Record<string, unknown> | null
@@ -175,6 +180,7 @@ export default function HealthTab({ organizationId }: { organizationId: string |
       const contactConfig = (contactSettings.data ?? null) as Record<string, unknown> | null
       const contactRows = ((contactEvents.data ?? []) as unknown[]).map((r) => r as Record<string, unknown>)
       const propertyRows = ((propertyEvents.data ?? []) as unknown[]).map((r) => r as Record<string, unknown>)
+      const acquisitionConfig = (acquisitionSettings.data ?? null) as Record<string, unknown> | null
 
       built.push({
         key: 'roofr_in',
@@ -276,6 +282,26 @@ export default function HealthTab({ organizationId }: { organizationId: string |
             failures: propertyFailure.length,
             lastSuccessAt: (propertySuccess[0]?.['completed_at'] as string | null) ?? null,
             lastFailureAt: (propertyFailure[0]?.['completed_at'] as string | null) ?? null,
+            expectedWithinHours: null,
+          },
+          now,
+        ),
+      })
+
+      built.push({
+        key: 'acquisition',
+        label: 'Inbound lead API',
+        detail: 'Signed Google/Meta/Zapier/partner lead ingestion and attribution endpoint',
+        health: assessHealth(
+          {
+            configured:
+              acquisitionConfig?.['enabled'] === true &&
+              acquisitionConfig?.['webhook_secret_hash'] != null,
+            successes: acquisitionConfig?.['last_received_at'] ? 1 : 0,
+            failures: 0,
+            lastSuccessAt:
+              (acquisitionConfig?.['last_received_at'] as string | null | undefined) ?? null,
+            lastFailureAt: null,
             expectedWithinHours: null,
           },
           now,
