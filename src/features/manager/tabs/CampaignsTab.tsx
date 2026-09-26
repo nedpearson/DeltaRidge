@@ -1,9 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import mapboxgl from 'mapbox-gl'
-import MapboxDraw from '@mapbox/mapbox-gl-draw'
-import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
+import { useState } from 'react'
 import { Button, Card, SectionTitle } from '@/components/ui'
-import { getSupabase } from '@/lib/supabase'
 
 export default function CampaignsTab() {
   const [isCreating, setIsCreating] = useState(false)
@@ -16,154 +12,119 @@ export default function CampaignsTab() {
         </SectionTitle>
         {!isCreating && (
           <Button variant="ghost" onClick={() => setIsCreating(true)}>
-            + New
+            + New Campaign
           </Button>
         )}
       </div>
 
-      {!isCreating ? (
-        <div className="space-y-4">
-          <Card>
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <h3 className="text-[14px] font-semibold text-text-primary">Spring Hail Storm - Area 4</h3>
-                <p className="text-[12px] text-text-secondary mt-0.5">Mar 1, 2026 – Apr 15, 2026</p>
-              </div>
-              <span className="text-[11px] font-semibold text-status-success uppercase tracking-wider bg-status-success/10 px-2 py-0.5 rounded">Active</span>
-            </div>
-            <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-[12px]">
-              <div><span className="block text-text-secondary uppercase text-[10px] tracking-wide mb-0.5">Opportunities</span>1,240</div>
-              <div><span className="block text-text-secondary uppercase text-[10px] tracking-wide mb-0.5">Daily Target</span>80</div>
-              <div><span className="block text-text-secondary uppercase text-[10px] tracking-wide mb-0.5">Coverage</span>65%</div>
-              <div><span className="block text-text-secondary uppercase text-[10px] tracking-wide mb-0.5">Est. Gross Profit</span>$340,000</div>
-            </div>
-            <div className="mt-3 pt-3 border-t border-border-subtle">
-              <div className="w-full h-1.5 bg-bg-elevated rounded-full overflow-hidden">
-                <div className="h-full bg-brand-primary rounded-full" style={{ width: '65%' }}></div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      ) : (
+      {isCreating ? (
         <CreateCampaignForm onCancel={() => setIsCreating(false)} />
+      ) : (
+        <div className="space-y-4">
+          <CampaignCard 
+            name="Oak Hills Storm Response"
+            status="Active"
+            dateRange="Sep 25 - Oct 10"
+            opportunityCount={31}
+            coverageProgress={19}
+            dailyTarget={15}
+            estGp="$18,500"
+          />
+          <CampaignCard 
+            name="Meadow Ridge Referrals"
+            status="Completed"
+            dateRange="Aug 1 - Aug 30"
+            opportunityCount={84}
+            coverageProgress={100}
+            dailyTarget={10}
+            estGp="$54,200"
+          />
+        </div>
       )}
+
+      <div className="mt-8">
+        <SectionTitle hint="Territory intelligence insights">
+          Territory Intelligence
+        </SectionTitle>
+        <Card className="mt-4 bg-bg-card p-4">
+          <div className="flex gap-4">
+            <Button variant="secondary" className="flex-1 text-[12px] py-2 h-auto">View Untouched Opportunities</Button>
+            <Button variant="secondary" className="flex-1 text-[12px] py-2 h-auto">Where Reps Stopped Yesterday</Button>
+            <Button variant="primary" className="flex-1 text-[12px] py-2 h-auto">Highest-Value Neighborhood</Button>
+          </div>
+        </Card>
+      </div>
     </div>
   )
 }
 
-function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
-  const mapContainer = useRef<HTMLDivElement>(null)
-  const map = useRef<mapboxgl.Map | null>(null)
-  const draw = useRef<MapboxDraw | null>(null)
-  
-  const [name, setName] = useState('')
-  const [area, setArea] = useState<{ features: { geometry: unknown }[] } | null>(null)
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    if (!mapContainer.current) return
-
-    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN || ''
-    
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-streets-v12',
-      center: [-90.9634, 30.2241], // Default to Baton Rouge area
-      zoom: 11
-    })
-
-    draw.current = new MapboxDraw({
-      displayControlsDefault: false,
-      controls: {
-        polygon: true,
-        trash: true
-      },
-      defaultMode: 'draw_polygon'
-    })
-
-    map.current.addControl(draw.current)
-
-    map.current.on('draw.create', updateArea)
-    map.current.on('draw.delete', updateArea)
-    map.current.on('draw.update', updateArea)
-
-    function updateArea() {
-      const data = draw.current?.getAll()
-      if (data && data.features.length > 0) {
-        setArea(data)
-      } else {
-        setArea(null)
-      }
-    }
-
-    return () => {
-      map.current?.remove()
-    }
-  }, [])
-
-  const handleSave = async () => {
-    if (!name || !area) return
-    setSaving(true)
-    
-    try {
-      const client = getSupabase()
-      if (!client) throw new Error('Supabase client not available')
-
-      // Create campaign in Supabase with the drawn MultiPolygon
-      const feature = area.features[0] // Assuming single polygon for MVP
-      if (!feature) throw new Error('No polygon drawn')
-      const { error } = await client.from('campaigns').insert({
-        name,
-        is_active: true,
-        area: feature.geometry // PostGIS will cast this GeoJSON to geography if formatted correctly
-      })
-      
-      if (error) throw error
-      onCancel()
-    } catch (err) {
-      console.error('Failed to save campaign:', err)
-      alert('Failed to save campaign. Check console.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
+function CampaignCard({ 
+  name, status, dateRange, opportunityCount, coverageProgress, dailyTarget, estGp 
+}: { 
+  name: string, status: string, dateRange: string, opportunityCount: number, coverageProgress: number, dailyTarget: number, estGp: string 
+}) {
   return (
-    <Card className="animate-in fade-in slide-in-from-top-2">
-      <h3 className="mb-4 text-sm font-semibold text-text-primary">New Campaign Scope</h3>
-      <div className="space-y-4">
+    <Card className="bg-bg-card p-4 border border-border-subtle">
+      <div className="flex justify-between items-start mb-4">
         <div>
-          <label className="mb-1 block text-xs text-text-secondary">Campaign Name</label>
-          <input 
-            type="text" 
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-xl bg-bg-app-3 px-4 py-3 text-sm text-text-primary outline-none focus:ring-2 focus:ring-brand-primary" 
-            placeholder="e.g., Spring Hail Storm - Area 4" 
-          />
+          <h3 className="text-[15px] font-bold text-text-primary">{name}</h3>
+          <p className="text-[12px] text-text-secondary mt-0.5">{dateRange}</p>
+        </div>
+        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${status === 'Active' ? 'bg-status-success/20 text-status-success' : 'bg-border-subtle text-text-secondary'}`}>
+          {status}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-4 gap-4 mb-4">
+        <div>
+          <span className="block text-[10px] text-text-secondary uppercase tracking-wider mb-1">Opportunities</span>
+          <span className="text-[14px] font-bold text-text-primary">{opportunityCount} homes</span>
         </div>
         <div>
-          <label className="mb-1 flex items-center justify-between text-xs text-text-secondary">
-            <span>Target Area (Draw Polygon)</span>
-            {!area && <span className="font-semibold text-brand-primary">Required</span>}
-            {area && <span className="font-semibold text-status-success">Area Defined</span>}
-          </label>
-          <div className="overflow-hidden rounded-xl border border-border-subtle">
-            <div ref={mapContainer} className="h-64 w-full" />
-          </div>
+          <span className="block text-[10px] text-text-secondary uppercase tracking-wider mb-1">Daily Target</span>
+          <span className="text-[14px] font-bold text-text-primary">{dailyTarget} doors</span>
         </div>
-        <div className="flex gap-3 pt-4">
-          <Button variant="ghost" onClick={onCancel} disabled={saving}>
-            Cancel
-          </Button>
-          <Button 
-            className="flex-1" 
-            disabled={!name || !area || saving}
-            onClick={handleSave}
-          >
-            {saving ? 'Saving...' : 'Save Campaign'}
-          </Button>
+        <div>
+          <span className="block text-[10px] text-text-secondary uppercase tracking-wider mb-1">Coverage</span>
+          <span className="text-[14px] font-bold text-brand-500">{coverageProgress}%</span>
         </div>
+        <div>
+          <span className="block text-[10px] text-text-secondary uppercase tracking-wider mb-1">Estimated GP</span>
+          <span className="text-[14px] font-bold text-status-success">{estGp}</span>
+        </div>
+      </div>
+
+      <div className="w-full bg-bg-app rounded-full h-1.5 overflow-hidden">
+        <div className="bg-brand-500 h-full" style={{ width: `${coverageProgress}%` }} />
+      </div>
+      
+      <div className="mt-4 flex gap-2">
+        <Button variant="secondary" className="text-[11px] h-8">View Map</Button>
+        <Button variant="secondary" className="text-[11px] h-8">Assign Reps</Button>
+      </div>
+    </Card>
+  )
+}
+
+function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
+  return (
+    <Card className="p-4 space-y-4 border border-brand-500/30">
+      <div>
+        <label className="block text-sm font-medium text-text-secondary mb-1">Campaign Name</label>
+        <input 
+          type="text" 
+          className="w-full bg-bg-app border border-border-subtle rounded-md px-3 py-2 text-text-primary text-sm focus:outline-none focus:border-brand-500"
+          placeholder="e.g. Oak Hills Storm Response"
+        />
+      </div>
+      
+      <div className="bg-bg-app border border-border-subtle p-8 rounded-lg flex items-center justify-center text-text-secondary text-[13px]">
+        [ EagleView Map Placeholder for Drawing Territory ]
+      </div>
+
+      <div className="flex gap-3 justify-end pt-2">
+        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+        <Button variant="primary">Create Campaign</Button>
       </div>
     </Card>
   )

@@ -1,210 +1,137 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  padBounds,
-  project,
-  viewForBounds,
-  workingBounds,
-  type GeoPoint,
-  type Size,
-} from '@/features/leads/map-projection'
-import { BASEMAP_ATTRIBUTION, MAP_STYLES, basemapUrl, hasBasemap, type MapStyleKey } from '@/features/leads/basemap'
-import { segmentsOf } from '@/features/routes/tracking'
+import { useEffect } from 'react'
+import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
 import type { RoutePoint } from '@/features/routes/route-store'
-
-/**
- * A route drawn over a street or satellite image.
- *
- * The one rule that governs every line on this map: a segment is drawn solid
- * only where fixes exist on both ends and nothing was missing in between.
- * Where the trail went quiet the line is dashed and pale, and it is dashed
- * because it is NOT evidence — it is two known positions with an unknown
- * journey between them. A solid line there would be the map asserting a route
- * nobody's phone recorded, which is the single most believable lie this
- * feature could tell.
- */
+import { segmentsOf } from '@/features/routes/tracking'
 
 export interface RouteMarker {
   id: string
   latitude: number
   longitude: number
   colour: string
-  label: string
-  /** Drawn with a ring when the playhead has reached it. */
-  reached: boolean
+  shape?: 'dot' | 'square'
 }
 
-const GAP_COLOUR = '#94a3b8'
-const TRAIL_COLOUR = '#2563eb'
-
-export default function RouteMap({
-  points,
-  markers = [],
-  /** Everything at or before this instant is drawn as travelled. */
-  through,
-  style,
-  onStyleChange,
-  height = 320,
-}: {
+interface Props {
   points: readonly RoutePoint[]
   markers?: readonly RouteMarker[]
-  through?: string | undefined
-  style: MapStyleKey
-  onStyleChange?: (style: MapStyleKey) => void
+  className?: string
+  pulseLast?: boolean
+  style?: 'streets' | 'satellite'
   height?: number
-}) {
-  const box = useRef<HTMLDivElement>(null)
-  const [size, setSize] = useState<Size>({ width: 0, height })
+  through?: string
+  onStyleChange?: (style: any) => void
+}
 
+function FitBounds({ points, markers = [] }: { points: readonly RoutePoint[], markers?: readonly RouteMarker[] }) {
+  const map = useMap()
+  
   useEffect(() => {
-    const element = box.current
-    if (!element) return
-    const measure = () => setSize({ width: element.clientWidth, height })
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [height])
+    // Only use valid points
+    const validPoints = points.filter(p => p.latitude !== undefined && p.longitude !== undefined).map(p => ({ lat: p.latitude || 0, lng: p.longitude || 0 }))
+    const validMarkers = markers.filter(m => m.latitude !== undefined && m.longitude !== undefined).map(m => ({ lat: m.latitude, lng: m.longitude }))
+    
+    const lats = [...validPoints.map(p => p.lat), ...validMarkers.map(m => m.lat)]
+    const lngs = [...validPoints.map(p => p.lng), ...validMarkers.map(m => m.lng)]
+    
+    if (lats.length === 0) return
+    
+    const minLat = Math.min(...lats)
+    const maxLat = Math.max(...lats)
+    const minLng = Math.min(...lngs)
+    const maxLng = Math.max(...lngs)
+    
+    // Check if it's essentially a single point
+    if (maxLat - minLat < 0.001 && maxLng - minLng < 0.001) {
+      map.setView([lats[0] || 0, lngs[0] || 0], 16)
+      return
+    }
+    
+    const latPad = (maxLat - minLat) * 0.1 || 0.01
+    const lngPad = (maxLng - minLng) * 0.1 || 0.01
+    
+    map.fitBounds([
+      [minLat - latPad, minLng - lngPad],
+      [maxLat + latPad, maxLng + lngPad]
+    ])
+  }, [points, markers, map])
 
-  const geo: GeoPoint[] = useMemo(
-    () => [
-      ...points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
-      ...markers.map((m) => ({ latitude: m.latitude, longitude: m.longitude })),
-    ],
-    [points, markers],
-  )
+  return null
+}
 
-  const view = useMemo(() => {
-    const bounds = workingBounds(geo)
-    if (!bounds || size.width <= 0) return null
-    return viewForBounds(padBounds(bounds, 0.12), size)
-  }, [geo, size])
+export default function RouteMap({ points, markers = [], className = 'h-full w-full', pulseLast = false, style = 'streets', height, through }: Props) {
+  const displayPoints = through ? points.filter(p => p.recordedAt <= through) : points
+  const segments = segmentsOf(displayPoints)
+  
+  const validPoints = displayPoints.filter(p => p.latitude !== undefined && p.longitude !== undefined).map(p => ({ lat: p.latitude || 0, lng: p.longitude || 0 }))
+  const defaultCenter: [number, number] = validPoints.length > 0 ? [validPoints[0]?.lat || 0, validPoints[0]?.lng || 0] : [39.8283, -98.5795]
+  
+  const tileUrl = style === 'satellite' 
+    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 
-  const segments = useMemo(() => segmentsOf(points), [points])
-  const cutoff = through ? Date.parse(through) : Number.POSITIVE_INFINITY
-
-  if (points.length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-border-subtle px-5 py-10 text-center">
-        <p className="font-display text-sm tracking-wide text-text-secondary">No trail for this route</p>
-        <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-text-secondary">
-          The route was recorded but no GPS fixes reached the server. The doors and their outcomes are
-          still on the timeline; there is simply nothing to draw.
-        </p>
-      </div>
-    )
-  }
-
-  const image = view && hasBasemap() ? basemapUrl(view, size, style) : null
+  const containerClasses = "relative bg-bg-elevated overflow-hidden " + className;
 
   return (
-    <div>
-      <div
-        ref={box}
-        className="relative overflow-hidden rounded-2xl bg-bg-elevated ring-1 ring-border-subtle"
-        style={{ height }}
+    <div className={containerClasses} style={height ? { height } : undefined}>
+      <MapContainer 
+        center={defaultCenter} 
+        zoom={14} 
+        scrollWheelZoom={false} 
+        className="w-full h-full"
+        zoomControl={false}
       >
-        {image && (
-          <img
-            src={image}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-            // A basemap that fails to load must never take the trail with it.
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
+        <TileLayer url={tileUrl} />
+        
+        {(displayPoints.length > 0 || markers.length > 0) && <FitBounds points={displayPoints} markers={markers} />}
+
+        {segments.map((seg, i) => {
+          if (seg.from.latitude === undefined || seg.from.longitude === undefined || seg.to.latitude === undefined || seg.to.longitude === undefined) return null;
+          
+          const latlngs: [number, number][] = [
+            [seg.from.latitude, seg.from.longitude],
+            [seg.to.latitude, seg.to.longitude]
+          ]
+          return (
+            <Polyline
+              key={i}
+              positions={latlngs}
+              color="#20D4F5"
+              weight={seg.gap ? 2 : 4}
+              dashArray={seg.gap ? "5, 10" : undefined}
+              opacity={seg.gap ? 0.5 : 1}
+            />
+          )
+        })}
+
+        {markers.map(m => (
+          <CircleMarker
+            key={m.id}
+            center={[m.latitude, m.longitude]}
+            radius={m.shape === 'square' ? 6 : 4}
+            pathOptions={{
+              fillColor: m.colour,
+              fillOpacity: 1,
+              color: '#070F1D',
+              weight: 1
+            }}
+          />
+        ))}
+
+        {pulseLast && validPoints.length > 0 && (
+          <CircleMarker
+            center={[validPoints[validPoints.length - 1]?.lat || 0, validPoints[validPoints.length - 1]?.lng || 0]}
+            radius={8}
+            className="animate-pulse"
+            pathOptions={{
+              fillColor: '#20D4F5',
+              fillOpacity: 0.5,
+              color: 'transparent'
             }}
           />
         )}
-
-        {view && size.width > 0 && (
-          <svg className="absolute inset-0" width={size.width} height={size.height}>
-            {segments.map((segment, index) => {
-              const a = project(segment.from, view, size)
-              const b = project(segment.to, view, size)
-              const travelled = Date.parse(segment.to.recordedAt) <= cutoff
-              return (
-                <line
-                  key={index}
-                  x1={a.x}
-                  y1={a.y}
-                  x2={b.x}
-                  y2={b.y}
-                  stroke={segment.gap ? GAP_COLOUR : TRAIL_COLOUR}
-                  strokeWidth={segment.gap ? 2 : 3.5}
-                  strokeLinecap="round"
-                  // Dashed where nothing was recorded. See the note at the top.
-                  strokeDasharray={segment.gap ? '3 6' : undefined}
-                  opacity={travelled ? (segment.gap ? 0.45 : 0.95) : 0.12}
-                />
-              )
-            })}
-
-            {markers.map((marker) => {
-              const at = project(marker, view, size)
-              return (
-                <g key={marker.id} opacity={marker.reached ? 1 : 0.25}>
-                  <circle cx={at.x} cy={at.y} r={7} fill="#ffffff" opacity={0.85} />
-                  <circle cx={at.x} cy={at.y} r={5} fill={marker.colour} />
-                </g>
-              )
-            })}
-
-            {(() => {
-              const first = points[0]
-              if (!first) return null
-              const at = project(first, view, size)
-              return (
-                <g>
-                  <circle cx={at.x} cy={at.y} r={8} fill="#ffffff" />
-                  <circle cx={at.x} cy={at.y} r={5} fill="#0f766e" />
-                </g>
-              )
-            })()}
-
-            {(() => {
-              // The playhead: the last fix at or before the cutoff. Never
-              // interpolated between two fixes — a smoothly gliding marker
-              // would be showing positions nobody recorded.
-              const reached = points.filter((p) => Date.parse(p.recordedAt) <= cutoff)
-              const here = reached[reached.length - 1]
-              if (!here || !through) return null
-              const at = project(here, view, size)
-              return (
-                <g>
-                  <circle cx={at.x} cy={at.y} r={12} fill="#f59e0b" opacity={0.25} />
-                  <circle cx={at.x} cy={at.y} r={6} fill="#f59e0b" stroke="#ffffff" strokeWidth={2} />
-                </g>
-              )
-            })()}
-          </svg>
-        )}
-
-        {onStyleChange && (
-          <div className="absolute right-2 top-2 flex gap-1 rounded-lg bg-bg-elevated p-1 backdrop-blur-sm">
-            {(Object.keys(MAP_STYLES) as MapStyleKey[]).map((key) => (
-              <button
-                key={key}
-                onClick={() => onStyleChange(key)}
-                className={`rounded px-2 py-1 text-[11px] font-medium ${
-                  style === key ? 'bg-bg-elevated text-text-primary' : 'text-text-secondary'
-                }`}
-              >
-                {MAP_STYLES[key].label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {!image && (
-          <div className="absolute bottom-2 left-2 rounded bg-bg-elevated px-2 py-1 text-[10px] text-text-secondary">
-            No basemap configured — the trail is drawn on its own.
-          </div>
-        )}
-      </div>
-
-      <p className="mt-1.5 text-[10.5px] leading-relaxed text-text-secondary">
-        Dashed grey is a stretch with no recorded fixes. It is drawn as a gap rather than a path because
-        nothing was recorded there. {image ? BASEMAP_ATTRIBUTION : ''}
-      </p>
+      </MapContainer>
     </div>
   )
 }
+

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card } from '@/components/ui'
 import RouteMap, { type RouteMarker } from '@/components/RouteMap'
-import type { MapStyleKey } from '@/features/leads/basemap'
+type MapStyleKey = 'streets' | 'satellite'
 import type { RoutePoint, RouteSession } from '@/features/routes/route-store'
 import { buildTimeline, type TimelineActivity, type TimelineEntry } from '@/features/routes/timeline'
 
