@@ -189,7 +189,7 @@ export default function RoutePanel() {
         <Card className="!p-0 overflow-hidden">
           {summary.points.length > 0 && (
             <div className="h-48 w-full border-b border-border-subtle bg-background-app">
-              <RouteMap points={summary.points} style="streets" height={192} />
+              <RouteMap points={summary.points} height={192} />
             </div>
           )}
           <div className="p-4">
