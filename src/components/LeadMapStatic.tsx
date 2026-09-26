@@ -16,6 +16,7 @@ import {
 import { STATUS_LABEL, type LeadStatus, type ManagedLead } from '@/features/leads/pipeline'
 import type { ScoredLead } from '@/features/leads/scoring'
 import type { StormEvent } from '@/integrations/storm'
+import { northEdge } from '@/features/leads/search-area'
 
 /**
  * The fallback map: one static image, no map library.
@@ -80,11 +81,15 @@ export default function LeadMapStatic({
   doors,
   leads,
   storms,
+  searchCenter = null,
+  searchRadiusMiles = 3,
   onOpenLead,
 }: {
   doors: readonly ScoredLead[]
   leads: readonly ManagedLead[]
   storms: readonly StormEvent[]
+  searchCenter?: { latitude: number; longitude: number; accuracyMeters?: number } | null
+  searchRadiusMiles?: number
   onOpenLead: (leadId: string) => void
 }) {
   const [size, setSize] = useState<Size>(FALLBACK_SIZE)
@@ -143,9 +148,13 @@ export default function LeadMapStatic({
   }, [doors, leads])
 
   const fitted = useMemo(() => {
-    const base = workingBounds(markers.map((m) => m.point))
+    const points = [
+      ...markers.map((m) => m.point),
+      ...(searchCenter ? [searchCenter, northEdge(searchCenter, searchRadiusMiles)] : []),
+    ]
+    const base = workingBounds(points)
     return base ? viewForBounds(padBounds(base), size) : null
-  }, [markers, size])
+  }, [markers, searchCenter, searchRadiusMiles, size])
 
   const [view, setView] = useState<View | null>(null)
   const [drag, setDrag] = useState({ x: 0, y: 0 })
@@ -173,6 +182,12 @@ export default function LeadMapStatic({
   const onSatellite = style === 'satellite'
 
   const placed = markers.map((m) => ({ marker: m, ...project(m.point, current, size) }))
+  const searchCenterPoint = searchCenter ? project(searchCenter, current, size) : null
+  const searchNorthPoint = searchCenter ? project(northEdge(searchCenter, searchRadiusMiles), current, size) : null
+  const searchRadiusPx =
+    searchCenterPoint && searchNorthPoint
+      ? Math.abs(searchCenterPoint.y - searchNorthPoint.y)
+      : 0
   const stormPoints = storms
     .filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude))
     .map((s) => ({ id: s.externalId, ...project(s, current, size), size: s.hailSizeInches ?? 1 }))
@@ -238,6 +253,29 @@ export default function LeadMapStatic({
             className="absolute inset-0 h-full w-full"
           >
             <g transform={`translate(${drag.x} ${drag.y})`}>
+              {searchCenterPoint && searchRadiusPx > 0 && (
+                <>
+                  <circle
+                    cx={searchCenterPoint.x}
+                    cy={searchCenterPoint.y}
+                    r={searchRadiusPx}
+                    fill="#27C6E8"
+                    fillOpacity={0.055}
+                    stroke="#27C6E8"
+                    strokeOpacity={0.7}
+                    strokeWidth={2}
+                  />
+                  <circle
+                    cx={searchCenterPoint.x}
+                    cy={searchCenterPoint.y}
+                    r={6}
+                    fill="#27C6E8"
+                    stroke="#F7FAFC"
+                    strokeWidth={2}
+                  />
+                </>
+              )}
+
               {/* Storm reports underneath: they are context, not the work. */}
               {stormPoints.map((s) => (
                 <circle
