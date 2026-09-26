@@ -226,12 +226,14 @@ function CreateCampaignForm({
 
     setSaving(true)
     setError(null)
-    const { error: writeError } = await client.from('campaigns').insert({
-      organization_id: organizationId,
-      created_by: userId,
-      name: name.trim(),
-      is_active: true,
-      area: geometry,
+    // PostGIS geography is created through the database RPC rather than asking
+    // PostgREST to guess how a browser GeoJSON object should be cast. The RPC
+    // also enforces the manager/admin role and geometry validity at the DB
+    // boundary.
+    const { error: writeError } = await client.rpc('create_campaign', {
+      p_organization_id: organizationId,
+      p_name: name.trim(),
+      p_geometry: geometry,
     })
 
     if (writeError) {
