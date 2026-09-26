@@ -1,3 +1,4 @@
+import { HistoricalCampaignPanel } from '@/features/membership/HistoricalCampaignPanel'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DoorOutcomeSheet from '@/components/DoorOutcomeSheet'
@@ -999,6 +1000,8 @@ export default function LeadsPage() {
 
               {/* Above the storm panel: a rep decides whether to record before
                   they start walking, not after they have worked half a street. */}
+              <HistoricalCampaignPanel />
+
               <RoutePanel />
 
               <CoveragePanel coverage={run.coverage} events={run.stormEvents} />
@@ -1196,3 +1199,5 @@ export default function LeadsPage() {
     </div>
   )
 }
+
+
