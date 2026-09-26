@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { readLead } from '@/features/leads/lead-store'
 import type { ManagedLead } from '@/features/leads/pipeline'
@@ -98,7 +98,7 @@ export default function EvidencePackagePage() {
           const result = await provider.searchCaptures({ latitude: foundLead.latitude, longitude: foundLead.longitude })
           const ranked = rankCaptures(result.captures)
           if (ranked.length > 0) {
-            setEagleViewCapture(ranked[0])
+            setEagleViewCapture(ranked[0] || null)
           }
         } catch (e) {
           console.error("EagleView fetch failed", e)
@@ -133,13 +133,14 @@ export default function EvidencePackagePage() {
 
   return (
     <div className="bg-white text-black min-h-screen -mx-4 -mt-4 px-4 pt-4 sm:mx-0 sm:mt-0 sm:px-0 sm:pt-0">
-      <style>{\n        @media print {
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
           @page { size: letter; margin: 1in; }
           body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
         }
         .page-break { page-break-before: always; }
-      }</style>
+      `}} />
       
       <div className="max-w-4xl mx-auto p-4 sm:p-8 font-sans">
         <div className="flex justify-between items-start mb-8 border-b-2 border-gray-800 pb-4">
