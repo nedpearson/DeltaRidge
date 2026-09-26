@@ -43,6 +43,7 @@ import {
 } from '@/features/leads/routes'
 import type { ScoredLead } from '@/features/leads/scoring'
 import { intelligenceFor, INTELLIGENCE_LEVEL_LABEL } from '@/features/leads/lead-intelligence'
+import LeadProofPanel from '@/features/leads/LeadProofPanel'
 import { WINDOW_OPTIONS, type StormWindowKey } from '@/features/leads/window'
 import { bboxAround, type SearchCenter } from '@/features/leads/search-area'
 import type { StormEvent } from '@/integrations/storm'
@@ -249,7 +250,12 @@ function DoorCard({
       >
         {open ? 'Hide why this house' : 'Why this house / show proof'}
       </button>
-      {open && <ScoreBreakdown lead={lead} />}
+      {open && (
+        <>
+          <LeadProofPanel scored={lead} {...(managed ? { managed } : {})} />
+          <ScoreBreakdown lead={lead} />
+        </>
+      )}
     </Card>
   )
 }
