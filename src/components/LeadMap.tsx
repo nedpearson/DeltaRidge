@@ -4,6 +4,7 @@ import LeadMapStatic from '@/components/LeadMapStatic'
 import { hasBasemap } from '@/features/leads/basemap'
 import type { ManagedLead } from '@/features/leads/pipeline'
 import type { ScoredLead } from '@/features/leads/scoring'
+import type { SearchCenter } from '@/features/leads/search-area'
 import type { StormEvent } from '@/integrations/storm'
 
 /**
@@ -25,6 +26,8 @@ interface Props {
   doors: readonly ScoredLead[]
   leads: readonly ManagedLead[]
   storms: readonly StormEvent[]
+  searchCenter?: SearchCenter
+  searchRadiusMiles?: number
   onOpenLead: (leadId: string) => void
 }
 
