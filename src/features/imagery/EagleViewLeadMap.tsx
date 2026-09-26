@@ -134,7 +134,17 @@ export default function EagleViewLeadMap({
     return () => observer.disconnect()
   }, [])
 
-  const fitted = useMemo(() => fit(markers, size.width, size.height), [markers, size])
+  const fitted = useMemo(
+    () =>
+      markers.length === 0 && searchCenter
+        ? {
+            latitude: searchCenter.latitude,
+            longitude: searchCenter.longitude,
+            zoom: 13,
+          }
+        : fit(markers, size.width, size.height),
+    [markers, size, searchCenter],
+  )
   const view = manualView ?? fitted
   const zoom = clamp(Math.round(view.zoom), config?.minZoom ?? 1, config?.maxZoom ?? 22)
   const worldX = xWorld(view.longitude, zoom)
