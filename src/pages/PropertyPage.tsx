@@ -176,6 +176,7 @@ export default function PropertyPage() {
           <ResidentPhoneCard
             address={lead.address}
             city={lead.city || 'Baton Rouge'}
+            zip={lead.postalCode}
             ownerName={lead.parcel?.ownerName}
             phone={managed?.contactPhone}
             email={managed?.contactEmail}
@@ -358,6 +359,8 @@ function OwnerTab({
 
       <ResidentPhoneCard
         address={address}
+        city={lead?.city || 'Baton Rouge'}
+        zip={lead?.postalCode}
         ownerName={typeof profile.owner.name.value === 'string' ? profile.owner.name.value : parcel?.ownerName}
         phone={managed?.contactPhone}
         email={managed?.contactEmail}

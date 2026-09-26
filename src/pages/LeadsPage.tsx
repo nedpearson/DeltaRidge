@@ -168,6 +168,7 @@ function DoorCard({
       <ResidentPhoneCard
         address={lead.address}
         city={lead.city || 'Baton Rouge'}
+        zip={lead.postalCode}
         ownerName={parcel?.ownerName}
         phone={managed?.contactPhone}
         email={managed?.contactEmail}
