@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import { useSession } from '@/features/auth/session'
 import { readCachedRun } from '@/features/leads/engine'
@@ -16,6 +17,7 @@ import {
 } from '@/features/manager/read'
 import RoutesTab from '@/features/manager/tabs/RoutesTab'
 import CampaignsTab from '@/features/manager/tabs/CampaignsTab'
+import SetterTab from '@/features/manager/tabs/SetterTab'
 import {
   fieldToday,
   locationNote,
@@ -74,6 +76,7 @@ type Tab =
   | 'field'
   | 'routes'
   | 'campaigns'
+  | 'setter'
   | 'performance'
   | 'grades'
   | 'leads'
@@ -89,6 +92,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'field', label: 'Live field' },
   { id: 'routes', label: 'Routes' },
   { id: 'campaigns', label: 'Campaigns' },
+  { id: 'setter', label: 'Setter' },
   { id: 'performance', label: 'Performance' },
   { id: 'grades', label: 'Grades' },
   { id: 'leads', label: 'Assign' },
@@ -131,6 +135,7 @@ function Nothing({ title, body }: { title: string; body: string }) {
 
 export default function ManagerPage() {
   const { session, membership } = useSession()
+  const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('team')
   const [snapshot, setSnapshot] = useState<ManagerSnapshot>(EMPTY_SNAPSHOT)
   const [doors, setDoors] = useState<ScoredLead[]>([])
@@ -318,6 +323,13 @@ export default function ManagerPage() {
       )}
 
       {tab === 'campaigns' && <CampaignsTab organizationId={orgId} userId={session.user.id} />}
+
+      {tab === 'setter' && (
+        <SetterTab
+          organizationId={orgId}
+          onOpenLead={(leadClientId) => navigate(`/lead/${leadClientId}`)}
+        />
+      )}
 
       {tab === 'performance' && (
         <PerformanceTab
