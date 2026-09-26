@@ -256,6 +256,89 @@ function toManagedLead(row: LeadRow, existing: ManagedLead | null): ManagedLead 
   return lead
 }
 
+export interface MaterializeLeadResult {
+  lead: ManagedLead | null
+  activities: number
+  error: string | null
+  source: 'local' | 'server' | 'unavailable'
+}
+
+/**
+ * Load one Lead 360 record by the stable client id on a device that has never
+ * seen it locally. This is required for manager/setter drill-downs.
+ *
+ * Existing local data always wins because it may contain unsent field work.
+ * RLS on the sync views remains the authorization boundary.
+ */
+export async function materializeLeadFromServer(input: {
+  orgId: string | null
+  userId: string | null
+  leadClientId: string
+}): Promise<MaterializeLeadResult> {
+  const existing = await readLead(input.leadClientId)
+  if (existing) return { lead: existing, activities: 0, error: null, source: 'local' }
+
+  const supabase = getSupabase()
+  if (!navigator.onLine) {
+    return {
+      lead: null,
+      activities: 0,
+      error: 'This lead is not stored on this device yet and the device is offline.',
+      source: 'unavailable',
+    }
+  }
+  if (!input.userId || !supabase) {
+    return { lead: null, activities: 0, error: 'Sign in to load this lead.', source: 'unavailable' }
+  }
+  if (!input.orgId) {
+    return { lead: null, activities: 0, error: 'No organization is available.', source: 'unavailable' }
+  }
+
+  setRemoteIdScope(input.orgId)
+
+  const { data, error } = await supabase
+    .from('lead_sync_rows')
+    .select('*')
+    .eq('organization_id', input.orgId)
+    .eq('client_id', input.leadClientId)
+    .maybeSingle()
+
+  if (error) return { lead: null, activities: 0, error: error.message, source: 'unavailable' }
+  if (!data) {
+    return {
+      lead: null,
+      activities: 0,
+      error: 'The server does not have this lead, or this account cannot read it.',
+      source: 'unavailable',
+    }
+  }
+
+  try {
+    const row = data as LeadRow
+    const lead = toManagedLead(row, null)
+    await saveLeadFromServer(lead)
+    await setRemoteId('lead', row.client_id, row.remote_id)
+
+    const errors: string[] = []
+    const { written, knocksByLead } = await pullActivities(input.orgId, [row.client_id], errors)
+    await reconcileKnockCounts(knocksByLead)
+
+    return {
+      lead: (await readLead(row.client_id)) ?? lead,
+      activities: written,
+      error: errors[0] ?? null,
+      source: 'server',
+    }
+  } catch (err) {
+    return {
+      lead: null,
+      activities: 0,
+      error: err instanceof Error ? err.message : String(err),
+      source: 'unavailable',
+    }
+  }
+}
+
 export async function pullLeads(orgId: string | null, userId: string | null): Promise<PullResult> {
   const result: PullResult = {
     inserted: 0,
