@@ -24,6 +24,8 @@ export type HailObservation = 'official_report' | 'radar_estimate'
 /** Whether a radar estimate has any ground report standing behind it. */
 export type RadarConfidence = 'corroborated' | 'radar_only'
 
+export type StormEvidenceTier = 'MULTI_SOURCE_STRONG' | 'OFFICIAL_REPORT' | 'RADAR_ONLY' | 'POSSIBLE_EXPOSURE' | 'NO_EVIDENCE'
+
 export interface StormEvent {
   /** Provider-scoped stable id, so re-ingestion is idempotent. */
   externalId: string
@@ -98,3 +100,4 @@ export interface StormProvider {
   /** Returns null when the provider offers no geometry for the event. */
   eventGeometry(externalId: string): Promise<StormGeometry | null>
 }
+
