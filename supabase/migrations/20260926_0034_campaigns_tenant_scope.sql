@@ -108,7 +108,7 @@ begin
     auth.uid(),
     btrim(p_name),
     true,
-    geom::geography
+    st_multi(geom)::geography
   )
   returning id into new_id;
 
