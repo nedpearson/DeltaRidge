@@ -5,6 +5,7 @@ import {
   buildTruePeopleSearchUrl,
   lookupResidentContact,
 } from '@/features/leads/contact-enrichment'
+import type { ContactSource } from '@/features/leads/pipeline'
 
 export default function ResidentPhoneCard({
   address,
@@ -25,7 +26,12 @@ export default function ResidentPhoneCard({
   phone?: string | null | undefined
   email?: string | null | undefined
   autoEnrich?: boolean | undefined
-  onPhoneSaved?: ((phone?: string | null, email?: string | null, name?: string | undefined) => void) | undefined
+  onPhoneSaved?: ((
+    phone?: string | null,
+    email?: string | null,
+    name?: string | undefined,
+    source?: ContactSource,
+  ) => void) | undefined
 }) {
   const [phone, setPhone] = useState<string | null | undefined>(initialPhone)
   const [email, setEmail] = useState<string | null | undefined>(initialEmail)
@@ -33,6 +39,7 @@ export default function ResidentPhoneCard({
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState(false)
   const [inputPhone, setInputPhone] = useState('')
+  const [inputSource, setInputSource] = useState<ContactSource>('unknown')
 
   useEffect(() => {
     setPhone(initialPhone)
@@ -56,7 +63,12 @@ export default function ResidentPhoneCard({
           if (result.phone) setPhone(result.phone)
           if (result.email) setEmail(result.email)
           if (result.residentName) setResident(result.residentName)
-          onPhoneSaved?.(result.phone, result.email, result.residentName || ownerName || undefined)
+          onPhoneSaved?.(
+            result.phone,
+            result.email,
+            result.residentName || ownerName || undefined,
+            result.source ?? 'third_party_lookup',
+          )
         }
       }).catch(() => {
         if (active) setLoading(false)
@@ -75,7 +87,7 @@ export default function ResidentPhoneCard({
     if (!inputPhone.trim()) return
     const num = inputPhone.trim()
     setPhone(num)
-    onPhoneSaved?.(num, email, resident || ownerName || undefined)
+    onPhoneSaved?.(num, email, resident || ownerName || undefined, inputSource)
     setEditing(false)
   }
 
@@ -103,28 +115,13 @@ export default function ResidentPhoneCard({
               </p>
             )}
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {phone && (
-              <>
-                <a href={`tel:${phone.replace(/\D/g, '')}`} className="contents">
-                  <Button variant="gold" className="!px-3 !py-1 text-[12px]">
-                    Call
-                  </Button>
-                </a>
-                <a href={`sms:${phone.replace(/\D/g, '')}`} className="contents">
-                  <Button variant="secondary" className="!px-3 !py-1 text-[12px]">
-                    Text
-                  </Button>
-                </a>
-              </>
-            )}
-            {email && (
-              <a href={`mailto:${email}`} className="contents">
-                <Button variant="secondary" className="!px-3 !py-1 text-[12px]">
-                  Email
-                </Button>
-              </a>
-            )}
+          <div className="shrink-0 text-right">
+            <p className="text-[9.5px] font-semibold uppercase tracking-wider text-route-live">
+              Contact found
+            </p>
+            <p className="mt-0.5 max-w-28 text-[9.5px] leading-tight text-text-muted">
+              Verify identity and permission in Lead 360 before contacting.
+            </p>
           </div>
         </div>
       </div>
@@ -182,6 +179,21 @@ export default function ResidentPhoneCard({
               Search Records ↗
             </a>
           </div>
+          <label className="block">
+            <span className="mb-1 block text-[10.5px] text-text-muted">Where did this number come from?</span>
+            <select
+              value={inputSource}
+              onChange={(e) => setInputSource(e.target.value as ContactSource)}
+              className="w-full rounded-lg border border-border-subtle bg-bg-card px-2.5 py-2 text-[12px] text-text-primary focus:border-brand-primary focus:outline-none"
+            >
+              <option value="unknown">Source not recorded</option>
+              <option value="homeowner_at_door">Homeowner gave it at the door</option>
+              <option value="homeowner_by_phone">Homeowner gave it on a call</option>
+              <option value="homeowner_in_writing">Homeowner provided it in writing</option>
+              <option value="public_record">Public record</option>
+              <option value="third_party_lookup">Records / skip-trace lookup</option>
+            </select>
+          </label>
           <div className="flex gap-2">
             <input
               type="tel"
