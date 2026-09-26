@@ -68,7 +68,18 @@ export interface LeadRunSettings {
    * "under hail" and the ranking stops discriminating.
    */
   radarMinHailInches?: number
+  /**
+   * Maximum distance between a property and the storm evidence used to qualify
+   * it. This is NOT the rep's search radius.
+   */
   radiusMiles: number
+  /**
+   * Current-location search center. The Leads screen supplies this from the
+   * device GPS. It is optional only for non-interactive jobs/tests.
+   */
+  searchCenter?: { latitude: number; longitude: number; accuracyMeters?: number }
+  /** How far from the rep's current location to consider properties. */
+  searchRadiusMiles?: number
   /** Only consider roofs first permitted before this year. */
   builtBefore: number
   maxLeads: number
@@ -101,6 +112,7 @@ export const DEFAULT_SETTINGS: LeadRunSettings = {
   useRadar: true,
   radarMinHailInches: 1.25,
   radiusMiles: 3,
+  searchRadiusMiles: 3,
   builtBefore: new Date().getFullYear() - 12,
   maxLeads: 150,
   maxGeocodesPerRun: 600,
@@ -411,6 +423,33 @@ export function flagCorroboration(
   })
 }
 
+function bboxAround(
+  latitude: number,
+  longitude: number,
+  radiusMiles: number,
+): [number, number, number, number] {
+  const latDegrees = radiusMiles / 69
+  const lonDegrees = radiusMiles / Math.max(1, 69 * Math.cos((latitude * Math.PI) / 180))
+  return [
+    longitude - lonDegrees,
+    latitude - latDegrees,
+    longitude + lonDegrees,
+    latitude + latDegrees,
+  ]
+}
+
+function intersectBbox(
+  a: [number, number, number, number],
+  b: [number, number, number, number],
+): [number, number, number, number] {
+  return [
+    Math.max(a[0], b[0]),
+    Math.max(a[1], b[1]),
+    Math.min(a[2], b[2]),
+    Math.min(a[3], b[3]),
+  ]
+}
+
 export async function runLeadEngine(
   settings: LeadRunSettings = DEFAULT_SETTINGS,
   deps: RunDeps = {},
@@ -418,6 +457,37 @@ export async function runLeadEngine(
   const now = deps.now ?? new Date()
   const fetchImpl = boundFetch(deps.fetchImpl)
   const notes: string[] = []
+
+  const searchRadiusMiles = settings.searchRadiusMiles ?? DEFAULT_SETTINGS.searchRadiusMiles ?? 3
+  const searchBbox = settings.searchCenter
+    ? intersectBbox(
+        settings.bbox,
+        bboxAround(
+          settings.searchCenter.latitude,
+          settings.searchCenter.longitude,
+          searchRadiusMiles,
+        ),
+      )
+    : settings.bbox
+  // Storm evidence may legitimately sit outside the property-search circle, so
+  // give providers enough margin to find a report that is within the configured
+  // property-to-storm radius of a property at the edge of the search.
+  const stormBbox = settings.searchCenter
+    ? intersectBbox(
+        settings.bbox,
+        bboxAround(
+          settings.searchCenter.latitude,
+          settings.searchCenter.longitude,
+          searchRadiusMiles + settings.radiusMiles,
+        ),
+      )
+    : settings.bbox
+
+  if (!settings.searchCenter) {
+    notes.push(
+      'No current-location search center was supplied. This run used the configured service-area bounds and should not be presented as “near me”.',
+    )
+  }
 
   const storms = createStormProvider('noaa', fetchImpl)
   const permits = new EbrPermitProvider(fetchImpl)
@@ -434,7 +504,7 @@ export async function runLeadEngine(
   // should not pay for two round trips in series.
   const [stormResult, radarResult, buildResult, reroofResult] = await Promise.allSettled([
     storms.searchEvents({
-      bbox: settings.bbox,
+      bbox: stormBbox,
       from,
       to,
       eventTypes: ['hail'],
@@ -442,7 +512,7 @@ export async function runLeadEngine(
     }),
     radarEnabled
       ? createStormProvider('swdi', fetchImpl).searchEvents({
-          bbox: settings.bbox,
+          bbox: stormBbox,
           from,
           to,
           eventTypes: ['hail'],
@@ -460,7 +530,7 @@ export async function runLeadEngine(
       limit: 5000,
     }),
     permits.search({
-      bbox: settings.bbox,
+      bbox: searchBbox,
       kinds: ['reroof'],
       issuedFrom: from.slice(0, 10),
       limit: 5000,
@@ -598,16 +668,30 @@ export async function runLeadEngine(
     return hit ? { ...p, latitude: hit.latitude, longitude: hit.longitude } : p
   })
 
-  const [west, south, east, north] = settings.bbox
-  const inArea = located.filter(
-    (p) =>
-      p.latitude !== undefined &&
-      p.longitude !== undefined &&
-      p.latitude >= south &&
-      p.latitude <= north &&
-      p.longitude >= west &&
-      p.longitude <= east,
-  )
+  const [west, south, east, north] = searchBbox
+  const inArea = located.filter((p) => {
+    if (
+      p.latitude === undefined ||
+      p.longitude === undefined ||
+      p.latitude < south ||
+      p.latitude > north ||
+      p.longitude < west ||
+      p.longitude > east
+    ) {
+      return false
+    }
+
+    if (!settings.searchCenter) return true
+
+    return (
+      distanceMiles(
+        settings.searchCenter.latitude,
+        settings.searchCenter.longitude,
+        p.latitude,
+        p.longitude,
+      ) <= searchRadiusMiles
+    )
+  })
 
   const awaitingGeocode = uncached.length - toGeocode.length
   if (awaitingGeocode > 0) {
