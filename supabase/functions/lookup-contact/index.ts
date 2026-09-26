@@ -249,6 +249,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: 'No active organization membership' }, 403)
   }
   const organizationId = membership.organization_id as string
+  const db =
+    SUPABASE_URL && SERVICE_ROLE_KEY
+      ? createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+      : null
+  let lookupEventId: string | null = null
+
+  const finishLookupEvent = async (
+    status: 'succeeded' | 'not_found' | 'failed' | 'blocked',
+    matched: boolean,
+    errorSummary?: string,
+  ) => {
+    if (!db || !lookupEventId) return
+    await db
+      .from('contact_lookup_events')
+      .update({
+        status,
+        matched,
+        completed_at: new Date().toISOString(),
+        error_summary: errorSummary?.slice(0, 240) ?? null,
+      })
+      .eq('id', lookupEventId)
+  }
 
   let body: Record<string, unknown>
   try {
@@ -268,8 +290,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   try {
     // 1. Check Supabase CRM database cache first
-    if (SUPABASE_URL && SERVICE_ROLE_KEY) {
-      const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    if (db) {
       const { data: cached } = await db
         .from('leads')
         .select('contact_name, contact_phone')
@@ -297,8 +318,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // prospecting for an organization whose agreement has not been attested.
     let commercialAllowed = false
     let secondaryAllowed = false
-    if (SUPABASE_URL && SERVICE_ROLE_KEY) {
-      const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    if (db) {
       const { data: providerSettings } = await db
         .from('contact_provider_settings')
         .select('entitlement, credential_present, commercial_use_confirmed, secondary_providers_enabled')
@@ -313,6 +333,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     if (!commercialAllowed) {
+      if (db) {
+        await db.from('contact_lookup_events').insert({
+          organization_id: organizationId,
+          requested_by: user.id,
+          provider: 'none',
+          status: 'blocked',
+          matched: false,
+          completed_at: new Date().toISOString(),
+          error_summary: 'commercial enrichment not enabled',
+        })
+      }
       return json({
         success: false,
         configuredProvider: 'none',
@@ -321,11 +352,33 @@ Deno.serve(async (req: Request): Promise<Response> => {
       })
     }
 
+    const primaryProvider = BATCHDATA_API_KEY
+      ? 'batchdata'
+      : secondaryAllowed && REALESTATE_API_KEY
+        ? 'realestateapi'
+        : 'none'
+
+    if (db) {
+      const { data: eventRow } = await db
+        .from('contact_lookup_events')
+        .insert({
+          organization_id: organizationId,
+          requested_by: user.id,
+          provider: primaryProvider,
+          status: 'started',
+          matched: false,
+        })
+        .select('id')
+        .maybeSingle()
+      lookupEventId = (eventRow?.id as string | undefined) ?? null
+    }
+
     // 2. Automated Skip-Tracing via the configured commercial provider.
     let ownerFromBatch: string | null = null
     if (BATCHDATA_API_KEY) {
       const batchResult = await lookupBatchData(street, city, state, zip, BATCHDATA_API_KEY)
       if (batchResult && batchResult.phone) {
+        await finishLookupEvent('succeeded', true)
         return json({ success: true, ...batchResult })
       }
       ownerFromBatch = await lookupBatchDataOwner(street, city, state, BATCHDATA_API_KEY)
@@ -336,10 +389,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (secondaryAllowed && REALESTATE_API_KEY) {
       const reResult = await lookupRealEstateApi(street, city, state, zip, REALESTATE_API_KEY)
       if (reResult && reResult.phone) {
+        await finishLookupEvent('succeeded', true)
         return json({ success: true, ...reResult })
       }
     }
 
+    await finishLookupEvent('not_found', false)
     return json({
       success: false,
       residentName: ownerFromBatch,
@@ -349,6 +404,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Lookup failed'
+    await finishLookupEvent('failed', false, message)
     return json({ error: message }, 500)
   }
 })
