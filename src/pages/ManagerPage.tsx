@@ -1,3 +1,4 @@
+import RevenueLeakagePanel from '@/features/dashboard/RevenueLeakagePanel'
 import { useManagerCommandCenter } from '@/features/dashboard/useManagerCommandCenter';
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
@@ -394,6 +395,10 @@ export default function ManagerPage() {
           <div>
             <div className="mb-3"><SectionTitle>SOURCE ATTRIBUTION</SectionTitle></div>
             <SourceAttributionPanel />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>REVENUE LEAKAGE</SectionTitle></div>
+            <RevenueLeakagePanel />
           </div>
           <div>
             <div className="mb-3"><SectionTitle>PERFORMANCE</SectionTitle></div>
@@ -1306,6 +1311,13 @@ function TerritoryIntelligencePanel() {
     </div>
   )
 }
+
+
+
+
+
+
+
 
 
 
