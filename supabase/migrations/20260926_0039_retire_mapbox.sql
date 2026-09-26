@@ -7,6 +7,17 @@
 -- boundary so a future client cannot silently re-enable it.
 -- =============================================================================
 
+
+-- Tighten the capture provider vocabulary for NEW/UPDATED rows without lying
+-- about any historical rows that may already exist. NOT VALID skips the
+-- historical-table scan but still enforces the check for future writes.
+alter table imagery_captures
+  drop constraint if exists imagery_captures_provider_known;
+
+alter table imagery_captures
+  add constraint imagery_captures_provider_known
+  check (provider in ('eagleview', 'manual_drone')) not valid;
+
 create or replace function app.reject_retired_mapbox_provider()
 returns trigger
 language plpgsql
