@@ -15,6 +15,7 @@ import {
   type ManagerSnapshot,
 } from '@/features/manager/read'
 import RoutesTab from '@/features/manager/tabs/RoutesTab'
+import CalendarTab from '@/features/manager/tabs/CalendarTab'
 import CampaignsTab from '@/features/manager/tabs/CampaignsTab'
 import {
   fieldToday,
@@ -364,6 +365,10 @@ export default function ManagerPage() {
               openByRep={openByRep}
               loading={loading}
             />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>TEAM CALENDAR</SectionTitle></div>
+            <CalendarTab nameOf={nameOf} orgId={orgId} />
           </div>
           <div>
             <div className="mb-3"><SectionTitle>ROUTES</SectionTitle></div>
@@ -1294,4 +1299,5 @@ function TerritoryIntelligencePanel() {
     </div>
   )
 }
+
 
