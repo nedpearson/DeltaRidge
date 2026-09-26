@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { Button, Card, SectionTitle } from '@/components/ui'
 import { listInspections, localStorageFootprint, type LocalInspection } from '@/lib/db'
 import { backendStatus } from '@/lib/backend'
-import AccountPanel from '@/features/auth/AccountPanel'
-import SyncPanel from '@/features/auth/SyncPanel'
 import { readCachedRun, type LeadRun } from '@/features/leads/engine'
 import { useSession } from '@/features/auth/session'
 import { useRepToday } from '@/features/dashboard/useRepToday'
@@ -131,8 +129,8 @@ export default function HomePage() {
 
       {/* Account and Sync panels moved to bottom as per recommendation */}
       <div className="grid gap-4 mt-8 opacity-75">
-        <AccountPanel />
-        <SyncPanel />
+        
+        
       </div>
 
       {footprint > 0 && (
@@ -143,3 +141,5 @@ export default function HomePage() {
     </div>
   )
 }
+
+

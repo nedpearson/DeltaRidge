@@ -46,6 +46,15 @@ export default function NotificationCenter() {
     }
   }, [])
 
+  async function markAllRead() {
+    const supabase = getSupabase()
+    if (!supabase) return
+    const unreadIds = notifications.map(n => n.id)
+    if (unreadIds.length === 0) return
+    setNotifications([])
+    await supabase.from('notifications').update({ read_at: new Date().toISOString() }).in('id', unreadIds)
+  }
+
   async function markRead(id: string) {
     const supabase = getSupabase()
     if (!supabase) return
@@ -76,7 +85,7 @@ export default function NotificationCenter() {
           <div className="absolute right-0 mt-2 w-80 z-50 rounded-lg border border-border-subtle bg-bg-card shadow-lg ring-1 ring-black ring-opacity-5">
             <div className="border-b border-border-subtle px-4 py-3 flex justify-between items-center bg-bg-elevated rounded-t-lg">
               <h3 className="text-[13px] font-semibold text-text-primary">Notifications</h3>
-              <span className="text-[11px] text-brand-500 font-medium cursor-pointer">Mark all read</span>
+              <span className="text-[11px] text-brand-500 font-medium cursor-pointer" onClick={markAllRead}>Mark all read</span>
             </div>
             <div className="max-h-96 overflow-y-auto">
               {notifications.length === 0 ? (
@@ -118,3 +127,4 @@ export default function NotificationCenter() {
     </div>
   )
 }
+

@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui'
 import { GraduationCap } from 'lucide-react'
+import AccountPanel from '@/features/auth/AccountPanel'
+import SyncPanel from '@/features/auth/SyncPanel'
 
 export default function MorePage() {
   const navigate = useNavigate()
@@ -24,6 +26,12 @@ export default function MorePage() {
           </div>
         </Card></div>
       </div>
+      <div className="grid gap-4 mt-8 opacity-75">
+        <AccountPanel />
+        <SyncPanel />
+      </div>
     </div>
   )
 }
+
+

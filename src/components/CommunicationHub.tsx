@@ -92,11 +92,12 @@ export function CommunicationHub({ events }: { events: CommunicationEvent[] }) {
           onChange={e => setComposeText(e.target.value)}
         />
         <div className="flex justify-end mt-2">
-          <Button variant="primary" disabled={!composeText.trim()} onClick={() => setComposeText('')}>
-            {composeType === 'note' ? 'Save Note' : 'Send'}
+          <Button variant="primary" disabled={composeType !== 'note' || !composeText.trim()} onClick={() => setComposeText('')}>
+            {composeType === 'note' ? 'Save Note' : composeType === 'sms' ? 'SMS Provider Not Configured' : 'Email Provider Not Configured'}
           </Button>
         </div>
       </div>
     </div>
   )
 }
+

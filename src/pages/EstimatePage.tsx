@@ -86,6 +86,18 @@ export default function EstimatePage() {
   const [estimate, setEstimate] = useState<SavedEstimate | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [roofrState, setRoofrState] = useState<'idle' | 'sending' | 'queued' | 'created'>('idle')
+  const handleSendHandoff = async () => {
+    setRoofrState('sending')
+    try {
+      await sendHandoff(id!, id!)
+      setRoofrState('queued')
+      setTimeout(() => setRoofrState('created'), 2000)
+    } catch (e) {
+      setRoofrState('idle')
+      alert('Failed to send to Roofr.')
+    }
+  }
   const [photos, setPhotos] = useState<LocalPhoto[]>([])
   const [observations, setObservations] = useState<LocalObservation[]>([])
 
@@ -438,20 +450,20 @@ export default function EstimatePage() {
               <h3 className="text-[14px] font-semibold text-text-primary">GOOD</h3>
               <p className="text-[12px] text-text-secondary mt-1 flex-1">Standard Shingle, basic underlayment, 10-year workmanship.</p>
               <div className="mt-3 text-[18px] font-bold text-text-primary">{money(Math.round(built.recommended.price * 0.85) as Cents)}</div>
-              <Button variant="secondary" className="mt-3 w-full text-[12px]" onClick={() => sendHandoff(id!, id!).then(() => alert('Successfully queued for Roofr!'))}>Select Option</Button>
+              <Button variant="secondary" className="mt-3 w-full text-[12px]" onClick={() => handleSendHandoff()} disabled={roofrState !== 'idle'}>{roofrState === 'idle' ? 'Select Option' : roofrState === 'sending' ? 'Sending...' : roofrState === 'queued' ? 'Queued' : 'Created'}</Button>
             </Card>
             <Card className="flex flex-col border-brand-primary ring-1 ring-brand-primary/50 shadow-md relative mt-3 md:mt-0">
               <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-brand-primary text-text-primary text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full">Recommended</div>
               <h3 className="text-[14px] font-semibold text-brand-primary">BETTER</h3>
               <p className="text-[12px] text-text-secondary mt-1 flex-1">Architectural Shingle, synthetic underlayment, 25-year workmanship.</p>
               <div className="mt-3 text-[18px] font-bold text-text-primary">{money(built.recommended.price)}</div>
-              <Button className="mt-3 w-full text-[12px]" onClick={() => sendHandoff(id!, id!).then(() => alert('Successfully queued for Roofr!'))}>Select Option</Button>
+              <Button className="mt-3 w-full text-[12px]" onClick={() => handleSendHandoff()} disabled={roofrState !== 'idle'}>{roofrState === 'idle' ? 'Select Option' : roofrState === 'sending' ? 'Sending...' : roofrState === 'queued' ? 'Queued' : 'Created'}</Button>
             </Card>
             <Card className="flex flex-col border-border-subtle bg-bg-app shadow-sm mt-3 md:mt-0">
               <h3 className="text-[14px] font-semibold text-gold-400">BEST</h3>
               <p className="text-[12px] text-text-secondary mt-1 flex-1">Premium Shingle, ice & water shield, lifetime warranty, premium accessories.</p>
               <div className="mt-3 text-[18px] font-bold text-text-primary">{money(Math.round(built.recommended.price * 1.25) as Cents)}</div>
-              <Button variant="secondary" className="mt-3 w-full text-[12px]" onClick={() => sendHandoff(id!, id!).then(() => alert('Successfully queued for Roofr!'))}>Select Option</Button>
+              <Button variant="secondary" className="mt-3 w-full text-[12px]" onClick={() => handleSendHandoff()} disabled={roofrState !== 'idle'}>{roofrState === 'idle' ? 'Select Option' : roofrState === 'sending' ? 'Sending...' : roofrState === 'queued' ? 'Queued' : 'Created'}</Button>
             </Card>
           </div>
 
@@ -574,3 +586,6 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
     </div>
   )
 }
+
+
+
