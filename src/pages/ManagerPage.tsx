@@ -273,6 +273,10 @@ export default function ManagerPage() {
       {tab === 'command_center' && (
         <div className="space-y-8">
           <div>
+            <div className="mb-3"><SectionTitle>MANAGER DAILY BRIEF</SectionTitle></div>
+            <ManagerDailyBriefTab />
+          </div>
+          <div>
             <div className="mb-3"><SectionTitle>TEAM NOW</SectionTitle></div>
             <TeamNowTab />
           </div>
@@ -340,6 +344,10 @@ export default function ManagerPage() {
             />
           </div>
           <div>
+            <div className="mb-3"><SectionTitle>TERRITORY INTELLIGENCE</SectionTitle></div>
+            <TerritoryIntelligencePanel />
+          </div>
+          <div>
             <div className="mb-3"><SectionTitle>CAMPAIGNS</SectionTitle></div>
             <CampaignsTab />
           </div>
@@ -382,6 +390,14 @@ export default function ManagerPage() {
 
       {tab === 'sales_revenue' && (
         <div className="space-y-8">
+          <div>
+            <div className="mb-3"><SectionTitle>LEAD ECONOMICS</SectionTitle></div>
+            <LeadEconomicsPanel />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>SOURCE ATTRIBUTION</SectionTitle></div>
+            <SourceAttributionPanel />
+          </div>
           <div>
             <div className="mb-3"><SectionTitle>PERFORMANCE</SectionTitle></div>
             <PerformanceTab
@@ -1155,3 +1171,100 @@ function ManagerExceptionCenterTab() {
 }
 
 
+function ManagerDailyBriefTab() {
+  return (
+    <div className="space-y-3">
+      <Card className="border-l-4 border-brand-500 bg-bg-card">
+        <p className="text-[14px] font-semibold mb-2">Morning Report</p>
+        <p className="text-[12.5px] leading-relaxed text-text-secondary mb-2">
+          Yesterday: 312 doors assigned, 181 knocked, 47 conversations... $58,400 contract value.
+        </p>
+        <p className="text-[12.5px] leading-relaxed text-status-warning/90 mb-2 font-medium">
+          Needs attention: 14 overdue follow-ups...
+        </p>
+        <p className="text-[12.5px] leading-relaxed text-status-success/90 font-medium">
+          Today's opportunities: 86 untouched high-opportunity properties.
+        </p>
+      </Card>
+    </div>
+  )
+}
+
+function LeadEconomicsPanel() {
+  return (
+    <div className="space-y-3">
+      <Card>
+        <p className="text-[12px] leading-relaxed text-text-secondary mb-3">
+          Funnel Metrics across all generated opportunities.
+        </p>
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          <Stat value="500" label="Assigned" />
+          <Stat value="350" label="Attempted" />
+          <Stat value="120" label="Conv" />
+          <Stat value="45" label="Interested" />
+          <Stat value="30" label="Appts" />
+          <Stat value="25" label="Inspections" />
+          <Stat value="15" label="Proposals" />
+          <Stat value="8" label="Won" />
+        </div>
+        <div className="border-t border-border-subtle pt-3 grid grid-cols-2 gap-2">
+          <Stat value="$145,000" label="Contract Value" />
+          <Stat value="$58,000" label="Estimated GP" />
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+function SourceAttributionPanel() {
+  const sources = [
+    { name: 'Delta Ridge Intelligence', appts: 15, closeRate: '30%', revenue: '$75k', gp: '$30k', gpPerOpp: '$2,000' },
+    { name: 'Referrals', appts: 5, closeRate: '50%', revenue: '$40k', gp: '$16k', gpPerOpp: '$3,200' },
+    { name: 'Google', appts: 8, closeRate: '20%', revenue: '$20k', gp: '$8k', gpPerOpp: '$1,000' },
+    { name: 'Meta', appts: 2, closeRate: '10%', revenue: '$10k', gp: '$4k', gpPerOpp: '$500' },
+    { name: 'Campaigns', appts: 4, closeRate: '25%', revenue: '$20k', gp: '$8k', gpPerOpp: '$1,500' },
+  ]
+  
+  return (
+    <div className="space-y-2">
+      <Card>
+        <p className="text-[12px] leading-relaxed text-text-secondary mb-3">
+          Performance breakdown by lead source. The ultimate metric is GROSS PROFIT PER GENERATED OPPORTUNITY.
+        </p>
+        <div className="space-y-3">
+          {sources.map(src => (
+            <div key={src.name} className="border border-border-subtle rounded p-3">
+              <div className="flex items-baseline justify-between gap-3 mb-2">
+                <p className="text-[13.5px] font-semibold text-text-primary">{src.name}</p>
+                <span className="text-[13px] font-bold text-status-success">{src.gpPerOpp} GP/OPP</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2 text-[11px] text-text-secondary">
+                <div><span className="block uppercase tracking-wider text-[10px]">Appts</span>{src.appts}</div>
+                <div><span className="block uppercase tracking-wider text-[10px]">Close Rate</span>{src.closeRate}</div>
+                <div><span className="block uppercase tracking-wider text-[10px]">Revenue</span>{src.revenue}</div>
+                <div><span className="block uppercase tracking-wider text-[10px]">GP</span>{src.gp}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+function TerritoryIntelligencePanel() {
+  return (
+    <div className="space-y-3">
+      <Card>
+        <p className="text-[12px] leading-relaxed text-text-secondary mb-3">
+          Territory Intelligence Overlays. Toggle map layers to visualize opportunity data.
+        </p>
+        <div className="flex flex-col gap-2">
+          <Button variant="secondary" full className="justify-start">🔍 Untouched opportunities</Button>
+          <Button variant="secondary" full className="justify-start">🛑 Where yesterday's reps stopped</Button>
+          <Button variant="secondary" full className="justify-start">💎 Highest-value untouched neighborhood</Button>
+        </div>
+      </Card>
+    </div>
+  )
+}

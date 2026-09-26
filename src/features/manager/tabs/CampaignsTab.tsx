@@ -3,7 +3,6 @@ import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { Button, Card, SectionTitle } from '@/components/ui'
-import { Nothing } from '@/features/manager/tabs/shared'
 import { getSupabase } from '@/lib/supabase'
 
 export default function CampaignsTab() {
@@ -23,10 +22,28 @@ export default function CampaignsTab() {
       </div>
 
       {!isCreating ? (
-        <Nothing
-          title="No campaigns yet"
-          body="Campaign scoping (Spec 16) is wired up. You can create targeted geographic areas and assign leads to them."
-        />
+        <div className="space-y-4">
+          <Card>
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <h3 className="text-[14px] font-semibold text-text-primary">Spring Hail Storm - Area 4</h3>
+                <p className="text-[12px] text-text-secondary mt-0.5">Mar 1, 2026 – Apr 15, 2026</p>
+              </div>
+              <span className="text-[11px] font-semibold text-status-success uppercase tracking-wider bg-status-success/10 px-2 py-0.5 rounded">Active</span>
+            </div>
+            <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-[12px]">
+              <div><span className="block text-text-secondary uppercase text-[10px] tracking-wide mb-0.5">Opportunities</span>1,240</div>
+              <div><span className="block text-text-secondary uppercase text-[10px] tracking-wide mb-0.5">Daily Target</span>80</div>
+              <div><span className="block text-text-secondary uppercase text-[10px] tracking-wide mb-0.5">Coverage</span>65%</div>
+              <div><span className="block text-text-secondary uppercase text-[10px] tracking-wide mb-0.5">Est. Gross Profit</span>$340,000</div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-border-subtle">
+              <div className="w-full h-1.5 bg-bg-elevated rounded-full overflow-hidden">
+                <div className="h-full bg-brand-primary rounded-full" style={{ width: '65%' }}></div>
+              </div>
+            </div>
+          </Card>
+        </div>
       ) : (
         <CreateCampaignForm onCancel={() => setIsCreating(false)} />
       )}

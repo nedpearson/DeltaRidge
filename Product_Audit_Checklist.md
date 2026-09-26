@@ -42,16 +42,16 @@ This checklist tracks the implementation of the complete product architecture, U
 - [x] Universal Timeline (Chronological events, offline vs server-backed)
 
 ## 6. Territory, Campaigns & Routing
-- [ ] Manager Lead Assignment (Decision-support system)
+- [x] Manager Lead Assignment (Decision-support system)
 - [ ] Territory Intelligence (Opportunities vs Coverage)
 - [ ] Campaign Management (Geographic area, storm, progress, gross profit)
 - [ ] Routing (Logical stop ordering, current location)
 
 ## 7. Scheduling, Inspections & Proposals
-- [ ] Appointments & Calendar (Unified scheduling, Appointment Prep Brief)
+- [x] Appointments & Calendar (Unified scheduling, Appointment Prep Brief)
 - [x] Inspection Experience (Guided evidence, fast photo capture, missing item jumps)
 - [x] Estimating & Proposals (Connected workflow from inspection, Good/Better/Best options)
-- [ ] Communication Hub (Calls, SMS, Email unified in record)
+- [x] Communication Hub (Calls, SMS, Email unified in record)
 
 ## 8. Automation & Performance
 - [ ] Automation Engine (Configurable workflow rules)
