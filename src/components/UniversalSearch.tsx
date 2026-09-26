@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from './ui'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase'
 
 type SearchResult = {
   result_type: 'customer' | 'property' | 'lead'
@@ -37,7 +37,7 @@ export function UniversalSearch() {
 
     const fetchResults = async () => {
       setLoading(true)
-      const { data, error } = await supabase.rpc('universal_search', { search_query: query })
+      const client = getSupabase(); if (!client) return; const { data, error } = await client.rpc('universal_search', { search_query: query })
       if (!error && data) {
         setResults(data as SearchResult[])
       }

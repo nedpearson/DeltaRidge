@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Button, Card, SectionTitle } from '@/components/ui'
 import { listInspections, localStorageFootprint, type LocalInspection } from '@/lib/db'
 import { backendStatus } from '@/lib/backend'
@@ -20,19 +20,10 @@ export function inspectionTitle(i: LocalInspection): string {
   return name || i.customerCompanyName || 'Untitled inspection'
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-xl bg-bg-card p-3 shadow-sm ring-1 ring-border-subtle flex flex-col items-center justify-center">
-      <div className="text-xl font-bold text-brand-500">{value}</div>
-      <div className="text-[10px] uppercase tracking-wider text-text-secondary mt-1">{label}</div>
-    </div>
-  )
-}
-
 export default function HomePage() {
   const navigate = useNavigate()
   const { session } = useSession()
-  const [inspections, setInspections] = useState<LocalInspection[]>([])
+  const [, setInspections] = useState<LocalInspection[]>([])
   const [footprint, setFootprint] = useState(0)
   const [, setRun] = useState<LeadRun | null>(null)
   const backend = backendStatus()
