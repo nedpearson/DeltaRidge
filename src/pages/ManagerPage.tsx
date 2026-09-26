@@ -40,6 +40,7 @@ import HealthTab from '@/features/integrations/health/HealthTab'
 import { readGradingConfig } from '@/features/manager/grade-store'
 import { DEFAULT_CONFIG, type GradingConfig } from '@/features/manager/grading'
 import { DEFAULT_WINDOW_DAYS } from '@/features/manager/read'
+import { readLeadEconomics, type LeadEconomicsRow } from '@/features/manager/economics'
 import {
   efficiencyFor,
   orgBaseline,
@@ -139,6 +140,8 @@ export default function ManagerPage() {
   const [followups, setFollowups] = useState<FollowupRow[]>([])
   const [config, setConfig] = useState<GradingConfig>(DEFAULT_CONFIG)
   const [configIsDefault, setConfigIsDefault] = useState(true)
+  const [economics, setEconomics] = useState<LeadEconomicsRow[]>([])
+  const [economicsError, setEconomicsError] = useState<string | null>(null)
 
   const orgId = membership?.organizationId ?? null
   const canManage = membership?.role === 'admin' || membership?.role === 'manager'
@@ -186,6 +189,24 @@ export default function ManagerPage() {
     [],
   )
   const windowTo = useMemo(() => new Date().toISOString(), [])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!canManage) {
+      setEconomics([])
+      setEconomicsError(null)
+      return
+    }
+    void readLeadEconomics(orgId, windowFrom, windowTo).then((result) => {
+      if (cancelled) return
+      setEconomics(result.rows)
+      setEconomicsError(result.error)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [canManage, orgId, windowFrom, windowTo])
+
   const baseline = useMemo(() => orgBaseline(outcomes), [outcomes])
   const repActivity = useMemo(() => rollUpActivity(snapshot.activity), [snapshot.activity])
   const coverage = useMemo(
@@ -329,6 +350,8 @@ export default function ManagerPage() {
           nameOf={nameOf}
           windowFrom={windowFrom}
           windowTo={windowTo}
+          economics={economics}
+          economicsError={economicsError}
         />
       )}
 
