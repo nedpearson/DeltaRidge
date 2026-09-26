@@ -38,7 +38,7 @@ export default function LeadIntelligenceSummary({
     const source = contactSource(managed)
     return evaluateLeadIntelligence({
       scored: lead,
-      managed,
+      ...(managed ? { managed } : {}),
       // Imagery and measurements only count once the canonical record has
       // evidence for them. A map tile or an EagleView button is not enough.
       hasCurrentImagery: false,
