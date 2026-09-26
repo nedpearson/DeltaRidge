@@ -74,10 +74,11 @@ export function proofForLead(scored: ScoredLead, managed?: ManagedLead): LeadPro
       value: parcel.ownerName,
       source: `${parcel.parish} assessor · retrieved ${new Date(parcel.retrievedAt).toLocaleDateString()}`,
       state: parcel.ownerConfidence === 'high' ? 'established' : 'supported',
-      limitation:
-        parcel.ownerConfidence === 'high'
-          ? undefined
-          : `Owner match confidence is ${parcel.ownerConfidence}; confirm before relying on the name.`,
+      ...(parcel.ownerConfidence === 'high'
+        ? {}
+        : {
+            limitation: `Owner match confidence is ${parcel.ownerConfidence}; confirm before relying on the name.`,
+          }),
     })
   } else {
     items.push({
