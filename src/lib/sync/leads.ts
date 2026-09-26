@@ -1,6 +1,12 @@
 import { readAttachment, readEvent, readLead } from '@/features/leads/lead-store'
 import { contactSourceOf } from '@/features/leads/pipeline'
 import type { ContactKind, LeadStatus, ManagedLead } from '@/features/leads/pipeline'
+import {
+  contactabilityIndex,
+  intelligenceLevelFor,
+  intentIndex,
+  LEAD_INTELLIGENCE_VERSION,
+} from '@/features/leads/lead-intelligence'
 import { getSupabase } from '../supabase'
 import { getRemoteId, setRemoteId } from '../sync-store'
 import { TERMINAL_REMOTE_STATUSES } from './pull'
@@ -146,6 +152,10 @@ export async function pushLead(localId: string, orgId: string, userId: string): 
    */
   const officeOwnsStatus = lead.remoteStatus ? TERMINAL_REMOTE_STATUSES.has(lead.remoteStatus) : false
 
+  const intentScore = intentIndex(lead)
+  const contactabilityScore = contactabilityIndex(lead)
+  const intelligenceLevel = intelligenceLevelFor(lead.score, intentScore, contactabilityScore)
+
   const { data, error } = await supabase
     .from('leads')
     .upsert(
@@ -157,6 +167,10 @@ export async function pushLead(localId: string, orgId: string, userId: string): 
         assigned_to: userId,
         ...(officeOwnsStatus ? {} : { status: remoteLeadStatus(lead.status) }),
         opportunity_score: lead.score,
+        intent_score: intentScore,
+        contactability_score: contactabilityScore,
+        intelligence_level: intelligenceLevel,
+        intelligence_version: LEAD_INTELLIGENCE_VERSION,
         score_computed_at: lead.createdAt,
         first_contacted_at: lead.knockCount > 0 ? lead.createdAt : null,
         last_activity_at: lead.updatedAt,
