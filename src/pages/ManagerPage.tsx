@@ -1,3 +1,4 @@
+import RoofcareManagerDashboard from '@/features/membership/RoofcareManagerDashboard'
 import RevenueLeakagePanel from '@/features/dashboard/RevenueLeakagePanel'
 import { useManagerCommandCenter } from '@/features/dashboard/useManagerCommandCenter';
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -79,6 +80,7 @@ type Tab =
   | 'leads_territory'
   | 'team_routes'
   | 'sales_revenue'
+  | 'roofcare'
   | 'operations'
 
 const TABS: { id: Tab; label: string }[] = [
@@ -86,7 +88,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'leads_territory', label: 'LEADS & TERRITORY' },
   { id: 'team_routes', label: 'TEAM & ROUTES' },
   { id: 'sales_revenue', label: 'SALES & REVENUE' },
-  { id: 'operations', label: 'OPERATIONS' },
+  { id: 'roofcare', label: 'ROOFCARE' },
+    { id: 'operations', label: 'OPERATIONS' },
 ]
 
 function ago(iso: string | null): string {
@@ -461,6 +464,9 @@ export default function ManagerPage() {
             <DuplicateMergePanel />
           </div>
         </div>
+      )}
+      {tab === 'roofcare' && (
+        <RoofcareManagerDashboard />
       )}
     </div>
   )
@@ -1311,6 +1317,9 @@ function TerritoryIntelligencePanel() {
     </div>
   )
 }
+
+
+
 
 
 
