@@ -193,8 +193,8 @@ function DoorCard({
         ownerName={parcel?.ownerName}
         phone={managed?.contactPhone}
         email={managed?.contactEmail}
-        onPhoneSaved={async (phone, email, name) => {
-          await saveResidentContact(lead, phone, email, name)
+        onPhoneSaved={async (phone, email, name, source) => {
+          await saveResidentContact(lead, phone, email, name, source ?? 'unknown')
           onPhoneSaved?.()
         }}
       />
