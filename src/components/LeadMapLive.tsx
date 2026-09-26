@@ -35,17 +35,61 @@ const DOORS_SOURCE = 'doors'
 const DOORS_LAYER = 'doors-circles'
 const STORMS_SOURCE = 'storms'
 const STORMS_LAYER = 'storms-circles'
+const SEARCH_RADIUS_SOURCE = 'search-radius'
+const SEARCH_RADIUS_FILL = 'search-radius-fill'
+const SEARCH_RADIUS_LINE = 'search-radius-line'
+
+function radiusGeoJson(
+  center: { latitude: number; longitude: number },
+  miles: number,
+): GeoJSON.FeatureCollection {
+  const earthRadiusMiles = 3958.8
+  const angular = Math.max(0.1, miles) / earthRadiusMiles
+  const lat1 = (center.latitude * Math.PI) / 180
+  const lon1 = (center.longitude * Math.PI) / 180
+  const coordinates: [number, number][] = []
+
+  for (let i = 0; i <= 72; i += 1) {
+    const bearing = (i / 72) * Math.PI * 2
+    const lat2 = Math.asin(
+      Math.sin(lat1) * Math.cos(angular) +
+        Math.cos(lat1) * Math.sin(angular) * Math.cos(bearing),
+    )
+    const lon2 =
+      lon1 +
+      Math.atan2(
+        Math.sin(bearing) * Math.sin(angular) * Math.cos(lat1),
+        Math.cos(angular) - Math.sin(lat1) * Math.sin(lat2),
+      )
+    coordinates.push([(lon2 * 180) / Math.PI, (lat2 * 180) / Math.PI])
+  }
+
+  return {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'Polygon', coordinates: [coordinates] },
+      },
+    ],
+  }
+}
 
 export default function LeadMapLive({
   doors,
   leads,
   storms,
+  searchCenter,
+  searchRadiusMiles,
   onOpenLead,
   onFailed,
 }: {
   doors: readonly ScoredLead[]
   leads: readonly ManagedLead[]
   storms: readonly StormEvent[]
+  searchCenter?: { latitude: number; longitude: number }
+  searchRadiusMiles?: number
   onOpenLead: (leadId: string) => void
   /** Called when the map cannot run at all, so the caller can fall back. */
   onFailed: () => void
@@ -69,6 +113,40 @@ export default function LeadMapLive({
    * behaviour that silently empties the map if you forget it.
    */
   const paintLayers = useCallback((map: mapboxgl.Map) => {
+    if (searchCenter && searchRadiusMiles) {
+      const data = radiusGeoJson(searchCenter, searchRadiusMiles)
+      const existing = map.getSource(SEARCH_RADIUS_SOURCE)
+      if (existing && 'setData' in existing) {
+        ;(existing as mapboxgl.GeoJSONSource).setData(data)
+      } else {
+        map.addSource(SEARCH_RADIUS_SOURCE, { type: 'geojson', data })
+      }
+      if (!map.getLayer(SEARCH_RADIUS_FILL)) {
+        map.addLayer({
+          id: SEARCH_RADIUS_FILL,
+          type: 'fill',
+          source: SEARCH_RADIUS_SOURCE,
+          paint: {
+            'fill-color': '#27C6E8',
+            'fill-opacity': 0.035,
+          },
+        })
+      }
+      if (!map.getLayer(SEARCH_RADIUS_LINE)) {
+        map.addLayer({
+          id: SEARCH_RADIUS_LINE,
+          type: 'line',
+          source: SEARCH_RADIUS_SOURCE,
+          paint: {
+            'line-color': '#27C6E8',
+            'line-opacity': 0.75,
+            'line-width': 2,
+            'line-dasharray': [2, 2],
+          },
+        })
+      }
+    }
+
     if (!map.getSource(STORMS_SOURCE)) {
       map.addSource(STORMS_SOURCE, { type: 'geojson', data: stormsToGeoJson(storms) as never })
     }
@@ -127,7 +205,7 @@ export default function LeadMapLive({
         },
       })
     }
-  }, [storms])
+  }, [searchCenter, searchRadiusMiles, storms])
 
   const attachMap = useCallback(
     (node: HTMLDivElement | null) => {
