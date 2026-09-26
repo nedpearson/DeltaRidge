@@ -41,11 +41,11 @@ import {
   walkingMiles,
   type Route,
 } from '@/features/leads/routes'
-import type { ScoredLead } from '@/features/leads/scoring'
+import { distanceMiles, type ScoredLead } from '@/features/leads/scoring'
 import { WINDOW_OPTIONS, type StormWindowKey } from '@/features/leads/window'
 import type { StormEvent } from '@/integrations/storm'
 import { newId, saveInspection, type LocalInspection } from '@/lib/db'
-import { currentPositionResult, type LocationFailure } from '@/lib/image'
+import { currentPositionResult } from '@/lib/image'
 
 /**
  * Custom ranges are deliberately absent until there is a date picker to set
