@@ -69,8 +69,8 @@ export default function HomePage() {
                 <span className="text-[14px] font-bold text-brand-500">{today?.activeCampaign || 'None'}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Recommended Doors</span>
-                <span className="text-[14px] font-bold text-status-success">{today?.recommendedDoors || 0} available</span>
+                <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Assigned Doors</span>
+                <span className="text-[14px] font-bold text-status-success">{today?.recommendedDoors || 0} doors</span>
               </div>
             </Card>
           )}
@@ -86,7 +86,7 @@ export default function HomePage() {
             <div className="flex flex-col gap-3">
               <div>
                 <h3 className="font-bold text-[16px] text-text-primary">{today.nextBestAction.address}</h3>
-                <p className="text-[13px] text-text-secondary font-medium mt-1">Recommended target</p>
+                <p className="text-[13px] text-text-secondary font-medium mt-1">{today.nextBestAction.reason || 'Recommended target'}</p>
               </div>
               
               <div className="grid grid-cols-2 gap-2 text-[12.5px]">
@@ -141,5 +141,7 @@ export default function HomePage() {
     </div>
   )
 }
+
+
 
 

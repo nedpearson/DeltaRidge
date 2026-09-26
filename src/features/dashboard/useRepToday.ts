@@ -13,6 +13,7 @@ export interface RepTodayData {
     score: number
     roofAge: string | null
     stormEvidence: string | null
+    reason?: string
   } | null
 }
 
@@ -48,42 +49,72 @@ export function useRepToday() {
         address: (appts[0].leads as any)?.address || 'Unknown address'
       } : null
 
-      // 2. Follow-ups
-      const { count: followUps } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'follow_up')
-        // ideally we would filter by assigned rep, but leads table doesn't have an explicit rep_id currently, assignments are via routes
+      // Get my active assignments
+      const { data: myAssignments } = await supabase
+        .from('lead_assignments')
+        .select('lead_id, reason')
+        .eq('assigned_to', user.id)
+        .is('unassigned_at', null)
 
-      // 3. Recommended doors (open leads with high score)
-      const { count: doors } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'open')
-        .gte('score', 70)
+      const assignedLeadIds = myAssignments?.map(a => a.lead_id) || []
 
-      // 4. Next Best Action (Highest score open lead)
-      const { data: bestLead } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('status', 'open')
-        .order('score', { ascending: false })
-        .limit(1)
+      // 2. Follow-ups (that I am assigned to, or just general if none)
+      let followUps = 0;
+      if (assignedLeadIds.length > 0) {
+        const { count } = await supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'follow_up')
+          .in('id', assignedLeadIds)
+        followUps = count || 0
+      }
 
-      const nextBestAction = bestLead?.[0] ? {
-        id: bestLead[0].id,
-        address: bestLead[0].address,
-        distanceMiles: null, // GPS distance would be calculated client-side
-        score: bestLead[0].score,
-        roofAge: null, // Ideally joined from properties
-        stormEvidence: null // Ideally joined from storms
+      // 3. Recommended doors = My Open Assigned Doors
+      let doors = 0;
+      let myAssignedLeads: any[] = []
+      if (assignedLeadIds.length > 0) {
+        const { count, data: leads } = await supabase
+          .from('leads')
+          .select('id, address, score')
+          .in('status', ['new', 'open'])
+          .in('id', assignedLeadIds)
+          .order('score', { ascending: false })
+        
+        doors = count || 0
+        myAssignedLeads = leads || []
+      }
+
+      // 4. Next Best Action (Highest score from MY assignments first, then fallback to general highest open)
+      let bestLead: any = null
+      let reason = undefined
+      if (myAssignedLeads.length > 0) {
+        bestLead = myAssignedLeads[0]
+        reason = myAssignments?.find(a => a.lead_id === bestLead.id)?.reason || 'Assigned to you by manager'
+      } else {
+        const { data: generalBestLead } = await supabase
+          .from('leads')
+          .select('id, address, score')
+          .eq('status', 'open')
+          .order('score', { ascending: false })
+          .limit(1)
+        bestLead = generalBestLead?.[0]
+      }
+
+      const nextBestAction = bestLead ? {
+        id: bestLead.id,
+        address: bestLead.address,
+        distanceMiles: null,
+        score: bestLead.score,
+        roofAge: null, 
+        stormEvidence: null,
+        reason
       } : null
 
       setData({
         nextAppointment,
-        followUpsDue: followUps || 0,
-        activeCampaign: null, // Placeholder until campaigns are fully wired
-        recommendedDoors: doors || 0,
+        followUpsDue: followUps,
+        activeCampaign: null,
+        recommendedDoors: doors,
         nextBestAction
       })
       setLoading(false)
