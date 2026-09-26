@@ -5,17 +5,30 @@ const root = process.cwd()
 const failures = []
 
 const migrationsDir = path.join(root, 'supabase', 'migrations')
-const applyAllPath = path.join(root, 'supabase', 'apply_all.sql')
-const applyAll = fs.readFileSync(applyAllPath, 'utf8')
 const migrationNames = fs
   .readdirSync(migrationsDir)
   .filter((name) => name.endsWith('.sql'))
   .sort()
 
+// Individual migration files are the deployable source of truth. apply_all.sql
+// is retained only as a convenience snapshot because the production project has
+// historical migration-state differences; treating that large concatenated
+// file as authoritative previously made CI green while a clean replay could
+// still fail on duplicate DDL.
+//
+// What CI can prove here is that migration filenames are deterministic and
+// unique. Deployment certification separately proves the objects exist in the
+// live database.
+const migrationPrefix = /^\d{8}(?:\d{6})?_[a-z0-9_]+\.sql$/
+const seenMigrationNames = new Set()
 for (const name of migrationNames) {
-  if (!applyAll.includes(`-- ${name}`)) {
-    failures.push(`apply_all.sql is missing migration: ${name}`)
+  if (!migrationPrefix.test(name)) {
+    failures.push(`Migration filename is not deterministic: ${name}`)
   }
+  if (seenMigrationNames.has(name)) {
+    failures.push(`Duplicate migration filename: ${name}`)
+  }
+  seenMigrationNames.add(name)
 }
 
 const functionsDir = path.join(root, 'supabase', 'functions')
