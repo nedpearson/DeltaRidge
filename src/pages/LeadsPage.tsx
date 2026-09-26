@@ -42,11 +42,6 @@ import {
   type Route,
 } from '@/features/leads/routes'
 import type { ScoredLead } from '@/features/leads/scoring'
-import {
-  optimizeDoorRoute,
-  routeMethodLabel,
-  type RouteOptimization,
-} from '@/features/leads/route-optimization'
 import { intelligenceFor, INTELLIGENCE_LEVEL_LABEL } from '@/features/leads/lead-intelligence'
 import LeadProofPanel from '@/features/leads/LeadProofPanel'
 import AppointmentBriefPanel from '@/features/leads/AppointmentBriefPanel'
@@ -312,83 +307,31 @@ function RouteCard({ route, onPick }: { route: Route; onPick: () => void }) {
 function RouteHeader({
   route,
   ordered,
-  optimization,
-  optimizing,
-  onRetry,
   onBack,
 }: {
   route: Route
   ordered: readonly ScoredLead[]
-  optimization: RouteOptimization | null
-  optimizing: boolean
-  onRetry: () => void
   onBack: () => void
 }) {
-  const straightLineMiles = walkingMiles(ordered)
-  const routeMiles =
-    optimization?.distanceMeters != null
-      ? optimization.distanceMeters / 1609.344
-      : null
-  const routeMinutes =
-    optimization?.durationSeconds != null
-      ? Math.max(1, Math.round(optimization.durationSeconds / 60))
-      : null
-
+  const miles = walkingMiles(ordered)
   return (
     <Card className="!py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-[14.5px] font-semibold">{route.name}</p>
           <p className="mt-0.5 text-[11.5px] text-text-secondary">
-            {ordered.length} door{ordered.length === 1 ? '' : 's'}
-            {routeMiles !== null
-              ? ` · ${routeMiles.toFixed(1)} road mi`
-              : straightLineMiles > 0
-                ? ` · about ${straightLineMiles} mi point-to-point`
-                : ''}
-            {routeMinutes !== null ? ` · about ${routeMinutes} min` : ''}
+            {ordered.length} door{ordered.length === 1 ? '' : 's'} in walking order
+            {miles > 0 && ` · about ${miles} mi point-to-point`}
           </p>
         </div>
         <Button variant="secondary" className="shrink-0 !min-h-0 !px-3 !py-1.5" onClick={onBack}>
           All routes
         </Button>
       </div>
-
-      <div className="mt-2 flex items-center justify-between gap-3 rounded-lg bg-bg-page px-3 py-2 ring-1 ring-border-subtle">
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-            Route method
-          </p>
-          <p className="mt-0.5 text-[11.5px] text-text-secondary">
-            {optimizing
-              ? 'Calculating street-aware walking order…'
-              : optimization
-                ? routeMethodLabel(optimization.method)
-                : 'Local nearest-door order'}
-          </p>
-        </div>
-        {!optimizing && (
-          <Button variant="ghost" className="shrink-0 !min-h-0 !px-2.5 !py-1.5" onClick={onRetry}>
-            Recalculate
-          </Button>
-        )}
-      </div>
-
-      {optimization?.warning ? (
-        <p className="mt-2 text-[10.5px] leading-relaxed text-status-warning">
-          {optimization.warning}
-        </p>
-      ) : optimization?.method === 'mapbox_exact' ? (
-        <p className="mt-2 text-[10.5px] leading-relaxed text-text-secondary">
-          Mapbox optimized this route against the walking street network, starting from your current GPS fix.
-          Road data can still differ from temporary closures or private access conditions.
-        </p>
-      ) : (
-        <p className="mt-2 text-[10.5px] leading-relaxed text-text-secondary">
-          The fallback order uses property coordinates only. It does not know one-way streets,
-          cul-de-sacs, sidewalks, gates, or temporary closures.
-        </p>
-      )}
+      <p className="mt-2 text-[10.5px] leading-relaxed text-text-secondary">
+        Ordered locally from the current GPS fix using property coordinates. Delta Ridge does not
+        use a Mapbox routing service. Tap Navigate on a property to hand directions to the device.
+      </p>
     </Card>
   )
 }
@@ -727,8 +670,6 @@ export default function LeadsPage() {
   const [here, setHere] = useState<{ latitude: number; longitude: number } | null>(null)
   const [locationState, setLocationState] = useState<'idle' | 'locating' | 'ready' | 'unavailable'>('idle')
   const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null)
-  const [routeOptimization, setRouteOptimization] = useState<RouteOptimization | null>(null)
-  const [routeOptimizing, setRouteOptimizing] = useState(false)
   const autoLocationAttempted = useRef(false)
 
   const busyRef = useRef(false)
@@ -827,40 +768,14 @@ export default function LeadsPage() {
     [routes, routeName],
   )
 
-  const localRouteOrder = useMemo(
-    () => (activeRoute ? orderForWalking(activeRoute.doors, here ?? undefined) : filteredDoors),
-    [activeRoute, filteredDoors, here],
-  )
-
-  const optimizeActiveRoute = useCallback(async () => {
-    if (!activeRoute || !here) {
-      setRouteOptimization(null)
-      return
-    }
-    setRouteOptimizing(true)
-    const result = await optimizeDoorRoute({
-      start: here,
-      doors: orderForWalking(activeRoute.doors, here),
-      profile: 'walking',
-    })
-    setRouteOptimization(result)
-    setRouteOptimizing(false)
-  }, [activeRoute, here])
-
-  useEffect(() => {
-    setRouteOptimization(null)
-    if (!activeRoute || !here) return
-    void optimizeActiveRoute()
-  }, [activeRoute, here, optimizeActiveRoute])
-
   /**
-   * The doors actually on screen. When the server-side Mapbox optimizer is
-   * available the street-aware order wins; otherwise the deterministic local
-   * nearest-door order remains the safe offline fallback.
+   * The doors actually on screen. Inside a route they use the deterministic
+   * local nearest-door order. Navigation itself is handed to the device; no
+   * external routing provider is required by Delta Ridge.
    */
   const visibleDoors = useMemo(
-    () => (activeRoute && routeOptimization ? routeOptimization.ordered : localRouteOrder),
-    [activeRoute, localRouteOrder, routeOptimization],
+    () => (activeRoute ? orderForWalking(activeRoute.doors, here ?? undefined) : filteredDoors),
+    [activeRoute, filteredDoors, here],
   )
 
   const counts = useMemo(() => chipCounts(managed, doors.length), [managed, doors.length])
@@ -1375,13 +1290,7 @@ export default function LeadsPage() {
                   <RouteHeader
                     route={activeRoute}
                     ordered={visibleDoors}
-                    optimization={routeOptimization}
-                    optimizing={routeOptimizing}
-                    onRetry={() => void optimizeActiveRoute()}
-                    onBack={() => {
-                      setRouteOptimization(null)
-                      setRouteName(null)
-                    }}
+                    onBack={() => setRouteName(null)}
                   />
                   {visibleDoors.map((lead) => (
                     <DoorCard
