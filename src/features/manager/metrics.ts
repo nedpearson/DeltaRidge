@@ -429,8 +429,8 @@ export function suggestAssignees(
       const factors: SuggestionFactor[] = []
 
       // Mock distance for demonstration as real GPS coordinates are not yet available per rep context
-      const mockDistance = (Math.random() * 3).toFixed(1)
-      const mockHasConflict = Math.random() > 0.8
+      const mockDistance = "1.2"
+      const mockHasConflict = false
 
       const subdivision = lead.subdivision ?? null
       if (subdivision && rep.workedSubdivisions.has(subdivision)) {
