@@ -12,7 +12,7 @@ export default function MorePage() {
       </div>
 
       <div className="space-y-3">
-        <Card className="cursor-pointer hover:bg-bg-elevated transition-colors" onClick={() => navigate('/training')}>
+        <div onClick={() => navigate('/training')} className="cursor-pointer"><Card className="hover:bg-bg-elevated transition-colors">
           <div className="flex items-center gap-4">
             <div className="bg-brand-500/10 p-3 rounded-xl">
               <GraduationCap className="w-6 h-6 text-brand-primary" />
@@ -22,7 +22,7 @@ export default function MorePage() {
               <p className="text-[13px] text-text-secondary mt-0.5">Interactive guided walkthrough</p>
             </div>
           </div>
-        </Card>
+        </Card></div>
       </div>
     </div>
   )
