@@ -29,6 +29,7 @@ import {
   type ResolvedWindow,
   type StormWindowKey,
 } from './window'
+import { bboxAround, expandBbox, type SearchCenter } from './search-area'
 
 /**
  * Runs the lead engine and remembers the result.
@@ -42,8 +43,12 @@ import {
  */
 
 export interface LeadRunSettings {
-  /** [west, south, east, north] — defaults to the Delta Ridge service area. */
+  /** [west, south, east, north]. Derived from searchCenter when location mode is active. */
   bbox: [number, number, number, number]
+  /** Current GPS center for "search around me". Absent on legacy/cached runs. */
+  searchCenter?: SearchCenter
+  /** Geographic search radius around searchCenter. */
+  searchRadiusMiles?: number
   /**
    * Which storm window to use. A rolling month count could not express "this
    * year", which is the question a rep actually asks in September.
@@ -101,6 +106,7 @@ export const DEFAULT_SETTINGS: LeadRunSettings = {
   useRadar: true,
   radarMinHailInches: 1.25,
   radiusMiles: 3,
+  searchRadiusMiles: 5,
   builtBefore: new Date().getFullYear() - 12,
   maxLeads: 150,
   maxGeocodesPerRun: 600,
@@ -118,8 +124,9 @@ export const DEFAULT_SETTINGS: LeadRunSettings = {
  * cannot catch that: the run was fresh, it was just from a different engine.
  *
  * 2 = radar-estimated hail is a source.
+ * 3 = lead search is explicitly GPS-centered when searchCenter is supplied.
  */
-export const ENGINE_VERSION = 2
+export const ENGINE_VERSION = 3
 
 export interface LeadRun {
   ranAt: string
@@ -422,6 +429,15 @@ export async function runLeadEngine(
   const storms = createStormProvider('noaa', fetchImpl)
   const permits = new EbrPermitProvider(fetchImpl)
 
+  const searchRadiusMiles = settings.searchRadiusMiles ?? DEFAULT_SETTINGS.searchRadiusMiles ?? 5
+  const searchBbox =
+    settings.searchCenter !== undefined
+      ? bboxAround(settings.searchCenter, searchRadiusMiles)
+      : settings.bbox
+  // Storm reports just outside the property-search circle can still be relevant
+  // to a property near the edge, so query a slightly larger storm envelope.
+  const stormBbox = expandBbox(searchBbox, settings.radiusMiles)
+
   // Radar is on unless this workspace turned it off, or a cached run from
   // before radar existed is being re-run with its own settings.
   const radarEnabled = settings.useRadar !== false && radarProviderId() === 'swdi'
@@ -434,7 +450,7 @@ export async function runLeadEngine(
   // should not pay for two round trips in series.
   const [stormResult, radarResult, buildResult, reroofResult] = await Promise.allSettled([
     storms.searchEvents({
-      bbox: settings.bbox,
+      bbox: stormBbox,
       from,
       to,
       eventTypes: ['hail'],
@@ -442,7 +458,7 @@ export async function runLeadEngine(
     }),
     radarEnabled
       ? createStormProvider('swdi', fetchImpl).searchEvents({
-          bbox: settings.bbox,
+          bbox: stormBbox,
           from,
           to,
           eventTypes: ['hail'],
@@ -460,7 +476,7 @@ export async function runLeadEngine(
       limit: 5000,
     }),
     permits.search({
-      bbox: settings.bbox,
+      bbox: searchBbox,
       kinds: ['reroof'],
       issuedFrom: from.slice(0, 10),
       limit: 5000,
@@ -598,16 +614,26 @@ export async function runLeadEngine(
     return hit ? { ...p, latitude: hit.latitude, longitude: hit.longitude } : p
   })
 
-  const [west, south, east, north] = settings.bbox
-  const inArea = located.filter(
-    (p) =>
-      p.latitude !== undefined &&
-      p.longitude !== undefined &&
-      p.latitude >= south &&
-      p.latitude <= north &&
-      p.longitude >= west &&
-      p.longitude <= east,
-  )
+  const [west, south, east, north] = searchBbox
+  const inArea = located.filter((p) => {
+    if (p.latitude === undefined || p.longitude === undefined) return false
+    if (
+      p.latitude < south ||
+      p.latitude > north ||
+      p.longitude < west ||
+      p.longitude > east
+    ) return false
+
+    if (settings.searchCenter === undefined) return true
+    return (
+      distanceMiles(
+        settings.searchCenter.latitude,
+        settings.searchCenter.longitude,
+        p.latitude,
+        p.longitude,
+      ) <= searchRadiusMiles
+    )
+  })
 
   const awaitingGeocode = uncached.length - toGeocode.length
   if (awaitingGeocode > 0) {
@@ -629,7 +655,11 @@ export async function runLeadEngine(
   const run: LeadRun = {
     ranAt: now.toISOString(),
     engineVersion: ENGINE_VERSION,
-    settings,
+    settings: {
+      ...settings,
+      bbox: searchBbox,
+      searchRadiusMiles,
+    },
     window,
     coverage,
     stormEvents,
