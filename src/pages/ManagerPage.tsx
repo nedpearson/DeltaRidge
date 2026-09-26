@@ -40,6 +40,7 @@ import ContactProviderTab from '@/features/contacts/ContactProviderTab'
 import IntegrationHealthPanel from '@/features/integrations/health/IntegrationHealthPanel'
 import { AutomationRulesPanel } from '@/features/manager/tabs/AutomationRulesPanel'
 import { readGradingConfig } from '@/features/manager/grade-store'
+import { DuplicateMergePanel } from '@/features/admin/DuplicateMergePanel'
 import { DEFAULT_CONFIG, type GradingConfig } from '@/features/manager/grading'
 import { DEFAULT_WINDOW_DAYS } from '@/features/manager/read'
 import {
@@ -448,6 +449,10 @@ export default function ManagerPage() {
               canManage={canManage}
               onSaved={() => void load()}
             />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>DUPLICATE MERGE</SectionTitle></div>
+            <DuplicateMergePanel />
           </div>
         </div>
       )}
