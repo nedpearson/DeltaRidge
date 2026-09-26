@@ -3,11 +3,11 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAt
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'gold'
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand-primary text-text-primary shadow-md box-glow hover:bg-brand-400 active:scale-[0.98]',
-  gold: 'bg-gold-500 text-text-primary shadow-md shadow-gold-500/20 hover:bg-gold-400 active:scale-[0.98]',
-  secondary: 'bg-bg-card text-text-primary ring-1 ring-[var(--color-surface-3)] hover:bg-bg-app shadow-sm active:scale-[0.98]',
+  primary: 'bg-brand-primary text-text-primary shadow-md box-glow hover:bg-brand-hover active:bg-brand-pressed active:scale-[0.98]',
+  gold: 'bg-brand-gold text-bg-app shadow-md hover:bg-brand-gold-highlight active:scale-[0.98]',
+  secondary: 'bg-bg-card text-text-primary ring-1 ring-border-subtle hover:bg-bg-elevated shadow-sm active:scale-[0.98]',
   ghost: 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary',
-  danger: 'bg-red-50 text-status-critical ring-1 ring-red-200 hover:bg-status-critical',
+  danger: 'bg-status-critical/10 text-status-critical ring-1 ring-status-critical/35 hover:bg-status-critical/15',
 }
 
 export function Button({
@@ -46,8 +46,8 @@ export function Card({
 export function SectionTitle({ children, hint }: { children: ReactNode; hint?: string }) {
   return (
     <div className="mb-2.5 mt-6 flex items-baseline justify-between first:mt-0">
-      <h2 className="font-display text-xs tracking-[0.14em] text-slate-60060">{children}</h2>
-      {hint && <span className="text-[11px] text-slate-60040">{hint}</span>}
+      <h2 className="font-display text-xs tracking-[0.14em] text-text-secondary">{children}</h2>
+      {hint && <span className="text-[11px] text-text-muted">{hint}</span>}
     </div>
   )
 }
@@ -65,13 +65,13 @@ export function Field({
     <label className="block">
       <span className="mb-1.5 block text-[12px] font-medium text-text-secondary">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-[11px] text-slate-60040">{hint}</span>}
+      {hint && <span className="mt-1 block text-[11px] text-text-muted">{hint}</span>}
     </label>
   )
 }
 
 const CONTROL =
-  'w-full rounded-xl bg-bg-card px-3.5 py-3 text-[15px] text-text-primary ring-1 ring-[var(--color-surface-3)] outline-none placeholder:text-slate-60030 focus:ring-2 focus:ring-brand-primary shadow-sm'
+  'w-full rounded-xl bg-bg-card px-3.5 py-3 text-[15px] text-text-primary ring-1 ring-border-subtle outline-none placeholder:text-text-disabled focus:ring-2 focus:ring-brand-primary shadow-sm'
 
 export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${CONTROL} ${props.className ?? ''}`} />
@@ -88,8 +88,8 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
 export function Empty({ title, body }: { title: string; body: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-border-subtle bg-bg-app/50 px-5 py-10 text-center">
-      <p className="font-display text-sm tracking-wide text-slate-60080">{title}</p>
-      <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-slate-60050">{body}</p>
+      <p className="font-display text-sm tracking-wide text-text-primary">{title}</p>
+      <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-text-secondary">{body}</p>
     </div>
   )
 }
