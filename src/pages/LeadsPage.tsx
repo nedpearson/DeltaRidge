@@ -670,52 +670,46 @@ export default function LeadsPage() {
   }, [])
 
   useEffect(() => {
-    void readCachedRun().then((cached) => {
+    let active = true
+
+    void (async () => {
+      const [cached, savedLeads, location] = await Promise.all([
+        readCachedRun(),
+        readLeads(),
+        acquireSearchCenter(),
+      ])
+      if (!active) return
+
+      setManaged(savedLeads)
       if (cached) {
         setRun(cached)
         setSettings(cached.settings)
       }
-      // Open the app, get today's list. The cache is there so the page paints
-      // instantly and still works in a dead spot, not so it can be the answer.
-      const age = cached ? Date.now() - new Date(cached.ranAt).getTime() : Infinity
 
-      // Age is not the only way a cached run goes wrong. A run written by an
-      // older engine can be minutes old and still describe a world that no
-      // longer exists — radar hail shipped, the new bundle deployed, and the
-      // panel kept saying NOT CONFIGURED because the cached run predated the
-      // source. The rep has no way to tell that apart from the truth, so a run
-      // from a different engine is stale however fresh it is.
-      const fromOlderEngine = !cached || cached.engineVersion !== ENGINE_VERSION
-
-      // Nearby searches must be centred on a fresh device location. The
-      // location acquisition below decides whether/when an automatic refresh
-      // is allowed; this block only paints the cached result immediately.
-      void fromOlderEngine
-      void age
-    })
-    void readLeads().then(setManaged)
-
-    void acquireSearchCenter().then((state) => {
-      setLocationState(state)
-      if (state.kind !== 'ready' || !navigator.onLine) return
+      setLocationState(location)
+      if (location.kind !== 'ready' || !navigator.onLine) return
 
       const age = cached ? Date.now() - new Date(cached.ranAt).getTime() : Infinity
       const fromOlderEngine = !cached || cached.engineVersion !== ENGINE_VERSION
       const movedCenter =
         !cached?.settings.searchCenter ||
-        Math.abs(cached.settings.searchCenter.latitude - state.center.latitude) > 0.01 ||
-        Math.abs(cached.settings.searchCenter.longitude - state.center.longitude) > 0.01
+        Math.abs(cached.settings.searchCenter.latitude - location.center.latitude) > 0.01 ||
+        Math.abs(cached.settings.searchCenter.longitude - location.center.longitude) > 0.01
 
       if (fromOlderEngine || age > MAX_CACHE_AGE_MS || movedCenter) {
-        const next = {
+        const next: LeadRunSettings = {
           ...(cached?.settings ?? DEFAULT_SETTINGS),
-          searchCenter: state.center,
+          searchCenter: location.center,
         }
         setSettings(next)
         void refresh(next, true)
       }
-    })
-  }, [locationState, refresh])
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [refresh])
 
   /**
    * Keep it current while the page stays open: on a timer, when the truck comes
