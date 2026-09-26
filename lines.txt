@@ -1,0 +1,127 @@
+1: import { getSupabase } from '@/lib/supabase'
+2: import { findByAddress, promote, saveLead } from './lead-store'
+3: import type { ManagedLead } from './pipeline'
+4: import type { ScoredLead } from './scoring'
+5: 
+6: export interface EnrichedContact {
+7:   readonly success: boolean
+8:   readonly residentName?: string | null | undefined
+9:   readonly phone?: string | null | undefined
+10:   readonly email?: string | null | undefined
+11:   readonly phoneType?: 'Wireless' | 'Landline' | 'Unknown' | undefined
+12:   readonly carrier?: string | null | undefined
+13:   readonly secondaryPhones?: Array<{ phone: string; type: string; carrier?: string }> | undefined
+14:   readonly source?: 'public_record' | 'third_party_lookup' | undefined
+15:   readonly searchUrl?: string | undefined
+16: }
+17: 
+18: export function buildFreeSearchUrl(street: string, city = 'Baton Rouge', state = 'LA', zip = '70810'): string {
+19:   const streetSlug = street.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
+20:   const citySlug = city.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
+21:   return `https://www.fastpeoplesearch.com/address/${streetSlug}_${citySlug}-${state.toLowerCase()}-${zip}`
+22: }
+23: 
+24: export function buildTruePeopleSearchUrl(street: string, city = 'Baton Rouge', state = 'LA', zip = '70810'): string {
+25:   return `https://www.truepeoplesearch.com/resultaddress?streetaddress=${encodeURIComponent(street)}&citystatezip=${encodeURIComponent(`${city}, ${state} ${zip}`)}`
+26: }
+27: 
+28: /**
+29:  * Fetch contact phone for a lead via Edge Function or local cache.
+30:  */
+31: export async function lookupResidentContact(params: {
+32:   street: string
+33:   city?: string | undefined
+34:   state?: string | undefined
+35:   zip?: string | undefined
+36:   ownerName?: string | null | undefined
+37: }): Promise<EnrichedContact> {
+38:   let street = params.street.trim()
+39:   const city = params.city || 'Baton Rouge'
+40:   const state = params.state || 'LA'
+41:   const zip = params.zip || '70810'
+42: 
+43:   // If the street parameter contains the full address, strip the city/state/zip
+44:   // Regex matches: "STREET ADDRESS CITY ST 12345"
+45:   const addressMatch = street.match(/^(.*?)\s+(?:[A-Za-z\s]+)\s+(?:[A-Za-z]{2})\s+(?:\d{5})$/i)
+46:   if (addressMatch) {
+47:     street = addressMatch[1].trim()
+48:   } else {
+49:     const cityStateZip = `${city} ${state} ${zip}`.toLowerCase()
+50:     if (street.toLowerCase().endsWith(cityStateZip)) {
+51:       street = street.slice(0, -(cityStateZip.length)).trim()
+52:     } else if (street.toLowerCase().endsWith(`${state} ${zip}`.toLowerCase())) {
+53:       street = street.slice(0, -(`${state} ${zip}`.length)).trim()
+54:     }
+55:   }
+56: 
+57:   try {
+58:     const supabase = getSupabase()
+59:     if (supabase) {
+60:       const { data, error } = await supabase.functions.invoke('lookup-contact', {
+61:         body: {
+62:           street,
+63:           city,
+64:           state,
+65:           zip,
+66:           ownerName: params.ownerName || undefined,
+67:         },
+68:       })
+69: 
+70:       if (!error && data?.success && (data?.phone || data?.email)) {
+71:         return {
+72:           success: true,
+73:           residentName: data.residentName ?? null,
+74:           phone: data.phone,
+75:           email: data.email,
+76:           phoneType: data.phoneType ?? 'Wireless',
+77:           carrier: data.carrier ?? null,
+78:           secondaryPhones: data.secondaryPhones ?? [],
+79:           source: data.source ?? 'third_party_lookup',
+80:           searchUrl: buildFreeSearchUrl(street, city, state, zip),
+81:         }
+82:       }
+83:     }
+84:   } catch {
+85:     // Network or edge function failure fallback
+86:   }
+87: 
+88:   return {
+89:     success: false,
+90:     searchUrl: buildFreeSearchUrl(street, city, state, zip),
+91:   }
+92: }
+93: 
+94: /**
+95:  * Save an enriched or rep-entered phone number onto a managed lead.
+96:  */
+97: export async function saveResidentContact(
+98:   lead: ScoredLead | ManagedLead,
+99:   phone?: string | null | undefined,
+100:   email?: string | null | undefined,
+101:   name?: string | null | undefined
+102: ): Promise<ManagedLead> {
+103:   const addressKey = lead.addressKey
+104:   let record = await findByAddress(addressKey)
+105:   const now = new Date().toISOString()
+106: 
+107:   if (!record) {
+108:     if ('reasons' in lead) {
+109:       record = promote(lead as ScoredLead, now)
+110:     } else {
+111:       record = lead as ManagedLead
+112:     }
+113:   }
+114: 
+115:   const updated: ManagedLead = {
+116:     ...record,
+117:     ...(phone?.trim() ? { contactPhone: phone.trim() } : {}),
+118:     ...(email?.trim() ? { contactEmail: email.trim() } : {}),
+119:     ...(name?.trim() ? { contactName: name.trim() } : {}),
+120:     contactSource: 'third_party_lookup',
+121:     updatedAt: now,
+122:   }
+123: 
+124:   await saveLead(updated)
+125:   return updated
+126: }
+127: 

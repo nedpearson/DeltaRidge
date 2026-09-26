@@ -44,7 +44,7 @@ export async function lookupResidentContact(params: {
   // Regex matches: "STREET ADDRESS CITY ST 12345"
   const addressMatch = street.match(/^(.*?)\s+(?:[A-Za-z\s]+)\s+(?:[A-Za-z]{2})\s+(?:\d{5})$/i)
   if (addressMatch) {
-    street = addressMatch[1].trim()
+    street = (addressMatch[1] || '').trim()
   } else {
     const cityStateZip = `${city} ${state} ${zip}`.toLowerCase()
     if (street.toLowerCase().endsWith(cityStateZip)) {
