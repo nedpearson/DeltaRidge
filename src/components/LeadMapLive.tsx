@@ -15,6 +15,7 @@ import {
 } from '@/features/leads/markers'
 import { STATUS_LABEL, type LeadStatus, type ManagedLead } from '@/features/leads/pipeline'
 import type { ScoredLead } from '@/features/leads/scoring'
+import { bboxAround, circlePolygon, type SearchCenter } from '@/features/leads/search-area'
 import type { StormEvent } from '@/integrations/storm'
 
 /**
@@ -35,17 +36,26 @@ const DOORS_SOURCE = 'doors'
 const DOORS_LAYER = 'doors-circles'
 const STORMS_SOURCE = 'storms'
 const STORMS_LAYER = 'storms-circles'
+const SEARCH_SOURCE = 'search-area'
+const SEARCH_FILL = 'search-area-fill'
+const SEARCH_LINE = 'search-area-line'
+const USER_SOURCE = 'search-center'
+const USER_LAYER = 'search-center-dot'
 
 export default function LeadMapLive({
   doors,
   leads,
   storms,
+  searchCenter,
+  searchRadiusMiles = 5,
   onOpenLead,
   onFailed,
 }: {
   doors: readonly ScoredLead[]
   leads: readonly ManagedLead[]
   storms: readonly StormEvent[]
+  searchCenter?: SearchCenter
+  searchRadiusMiles?: number
   onOpenLead: (leadId: string) => void
   /** Called when the map cannot run at all, so the caller can fall back. */
   onFailed: () => void
@@ -69,6 +79,62 @@ export default function LeadMapLive({
    * behaviour that silently empties the map if you forget it.
    */
   const paintLayers = useCallback((map: mapboxgl.Map) => {
+    if (searchCenter && !map.getSource(SEARCH_SOURCE)) {
+      map.addSource(SEARCH_SOURCE, {
+        type: 'geojson',
+        data: circlePolygon(searchCenter, searchRadiusMiles) as never,
+      })
+    }
+    if (searchCenter && !map.getLayer(SEARCH_FILL)) {
+      map.addLayer({
+        id: SEARCH_FILL,
+        type: 'fill',
+        source: SEARCH_SOURCE,
+        paint: {
+          'fill-color': '#27C6E8',
+          'fill-opacity': 0.055,
+        },
+      })
+    }
+    if (searchCenter && !map.getLayer(SEARCH_LINE)) {
+      map.addLayer({
+        id: SEARCH_LINE,
+        type: 'line',
+        source: SEARCH_SOURCE,
+        paint: {
+          'line-color': '#27C6E8',
+          'line-opacity': 0.7,
+          'line-width': 2,
+          'line-dasharray': [3, 2],
+        },
+      })
+    }
+    if (searchCenter && !map.getSource(USER_SOURCE)) {
+      map.addSource(USER_SOURCE, {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'Point',
+            coordinates: [searchCenter.longitude, searchCenter.latitude],
+          },
+        } as never,
+      })
+    }
+    if (searchCenter && !map.getLayer(USER_LAYER)) {
+      map.addLayer({
+        id: USER_LAYER,
+        type: 'circle',
+        source: USER_SOURCE,
+        paint: {
+          'circle-radius': 7,
+          'circle-color': '#27C6E8',
+          'circle-stroke-color': '#F7FAFC',
+          'circle-stroke-width': 2,
+        },
+      })
+    }
     if (!map.getSource(STORMS_SOURCE)) {
       map.addSource(STORMS_SOURCE, { type: 'geojson', data: stormsToGeoJson(storms) as never })
     }
@@ -127,7 +193,7 @@ export default function LeadMapLive({
         },
       })
     }
-  }, [storms])
+  }, [searchCenter, searchRadiusMiles, storms])
 
   const attachMap = useCallback(
     (node: HTMLDivElement | null) => {
@@ -141,7 +207,14 @@ export default function LeadMapLive({
       // No explicit WebGL check: `supported()` was removed in Mapbox GL v3,
       // and the constructor below throws on a device that cannot run it
       // anyway. Catching that is version-proof where a feature test is not.
-      const bounds = workingBounds(markersRef.current) ?? boundsOf(markersRef.current)
+      const markerBounds = workingBounds(markersRef.current) ?? boundsOf(markersRef.current)
+      const searchBounds = searchCenter
+        ? (() => {
+            const [west, south, east, north] = bboxAround(searchCenter, searchRadiusMiles)
+            return { west, south, east, north }
+          })()
+        : null
+      const bounds = markerBounds ?? searchBounds
 
       let map: mapboxgl.Map
       try {
@@ -240,6 +313,28 @@ export default function LeadMapLive({
       ;(source as mapboxgl.GeoJSONSource).setData(markersToGeoJson(markers) as never)
     }
   }, [markers, ready])
+
+  // GPS search center/radius can change without recreating the map.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready || !searchCenter) return
+
+    const area = map.getSource(SEARCH_SOURCE)
+    if (area && 'setData' in area) {
+      ;(area as mapboxgl.GeoJSONSource).setData(circlePolygon(searchCenter, searchRadiusMiles) as never)
+    }
+    const center = map.getSource(USER_SOURCE)
+    if (center && 'setData' in center) {
+      ;(center as mapboxgl.GeoJSONSource).setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'Point',
+          coordinates: [searchCenter.longitude, searchCenter.latitude],
+        },
+      } as never)
+    }
+  }, [ready, searchCenter, searchRadiusMiles])
 
   const switchStyle = (key: MapStyleKey) => {
     setStyle(key)
