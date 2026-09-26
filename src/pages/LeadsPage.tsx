@@ -45,7 +45,7 @@ import type { ScoredLead } from '@/features/leads/scoring'
 import { WINDOW_OPTIONS, type StormWindowKey } from '@/features/leads/window'
 import type { StormEvent } from '@/integrations/storm'
 import { newId, saveInspection, type LocalInspection } from '@/lib/db'
-import { currentPosition } from '@/lib/image'
+import { currentPositionResult, type LocationFailure } from '@/lib/image'
 
 /**
  * Custom ranges are deliberately absent until there is a date picker to set
@@ -619,7 +619,14 @@ export default function LeadsPage() {
   const [showCompetitors, setShowCompetitors] = useState(false)
   const [routeName, setRouteName] = useState<string | null>(null)
   const [ownerOccupiedOnly, setOwnerOccupiedOnly] = useState(false)
-  const [here, setHere] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [here, setHere] = useState<{
+    latitude: number
+    longitude: number
+    accuracyMeters: number
+  } | null>(null)
+  const [locationState, setLocationState] = useState<
+    'locating' | 'ready' | 'permission_denied' | 'unavailable' | 'timeout' | 'unsupported' | 'unknown'
+  >('locating')
 
   const busyRef = useRef(false)
   const settingsRef = useRef(settings)
