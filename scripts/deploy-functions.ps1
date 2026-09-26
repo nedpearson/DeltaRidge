@@ -1,8 +1,22 @@
-Write-Host "Deploying eagleview-imagery function..."
-supabase functions deploy eagleview-imagery --no-verify-jwt
+$ErrorActionPreference = "Stop"
 
-Write-Host "Deploying roofr-push function..."
-supabase functions deploy roofr-push --no-verify-jwt
+# Deploy every Delta Ridge Edge Function. Gateway JWT verification is disabled
+# because authentication is enforced by each function according to its contract.
+$functions = @(
+  "eagleview-imagery",
+  "lookup-contact",
+  "lookup-property",
+  "roofr-events",
+  "roofr-push"
+)
 
-Write-Host "Deployment commands executed."
-Write-Host "Don't forget to set your secrets in the Supabase Dashboard!"
+foreach ($fn in $functions) {
+  Write-Host "Deploying $fn..."
+  npx supabase functions deploy $fn --no-verify-jwt
+  if ($LASTEXITCODE -ne 0) {
+    throw "Supabase function deployment failed: $fn"
+  }
+}
+
+Write-Host "All Edge Function deployment commands completed."
+Write-Host "Next: run docs/PRODUCTION_CERTIFICATION.md against the live environment."
