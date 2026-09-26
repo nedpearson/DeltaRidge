@@ -317,7 +317,7 @@ export default function ManagerPage() {
         />
       )}
 
-      {tab === 'campaigns' && <CampaignsTab />}
+      {tab === 'campaigns' && <CampaignsTab organizationId={orgId} userId={session.user.id} />}
 
       {tab === 'performance' && (
         <PerformanceTab
