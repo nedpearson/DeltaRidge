@@ -45,7 +45,8 @@ import type { ScoredLead } from '@/features/leads/scoring'
 import { WINDOW_OPTIONS, type StormWindowKey } from '@/features/leads/window'
 import type { StormEvent } from '@/integrations/storm'
 import { newId, saveInspection, type LocalInspection } from '@/lib/db'
-import { currentPosition } from '@/lib/image'
+import { acquireSearchCenter, type LocationSearchState } from '@/features/leads/location-search'
+import LeadIntelligenceCard from '@/features/leads/LeadIntelligenceCard'
 
 /**
  * Custom ranges are deliberately absent until there is a date picker to set
@@ -196,6 +197,12 @@ function DoorCard({
       {/* Knocking is the only thing this app asks a rep to do at a door, and it
           is the widest target on the card for that reason. Navigate and the
           full profile sit under it rather than competing with it. */}
+      <LeadIntelligenceCard
+        lead={lead}
+        {...(managed ? { managed } : {})}
+        onOpenProperty={() => navigate(`/property/${encodeURIComponent(lead.addressKey)}`)}
+      />
+
       <Button variant="gold" full className="mt-3" onClick={() => onKnock(lead)}>
         Knocked it
       </Button>
@@ -619,7 +626,14 @@ export default function LeadsPage() {
   const [showCompetitors, setShowCompetitors] = useState(false)
   const [routeName, setRouteName] = useState<string | null>(null)
   const [ownerOccupiedOnly, setOwnerOccupiedOnly] = useState(false)
-  const [here, setHere] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [locationState, setLocationState] = useState<LocationSearchState>({ kind: 'locating' })
+  const here =
+    locationState.kind === 'ready'
+      ? {
+          latitude: locationState.center.latitude,
+          longitude: locationState.center.longitude,
+        }
+      : null
 
   const busyRef = useRef(false)
   const settingsRef = useRef(settings)
@@ -673,20 +687,35 @@ export default function LeadsPage() {
       // from a different engine is stale however fresh it is.
       const fromOlderEngine = !cached || cached.engineVersion !== ENGINE_VERSION
 
-      if ((fromOlderEngine || age > MAX_CACHE_AGE_MS) && navigator.onLine) {
-        void refresh(cached?.settings ?? DEFAULT_SETTINGS, true)
-      }
+      // Nearby searches must be centred on a fresh device location. The
+      // location acquisition below decides whether/when an automatic refresh
+      // is allowed; this block only paints the cached result immediately.
+      void fromOlderEngine
+      void age
     })
     void readLeads().then(setManaged)
 
-    // Asked for once, never waited on. The list is complete without it; a
-    // position only changes where the walk starts and how far the routes are
-    // reported to be. `currentPosition` always settles, including when the
-    // permission prompt is never answered — see src/lib/image.ts.
-    void currentPosition().then((pos) => {
-      if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+    void acquireSearchCenter().then((state) => {
+      setLocationState(state)
+      if (state.kind !== 'ready' || !navigator.onLine) return
+
+      const age = cached ? Date.now() - new Date(cached.ranAt).getTime() : Infinity
+      const fromOlderEngine = !cached || cached.engineVersion !== ENGINE_VERSION
+      const movedCenter =
+        !cached?.settings.searchCenter ||
+        Math.abs(cached.settings.searchCenter.latitude - state.center.latitude) > 0.01 ||
+        Math.abs(cached.settings.searchCenter.longitude - state.center.longitude) > 0.01
+
+      if (fromOlderEngine || age > MAX_CACHE_AGE_MS || movedCenter) {
+        const next = {
+          ...(cached?.settings ?? DEFAULT_SETTINGS),
+          searchCenter: state.center,
+        }
+        setSettings(next)
+        void refresh(next, true)
+      }
     })
-  }, [refresh])
+  }, [locationState, refresh])
 
   /**
    * Keep it current while the page stays open: on a timer, when the truck comes
@@ -698,7 +727,8 @@ export default function LeadsPage() {
       if (document.visibilityState !== 'visible' || !navigator.onLine) return
       const ranAt = ranAtRef.current
       if (ranAt && Date.now() - new Date(ranAt).getTime() < MAX_CACHE_AGE_MS) return
-      void refresh(settingsRef.current, true)
+      if (locationState.kind !== 'ready') return
+      void refresh({ ...settingsRef.current, searchCenter: locationState.center }, true)
     }
 
     const timer = window.setInterval(rebuildIfStale, POLL_MS)
@@ -825,10 +855,25 @@ export default function LeadsPage() {
   )
 
   const patch = (p: Partial<LeadRunSettings>) => {
-    const next = { ...settings, ...p }
+    const next = {
+      ...settings,
+      ...p,
+      ...(locationState.kind === 'ready' ? { searchCenter: locationState.center } : {}),
+    }
     setSettings(next)
-    void refresh(next)
+    if (locationState.kind === 'ready') void refresh(next)
   }
+
+  const refreshFromMyLocation = useCallback(async () => {
+    setLocationState({ kind: 'locating' })
+    const state = await acquireSearchCenter()
+    setLocationState(state)
+    if (state.kind !== 'ready') return
+
+    const next = { ...settingsRef.current, searchCenter: state.center }
+    setSettings(next)
+    await refresh(next)
+  }, [refresh])
 
   return (
     <div>
@@ -842,10 +887,16 @@ export default function LeadsPage() {
           variant="gold"
           full
           className="mt-4"
-          onClick={() => void refresh(settings)}
-          disabled={busy}
+          onClick={() => void refreshFromMyLocation()}
+          disabled={busy || locationState.kind === 'locating'}
         >
-          {busy ? 'Building the list…' : run ? 'Refresh the list' : 'Build the list'}
+          {busy
+            ? 'Building the list…'
+            : locationState.kind === 'locating'
+              ? 'Getting your location…'
+              : run
+                ? 'Refresh from my location'
+                : 'Build near me'}
         </Button>
       </div>
 
@@ -908,12 +959,75 @@ export default function LeadsPage() {
         </>
       ) : (
         <>
+          <SectionTitle>SEARCH AROUND MY LOCATION</SectionTitle>
+          <Card>
+            {locationState.kind === 'ready' ? (
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 text-[13px] font-semibold text-route-live">
+                      <span className="size-2 rounded-full bg-route-live shadow-[0_0_12px_rgba(39,198,232,0.45)]" />
+                      Using your current location
+                    </p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-text-secondary">
+                      GPS acquired
+                      {locationState.center.accuracyM !== null
+                        ? ` · accuracy ±${Math.round(locationState.center.accuracyM)} m`
+                        : ''}
+                      {' · '}
+                      {new Date(locationState.center.capturedAt).toLocaleTimeString([], {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    className="shrink-0"
+                    onClick={() => void refreshFromMyLocation()}
+                    disabled={busy}
+                  >
+                    Refresh location
+                  </Button>
+                </div>
+                <p className="mt-3 rounded-xl bg-route-surface px-3 py-2 text-[11.5px] leading-relaxed text-route-text ring-1 ring-route-border">
+                  Current search: within {settings.radiusMiles} mi · ≥{settings.minHailInches}" hail ·{' '}
+                  {SELECTABLE_WINDOWS.find((item) => item.key === settings.windowKey)?.label ??
+                    settings.windowKey}{' '}
+                  · roof ≥{new Date().getFullYear() - settings.builtBefore} yrs
+                </p>
+              </>
+            ) : (
+              <div className="rounded-xl bg-warning-surface px-3 py-3 ring-1 ring-warning-border">
+                <p className="text-[13px] font-semibold text-warning-highlight">
+                  Location required for nearby storm leads
+                </p>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-text-secondary">
+                  {locationState.kind === 'locating'
+                    ? 'Delta Ridge is asking this device for its current GPS position.'
+                    : locationState.message}
+                </p>
+                {locationState.kind !== 'locating' && (
+                  <Button
+                    variant="secondary"
+                    full
+                    className="mt-3"
+                    onClick={() => void refreshFromMyLocation()}
+                  >
+                    Enable / retry location
+                  </Button>
+                )}
+              </div>
+            )}
+          </Card>
+
           <SectionTitle>FILTERS</SectionTitle>
           <Card className="grid grid-cols-2 gap-3">
             <Field label="Minimum hail">
               <Select
                 value={String(settings.minHailInches)}
                 onChange={(e) => patch({ minHailInches: Number(e.target.value) })}
+                disabled={locationState.kind !== 'ready'}
               >
                 <option value="0.75">0.75" and up</option>
                 <option value="1">1" and up</option>
@@ -925,17 +1039,22 @@ export default function LeadsPage() {
               <Select
                 value={String(settings.radiusMiles)}
                 onChange={(e) => patch({ radiusMiles: Number(e.target.value) })}
+                disabled={locationState.kind !== 'ready'}
               >
                 <option value="1">1 mile</option>
                 <option value="2">2 miles</option>
                 <option value="3">3 miles</option>
                 <option value="5">5 miles</option>
+                <option value="10">10 miles</option>
+                <option value="15">15 miles</option>
+                <option value="25">25 miles</option>
               </Select>
             </Field>
             <Field label="Storm window">
               <Select
                 value={settings.windowKey}
                 onChange={(e) => patch({ windowKey: e.target.value as StormWindowKey })}
+                disabled={locationState.kind !== 'ready'}
               >
                 {SELECTABLE_WINDOWS.map((w) => (
                   <option key={w.key} value={w.key}>
@@ -948,6 +1067,7 @@ export default function LeadsPage() {
               <Select
                 value={String(settings.builtBefore)}
                 onChange={(e) => patch({ builtBefore: Number(e.target.value) })}
+                disabled={locationState.kind !== 'ready'}
               >
                 <option value={new Date().getFullYear() - 10}>10 years old</option>
                 <option value={new Date().getFullYear() - 12}>12 years old</option>
@@ -982,6 +1102,9 @@ export default function LeadsPage() {
                 doors={visibleDoors}
                 leads={managed}
                 storms={run.stormEvents}
+                {...(locationState.kind === 'ready'
+                  ? { searchCenter: locationState.center, searchRadiusMiles: settings.radiusMiles }
+                  : {})}
                 onOpenLead={(leadId) => navigate(`/lead/${leadId}`)}
               />
 
