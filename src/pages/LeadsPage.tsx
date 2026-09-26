@@ -969,7 +969,7 @@ export default function LeadsPage() {
               <>
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[12.5px] font-semibold text-live-accent">
+                    <p className="text-[12.5px] font-semibold text-route-live">
                       ● USING CURRENT LOCATION
                     </p>
                     <p className="mt-1 text-[11px] leading-relaxed text-text-secondary">
