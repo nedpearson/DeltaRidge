@@ -180,10 +180,10 @@ export default function PropertyPage() {
             ownerName={lead.parcel?.ownerName}
             phone={managed?.contactPhone}
             email={managed?.contactEmail}
-            onPhoneSaved={async (phone, email, name) => {
+            onPhoneSaved={async (phone, email, name, source) => {
               // Ensure we save the phone number to the lead record.
               // If it's managed, update it. If not, saveResidentContact will promote it.
-              await saveResidentContact(managed || lead, phone, email, name)
+              await saveResidentContact(managed || lead, phone, email, name, source ?? 'unknown')
               void findByAddress(addressKey).then(setManaged)
             }}
           />
@@ -364,11 +364,11 @@ function OwnerTab({
         ownerName={typeof profile.owner.name.value === 'string' ? profile.owner.name.value : parcel?.ownerName}
         phone={managed?.contactPhone}
         email={managed?.contactEmail}
-        onPhoneSaved={async (phone, email, name) => {
+        onPhoneSaved={async (phone, email, name, source) => {
           if (lead) {
-            await saveResidentContact(lead, phone, email, name)
+            await saveResidentContact(lead, phone, email, name, source ?? 'unknown')
           } else if (managed) {
-            await saveResidentContact(managed, phone, email, name)
+            await saveResidentContact(managed, phone, email, name, source ?? 'unknown')
           }
           onPhoneSaved?.()
         }}
