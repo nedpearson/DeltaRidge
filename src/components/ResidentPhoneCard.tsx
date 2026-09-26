@@ -60,7 +60,7 @@ export default function ResidentPhoneCard({
     return () => {
       active = false
     }
-  }, [address, autoEnrich, city, ownerName, phone, state, zip, onPhoneSaved, loading])
+  }, [address, autoEnrich, city, ownerName, phone, state, zip, onPhoneSaved])
 
   const freeSearchUrl = buildFreeSearchUrl(address, city, state, zip)
   const tpsUrl = buildTruePeopleSearchUrl(address, city, state, zip)
