@@ -1,0 +1,134 @@
+name: Deploy production backend
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_functions:
+        description: Deploy Edge Functions after migrations
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: delta-ridge-production
+  cancel-in-progress: false
+
+jobs:
+  verify-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      EAGLEVIEW_CLIENT_ID: ${{ secrets.EAGLEVIEW_CLIENT_ID }}
+      EAGLEVIEW_CLIENT_SECRET: ${{ secrets.EAGLEVIEW_CLIENT_SECRET }}
+      EAGLEVIEW_ENV: production
+      EAGLEVIEW_WMTS_TILE_URL_TEMPLATE: ${{ secrets.EAGLEVIEW_WMTS_TILE_URL_TEMPLATE }}
+      EAGLEVIEW_WMTS_TILE_SIZE: ${{ secrets.EAGLEVIEW_WMTS_TILE_SIZE }}
+      EAGLEVIEW_WMTS_MIN_ZOOM: ${{ secrets.EAGLEVIEW_WMTS_MIN_ZOOM }}
+      EAGLEVIEW_WMTS_MAX_ZOOM: ${{ secrets.EAGLEVIEW_WMTS_MAX_ZOOM }}
+      ZAPIER_ROOFR_HOOK_URL: ${{ secrets.ZAPIER_ROOFR_HOOK_URL }}
+      BATCHDATA_API_KEY: ${{ secrets.BATCHDATA_API_KEY }}
+      REALESTATE_API_KEY: ${{ secrets.REALESTATE_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Validate required deployment secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF EAGLEVIEW_CLIENT_ID EAGLEVIEW_CLIENT_SECRET EAGLEVIEW_WMTS_TILE_URL_TEMPLATE; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing required production secret: $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link production project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply database migrations
+        run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Set Edge Function secrets
+        if: ${{ inputs.deploy_functions }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase secrets set             EAGLEVIEW_CLIENT_ID="$EAGLEVIEW_CLIENT_ID"             EAGLEVIEW_CLIENT_SECRET="$EAGLEVIEW_CLIENT_SECRET"             EAGLEVIEW_ENV=production             EAGLEVIEW_WMTS_TILE_URL_TEMPLATE="$EAGLEVIEW_WMTS_TILE_URL_TEMPLATE"             EAGLEVIEW_WMTS_TILE_SIZE="${EAGLEVIEW_WMTS_TILE_SIZE:-256}"             EAGLEVIEW_WMTS_MIN_ZOOM="${EAGLEVIEW_WMTS_MIN_ZOOM:-1}"             EAGLEVIEW_WMTS_MAX_ZOOM="${EAGLEVIEW_WMTS_MAX_ZOOM:-22}"
+          if [ -n "${ZAPIER_ROOFR_HOOK_URL:-}" ]; then
+            supabase secrets set ZAPIER_ROOFR_HOOK_URL="$ZAPIER_ROOFR_HOOK_URL"
+          fi
+          if [ -n "${BATCHDATA_API_KEY:-}" ]; then
+            supabase secrets set BATCHDATA_API_KEY="$BATCHDATA_API_KEY"
+          fi
+          if [ -n "${REALESTATE_API_KEY:-}" ]; then
+            supabase secrets set REALESTATE_API_KEY="$REALESTATE_API_KEY"
+          fi
+
+      - name: Deploy Edge Functions
+        if: ${{ inputs.deploy_functions }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for fn in eagleview-imagery eagleview-map-tile lookup-contact lookup-property roofr-events roofr-push; do
+            echo "Deploying $fn"
+            supabase functions deploy "$fn" --project-ref "$SUPABASE_PROJECT_REF"
+          done
+
+      - name: Security smoke - functions reject anonymous calls
+        if: ${{ inputs.deploy_functions }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1"
+          for fn in eagleview-imagery eagleview-map-tile lookup-contact roofr-push; do
+            code=$(curl -sS -o /tmp/"$fn".out -w "%{http_code}" -X POST               -H "content-type: application/json"               -d '{}'               "$base/$fn")
+            if [ "$code" != "401" ]; then
+              echo "::error::$fn anonymous security smoke returned HTTP $code, expected 401"
+              cat /tmp/"$fn".out
+              exit 1
+            fi
+          done
+
+      - name: Deployment summary
+        run: |
+          echo "Backend migrations and configured Edge Functions deployed."
+          echo "This workflow does not certify browser geolocation, Mapbox rendering, provider entitlements, or two-device sync."
+          echo "Run docs/PRODUCTION_RELEASE_CERTIFICATION.md before declaring the release live."

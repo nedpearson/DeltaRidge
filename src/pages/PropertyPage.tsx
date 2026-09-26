@@ -180,10 +180,9 @@ export default function PropertyPage() {
             ownerName={lead.parcel?.ownerName}
             phone={managed?.contactPhone}
             email={managed?.contactEmail}
-            onPhoneSaved={async (phone, email, name) => {
-              // Ensure we save the phone number to the lead record.
-              // If it's managed, update it. If not, saveResidentContact will promote it.
-              await saveResidentContact(managed || lead, phone, email, name)
+            onPhoneSaved={async (phone, email, name, source) => {
+              // Preserve provenance. A number from a lookup is not homeowner permission.
+              await saveResidentContact(managed || lead, phone, email, name, source ?? 'unknown')
               void findByAddress(addressKey).then(setManaged)
             }}
           />

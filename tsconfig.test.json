@@ -12,7 +12,7 @@
   "compilerOptions": {
     "composite": true,
     "tsBuildInfoFile": "./tsconfig.test.tsbuildinfo",
-    "types": ["vite/client", "vite-plugin-pwa/client", "vitest/globals"]
+    "types": ["vite/client", "vite-plugin-pwa/client", "vitest/globals", "node"]
   },
   /*
    * The Edge Functions' PURE modules are typechecked here too.

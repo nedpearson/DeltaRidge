@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import { useSession } from '@/features/auth/session'
 import { readCachedRun } from '@/features/leads/engine'
@@ -37,6 +38,7 @@ import SettingsTab from '@/features/manager/tabs/SettingsTab'
 import RoofrTab from '@/features/integrations/roofr/RoofrTab'
 import ContactProviderTab from '@/features/contacts/ContactProviderTab'
 import HealthTab from '@/features/integrations/health/HealthTab'
+import LeadEconomicsTab from '@/features/manager/tabs/LeadEconomicsTab'
 import { readGradingConfig } from '@/features/manager/grade-store'
 import { DEFAULT_CONFIG, type GradingConfig } from '@/features/manager/grading'
 import { DEFAULT_WINDOW_DAYS } from '@/features/manager/read'
@@ -75,6 +77,7 @@ type Tab =
   | 'routes'
   | 'campaigns'
   | 'performance'
+  | 'economics'
   | 'grades'
   | 'leads'
   | 'territory'
@@ -90,6 +93,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'routes', label: 'Routes' },
   { id: 'campaigns', label: 'Campaigns' },
   { id: 'performance', label: 'Performance' },
+  { id: 'economics', label: 'Lead economics' },
   { id: 'grades', label: 'Grades' },
   { id: 'leads', label: 'Assign' },
   { id: 'territory', label: 'Territory' },
@@ -130,6 +134,7 @@ function Nothing({ title, body }: { title: string; body: string }) {
 }
 
 export default function ManagerPage() {
+  const navigate = useNavigate()
   const { session, membership } = useSession()
   const [tab, setTab] = useState<Tab>('team')
   const [snapshot, setSnapshot] = useState<ManagerSnapshot>(EMPTY_SNAPSHOT)
@@ -329,6 +334,13 @@ export default function ManagerPage() {
           nameOf={nameOf}
           windowFrom={windowFrom}
           windowTo={windowTo}
+        />
+      )}
+
+      {tab === 'economics' && (
+        <LeadEconomicsTab
+          organizationId={orgId}
+          onOpenLead={(leadClientId) => navigate(`/lead/${leadClientId}`)}
         />
       )}
 

@@ -1,6 +1,6 @@
 import { getSupabase } from '@/lib/supabase'
 import { findByAddress, promote, saveLead } from './lead-store'
-import type { ManagedLead } from './pipeline'
+import type { ContactSource, ManagedLead } from './pipeline'
 import type { ScoredLead } from './scoring'
 
 export interface EnrichedContact {
@@ -11,7 +11,7 @@ export interface EnrichedContact {
   readonly phoneType?: 'Wireless' | 'Landline' | 'Unknown' | undefined
   readonly carrier?: string | null | undefined
   readonly secondaryPhones?: Array<{ phone: string; type: string; carrier?: string }> | undefined
-  readonly source?: 'public_record' | 'third_party_lookup' | undefined
+  readonly source?: ContactSource | undefined
   readonly searchUrl?: string | undefined
 }
 
@@ -92,7 +92,8 @@ export async function saveResidentContact(
   lead: ScoredLead | ManagedLead,
   phone?: string | null | undefined,
   email?: string | null | undefined,
-  name?: string | null | undefined
+  name?: string | null | undefined,
+  source: ContactSource = 'third_party_lookup',
 ): Promise<ManagedLead> {
   const addressKey = lead.addressKey
   let record = await findByAddress(addressKey)
@@ -111,7 +112,7 @@ export async function saveResidentContact(
     ...(phone?.trim() ? { contactPhone: phone.trim() } : {}),
     ...(email?.trim() ? { contactEmail: email.trim() } : {}),
     ...(name?.trim() ? { contactName: name.trim() } : {}),
-    contactSource: 'third_party_lookup',
+    ...(phone?.trim() ? { contactSource: source } : {}),
     updatedAt: now,
   }
 

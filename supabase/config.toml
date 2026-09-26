@@ -28,3 +28,11 @@ verify_jwt = true
 
 [functions.eagleview-imagery]
 verify_jwt = true
+
+[functions.roofr-push]
+verify_jwt = true
+
+
+
+[functions.eagleview-map-tile]
+verify_jwt = true

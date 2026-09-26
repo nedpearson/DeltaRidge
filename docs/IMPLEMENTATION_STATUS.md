@@ -16,8 +16,7 @@ React 19 + TypeScript (strict, with `noUncheckedIndexedAccess` and
 `exactOptionalPropertyTypes`) + Vite 6 + Tailwind 4 + PWA via `vite-plugin-pwa`.
 ESLint 9 flat config, Vitest. **Verified:** `npm run typecheck`, `npm run lint`,
 `npm test` (60 tests) and `npm run build` all clean; bundle 616KB JS
-(177KB gzip). The 370KB figure previously recorded here predated Mapbox being
-pulled into the graph and was stale, not a regression.
+(177KB gzip) in that historical build. The mapping stack has since been moved to EagleView-backed imagery; current bundle size is verified by CI on each change.
 
 ### Brand tokens
 Extracted from the real logo at delta-ridge.com rather than invented: steel navy
@@ -145,7 +144,7 @@ then widen.
 | Office review screen | The office can read the row; there is no UI built for them |
 | Voice transcript structuring | Audio is captured, stored and uploaded; nothing transcribes it |
 | AI provider implementations | Interface shape settled by the schema; adapters unwritten |
-| Map, pins, filters, PostGIS queries | Needs a Mapbox token |
+| EagleView map tiles, pins, filters, PostGIS queries | EagleView WMTS production entitlement must be proven with a real tile request |
 | CompanyCam push + sync worker | Needs plan confirmation (Pro/Premium/Elite) |
 | Roofr inbound webhook | |
 | Dashboards, routing, scoring | Deliberately last — scoring needs outcome data first |

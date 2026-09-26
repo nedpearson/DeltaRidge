@@ -5,7 +5,7 @@ import { z } from 'zod'
  *
  * Deliberate design choice: this schema treats almost every integration
  * credential as OPTIONAL. The app must boot and be useful in the field with
- * nothing but a Supabase URL and key. A missing Mapbox token degrades the map;
+ * nothing but a Supabase URL and key. A missing EagleView entitlement degrades imagery;
  * a missing AI key degrades photo assist; a missing CompanyCam token degrades
  * the handoff to PDF. None of them may prevent a rep from documenting a roof.
  */
@@ -13,7 +13,6 @@ const envSchema = z.object({
   VITE_SUPABASE_URL: z.string().url('VITE_SUPABASE_URL must be a full URL'),
   VITE_SUPABASE_ANON_KEY: z.string().min(20, 'VITE_SUPABASE_ANON_KEY looks malformed'),
 
-  VITE_MAPBOX_PUBLIC_TOKEN: z.string().optional(),
   VITE_STORM_PROVIDER: z.enum(['noaa', 'hailtrace', 'none']).default('noaa'),
   /**
    * Radar-estimated hail, alongside ground reports rather than instead of them.
@@ -40,7 +39,6 @@ function assertNoServerSecrets(raw: Record<string, unknown>): void {
     'VITE_HAILTRACE_API_KEY',
     'VITE_COMPANYCAM_API_TOKEN',
     'VITE_AI_API_KEY',
-    'VITE_MAPBOX_SECRET_TOKEN',
     'VITE_ROOFR_WEBHOOK_SECRET',
     'VITE_EAGLEVIEW_CLIENT_ID',
     'VITE_EAGLEVIEW_CLIENT_SECRET',

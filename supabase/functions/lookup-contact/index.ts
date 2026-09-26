@@ -43,7 +43,13 @@ interface ContactResult {
   carrier: string | null
   secondaryPhones: Array<{ phone: string; type: string; carrier?: string }>
   email?: string | null
-  source: 'public_record' | 'third_party_lookup'
+  source:
+    | 'homeowner_at_door'
+    | 'homeowner_by_phone'
+    | 'homeowner_in_writing'
+    | 'public_record'
+    | 'third_party_lookup'
+    | 'unknown'
 }
 
 /**
@@ -237,6 +243,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: 'Unauthorized: Invalid token' }, 401)
   }
 
+  const { data: membership, error: membershipError } = await supabaseClient
+    .from('organization_members')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle()
+
+  if (membershipError || !membership?.organization_id) {
+    return json({ error: 'Forbidden: active organization membership required' }, 403)
+  }
+  const organizationId = membership.organization_id as string
+
   let body: Record<string, unknown>
   try {
     body = (await req.json()) as Record<string, unknown>
@@ -254,27 +273,59 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    // 1. Check Supabase CRM database cache first
+    // 1. Check this organisation's own CRM first.
+    // Leads do not carry address/contact columns directly; they point to
+    // properties and customers. Resolve those relations explicitly and keep
+    // the organisation filter on every service-role read.
     if (SUPABASE_URL && SERVICE_ROLE_KEY) {
       const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
-      const { data: cached } = await db
-        .from('leads')
-        .select('contact_name, contact_phone')
+      const { data: property } = await db
+        .from('properties')
+        .select('id')
+        .eq('organization_id', organizationId)
         .ilike('address_line1', street)
-        .not('contact_phone', 'is', null)
+        .is('deleted_at', null)
         .limit(1)
         .maybeSingle()
 
-      if (cached?.contact_phone) {
-        return json({
-          success: true,
-          residentName: cached.contact_name ?? null,
-          phone: cleanPhone(cached.contact_phone),
-          phoneType: 'Wireless',
-          carrier: null,
-          secondaryPhones: [],
-          source: 'public_record',
-        })
+      if (property?.id) {
+        const { data: lead } = await db
+          .from('leads')
+          .select('customer_id')
+          .eq('organization_id', organizationId)
+          .eq('property_id', property.id)
+          .not('customer_id', 'is', null)
+          .is('deleted_at', null)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (lead?.customer_id) {
+          const { data: customer } = await db
+            .from('customers')
+            .select('first_name, last_name, company_name, primary_phone, email, phone_source')
+            .eq('organization_id', organizationId)
+            .eq('id', lead.customer_id)
+            .is('deleted_at', null)
+            .maybeSingle()
+
+          if (customer?.primary_phone || customer?.email) {
+            const residentName =
+              customer.company_name ||
+              [customer.first_name, customer.last_name].filter(Boolean).join(' ').trim() ||
+              null
+            return json({
+              success: true,
+              residentName,
+              phone: customer.primary_phone ? cleanPhone(customer.primary_phone) : null,
+              email: customer.email ?? null,
+              phoneType: 'Unknown',
+              carrier: null,
+              secondaryPhones: [],
+              source: customer.phone_source ?? 'unknown',
+            })
+          }
+        }
       }
     }
 
