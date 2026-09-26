@@ -31,6 +31,7 @@ export default function ResidentPhoneCard({
   const [email, setEmail] = useState<string | null | undefined>(initialEmail)
   const [resident, setResident] = useState<string | null | undefined>(ownerName)
   const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [inputPhone, setInputPhone] = useState('')
 
@@ -41,7 +42,7 @@ export default function ResidentPhoneCard({
 
   useEffect(() => {
     let active = true
-    if (!phone && !email && autoEnrich && address && !loading) {
+    if (!phone && !email && autoEnrich && address && !loading && !errorMsg) {
       setLoading(true)
       void lookupResidentContact({
         street: address,
@@ -57,6 +58,8 @@ export default function ResidentPhoneCard({
           if (result.email) setEmail(result.email)
           if (result.residentName) setResident(result.residentName)
           onPhoneSaved?.(result.phone, result.email, result.residentName || ownerName || undefined)
+        } else if (!result.success && result.message) {
+          setErrorMsg(result.message)
         }
       }).catch(() => {
         if (active) setLoading(false)
@@ -137,27 +140,16 @@ export default function ResidentPhoneCard({
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="text-[11.5px] font-medium text-text-secondary">
-              {loading
-                ? '⚡ Auto-enriching phone number…'
-                : (resident || ownerName)
+              {loading ? '⚡ Auto-enriching phone number...' : errorMsg ? 'Skip-Tracing Failed' : (resident || ownerName)
                   ? `Phone for ${resident || ownerName}`
                   : 'Homeowner Phone Number'}
             </p>
             <p className="text-[10.5px] text-text-muted">
-              {loading ? 'Querying skip-trace records…' : 'Automated skip-trace & reverse directory'}
+              {loading ? 'Querying skip-trace records...' : errorMsg ? (<span className="text-status-critical">{errorMsg}</span>) : 'Automated skip-trace & reverse directory'}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
-            <a
-              href={freeSearchUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="contents"
-            >
-              <Button variant="secondary" className="!px-2.5 !py-1 text-[11px]">
-                🔍 Look Up
-              </Button>
-            </a>
+            {!errorMsg && (<a href={freeSearchUrl} target="_blank" rel="noreferrer" className="contents"><Button variant="secondary" className="!px-2.5 !py-1 text-[11px]">🔍 Look Up</Button></a>)}
             <Button
               variant="secondary"
               onClick={() => setEditing(true)}

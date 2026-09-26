@@ -434,16 +434,25 @@ function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
         window, so a blocked number simply does not offer the button and the
         reason waits on the lead screen.
       */}
-      {callable !== null && (
-        <div className="mt-3 flex items-center gap-2">
-          <a href={`tel:${callable}`} className="contents">
-            <Button variant="secondary">Call</Button>
-          </a>
-          <a href={`sms:${callable}`} className="contents">
-            <Button variant="secondary">Text</Button>
-          </a>
-        </div>
-      )}
+      {(callable !== null || lead.contactEmail) && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {callable !== null && (
+              <>
+                <a href={`tel:${callable}`} className="contents">
+                  <Button variant="secondary">Call</Button>
+                </a>
+                <a href={`sms:${callable}`} className="contents">
+                  <Button variant="secondary">Text</Button>
+                </a>
+              </>
+            )}
+            {lead.contactEmail && (
+              <a href={`mailto:${lead.contactEmail}`} className="contents">
+                <Button variant="secondary">Email</Button>
+              </a>
+            )}
+          </div>
+        )}
 
       <div className="mt-2 grid grid-cols-2 gap-2">
         <a

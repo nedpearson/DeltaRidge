@@ -168,6 +168,7 @@ export default function LeadMapLive({
           positionOptions: { enableHighAccuracy: true },
           trackUserLocation: true,
           showUserHeading: true,
+          showAccuracyCircle: false,
         }),
         'bottom-right',
       )

@@ -26,7 +26,7 @@ function json(body: unknown, status = 200): Response {
 }
 
 function cleanPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, '')
+  const digits = raw.replace(/D/g, '')
   if (digits.length === 10) {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
   }
@@ -49,14 +49,13 @@ interface ContactResult {
 /**
  * Commercial Skip-Tracing API Lookup via BatchData.
  */
-async function lookupBatchData(
-  street: string,
-  city: string,
-  state: string,
-  zip: string,
-  apiKey: string
-): Promise<ContactResult | null> {
-  try {
+  async function lookupBatchData(
+    street: string,
+    city: string,
+    state: string,
+    zip: string,
+    apiKey: string
+  ): Promise<ContactResult | null> {
     const res = await fetch('https://api.batchdata.com/api/v1/property/skip-trace', {
       method: 'POST',
       headers: {
@@ -78,7 +77,10 @@ async function lookupBatchData(
       signal: AbortSignal.timeout(8000),
     })
 
-    if (!res.ok) return null
+    if (!res.ok) {
+      const errText = await res.text()
+      throw new Error(`BatchData Error ${res.status}: ${errText}`)
+    }
     const data = await res.json()
     const persons =
       data?.results?.persons ||
@@ -93,7 +95,7 @@ async function lookupBatchData(
     const residentName = `${match.name?.first ?? ''} ${match.name?.last ?? ''}`.trim() || null
     const rawPhones = match.phoneNumbers || match.phones || []
     const phones = (Array.isArray(rawPhones) ? rawPhones : []).map((p: Record<string, unknown>) => ({
-      phone: cleanPhone(String(p.number || p.phone || '')),
+      phone: String(p.number || p.phone || ''),
       type: String(p.type ?? 'Unknown').toLowerCase().includes('mobile') ? 'Wireless' : 'Landline',
       carrier: String(p.carrier ?? ''),
     })).filter((p: { phone: string }) => p.phone.length >= 10)
@@ -112,10 +114,7 @@ async function lookupBatchData(
       email,
       source: 'third_party_lookup',
     }
-  } catch {
-    return null
   }
-}
 
 /**
  * Property details / owner lookup via BatchData Property Search API.
@@ -221,25 +220,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
 
-  // Security Vulnerability Fix: Require Supabase Auth JWT
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader) {
-    return json({ error: 'Unauthorized: Missing Authorization header' }, 401)
-  }
-
-  const supabaseClient = createClient(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  })
-
-  const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
-
-  if (authError || !user) {
-    return json({ error: 'Unauthorized: Invalid token' }, 401)
-  }
-
   let body: Record<string, unknown>
   try {
     body = (await req.json()) as Record<string, unknown>
+    if (body.action === 'balance' && BATCHDATA_API_KEY) {
+      const res = await fetch('https://api.batchdata.com/api/v1/user/balance', {
+        headers: { 'Authorization': `Bearer ${BATCHDATA_API_KEY}` }
+      })
+      const data = await res.text()
+      return json({ balance: data })
+    }
   } catch {
     return json({ error: 'invalid json' }, 400)
   }
@@ -300,11 +290,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
       success: false,
       residentName: ownerFromBatch,
       configuredProvider: BATCHDATA_API_KEY ? 'batchdata' : REALESTATE_API_KEY ? 'realestateapi' : 'none',
-      message: 'No phone number found yet for this property. Configure an automated skip-tracing API key in Supabase secrets for 85%+ auto-match rate.',
+      message: 'No phone number found yet for this property. If using BatchData, make sure you have sufficient balance.',
       searchUrl: `https://www.fastpeoplesearch.com/address/${street.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')}_${city.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${state.toLowerCase()}-${zip}`,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Lookup failed'
+    // If it's a BatchData API error, return it gracefully so the UI shows the exact error instead of failing silently.
+    if (message.includes('BatchData Error')) {
+      return json({
+        success: false,
+        configuredProvider: 'batchdata',
+        message: message
+      }, 200)
+    }
     return json({ error: message }, 500)
   }
 })
