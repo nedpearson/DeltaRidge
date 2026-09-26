@@ -24,7 +24,10 @@ select
   l.assigned_to,
   l.status,
   l.lead_source_id,
+  ls.name as lead_source_name,
+  ls.category as lead_source_category,
   l.campaign_id,
+  c.name as campaign_name,
   l.opportunity_score,
   l.intent_score,
   l.contactability_score,
@@ -87,6 +90,10 @@ select
   end as funnel_stage
 
 from leads l
+left join lead_sources ls
+  on ls.id = l.lead_source_id
+left join campaigns c
+  on c.id = l.campaign_id
 left join roofr_links rl
   on rl.lead_id = l.id
 left join lateral (
