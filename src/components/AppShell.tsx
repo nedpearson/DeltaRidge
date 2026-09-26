@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { outboxCount } from '@/lib/db'
 import { UniversalSearch } from './UniversalSearch'
+import NotificationCenter from './NotificationCenter'
 
 export const NAV = [
   { to: '/', label: 'Today', icon: 'home' },
@@ -153,6 +154,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-3">
             <UniversalSearch />
+              <NotificationCenter />
             <OnlinePill />
           </div>
         </div>
