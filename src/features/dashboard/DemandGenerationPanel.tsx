@@ -39,7 +39,7 @@ export function DemandGenerationPanel({ organizationId }: { organizationId: stri
         </div>
       </Card>
 
-      <Card className="p-4 border border-border-subtle bg-bg-app opacity-75">
+      <Card className="p-4 border border-border-subtle bg-bg-app">
         <div className="flex justify-between items-start">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -50,11 +50,12 @@ export function DemandGenerationPanel({ organizationId }: { organizationId: stri
               Trigger "Neighborhood Blast" postcards to properties immediately surrounding a newly won contract or a severe storm cell.
             </p>
           </div>
-          <Button variant="secondary" disabled className="text-[11px]">Coming Soon</Button>
+          <span className="inline-block px-2 py-0.5 bg-status-success/20 text-status-success text-[10px] font-bold uppercase rounded-sm">Active</span>
         </div>
       </Card>
     </div>
   )
 }
+
 
 
