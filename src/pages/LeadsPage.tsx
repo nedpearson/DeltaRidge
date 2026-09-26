@@ -42,6 +42,7 @@ import {
   type Route,
 } from '@/features/leads/routes'
 import type { ScoredLead } from '@/features/leads/scoring'
+import { intelligenceFor, INTELLIGENCE_LEVEL_LABEL } from '@/features/leads/lead-intelligence'
 import { WINDOW_OPTIONS, type StormWindowKey } from '@/features/leads/window'
 import { bboxAround, type SearchCenter } from '@/features/leads/search-area'
 import type { StormEvent } from '@/integrations/storm'
@@ -114,8 +115,8 @@ function shortDate(iso: string): string {
 }
 
 function tone(score: number): string {
-  if (score >= 60) return 'text-status-success'
-  if (score >= 40) return 'text-gold-400'
+  if (score >= 60) return 'text-brand-primary'
+  if (score >= 40) return 'text-brand-gold'
   return 'text-text-secondary'
 }
 
@@ -139,6 +140,7 @@ function DoorCard({
   const [open, setOpen] = useState(false)
   const [roofOpen, setRoofOpen] = useState(false)
   const parcel = lead.parcel
+  const intel = intelligenceFor(lead, managed)
 
   return (
     <Card>
@@ -165,6 +167,24 @@ function DoorCard({
       </div>
 
       <OwnerLine parcel={parcel} />
+
+      <div className="mt-2 grid grid-cols-3 gap-1.5">
+        <div className="rounded-xl bg-bg-page px-2 py-2 text-center ring-1 ring-border-subtle">
+          <p className="font-display text-[16px] leading-none text-brand-gold">{intel.propertyOpportunity}</p>
+          <p className="mt-1 text-[9px] uppercase tracking-wider text-text-muted">Opportunity</p>
+        </div>
+        <div className="rounded-xl bg-bg-page px-2 py-2 text-center ring-1 ring-border-subtle">
+          <p className="font-display text-[16px] leading-none text-status-ai">{intel.intent}</p>
+          <p className="mt-1 text-[9px] uppercase tracking-wider text-text-muted">Intent</p>
+        </div>
+        <div className="rounded-xl bg-bg-page px-2 py-2 text-center ring-1 ring-border-subtle">
+          <p className="font-display text-[16px] leading-none text-route-live">{intel.contactability}</p>
+          <p className="mt-1 text-[9px] uppercase tracking-wider text-text-muted">Contact</p>
+        </div>
+      </div>
+      <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+        {INTELLIGENCE_LEVEL_LABEL[intel.level]}
+      </p>
 
       <ResidentPhoneCard
         address={lead.address}
@@ -227,7 +247,7 @@ function DoorCard({
         onClick={() => setOpen((v) => !v)}
         className="mt-2 w-full !min-h-0 py-1 text-[11px] text-text-secondary"
       >
-        {open ? 'Hide how this ranked' : 'How this ranked'}
+        {open ? 'Hide why this house' : 'Why this house / show proof'}
       </button>
       {open && <ScoreBreakdown lead={lead} />}
     </Card>
@@ -375,6 +395,26 @@ function ScoreBreakdown({ lead }: { lead: ScoredLead }) {
         Weights are hand-set, not learned. This ranks documentation-worthy opportunity, not the
         chance of a sale — there is no closed-won history in this system yet to learn one from.
       </p>
+
+      <div className="mt-2 border-t border-border-subtle pt-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Proof</p>
+        <ul className="mt-1.5 space-y-1 text-[11px] leading-relaxed text-text-secondary">
+          <li>
+            Storm: {lead.storm.provider.toUpperCase()} · {lead.storm.observation === 'radar_estimate' ? 'radar estimate' : 'official report'} · {shortDate(lead.storm.occurredAt)}
+          </li>
+          <li>
+            Roof age basis: {lead.roofPermit.provider.toUpperCase()} permit · {shortDate(lead.roofPermit.issuedAt)}
+          </li>
+          {lead.parcel && (
+            <li>
+              Owner/property basis: {lead.parcel.provider.toUpperCase()} assessor record · retrieved {shortDate(lead.parcel.retrievedAt)}
+            </li>
+          )}
+        </ul>
+        <p className="mt-1.5 text-[10px] leading-relaxed text-text-muted">
+          Nearby storm evidence is not proof that hail struck this specific roof. Current condition still requires suitable imagery or inspection evidence.
+        </p>
+      </div>
     </div>
   )
 }
