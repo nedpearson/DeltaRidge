@@ -34,10 +34,18 @@ export async function lookupResidentContact(params: {
   zip?: string | undefined
   ownerName?: string | null | undefined
 }): Promise<EnrichedContact> {
-  const street = params.street.trim()
+  let street = params.street.trim()
   const city = params.city || 'Baton Rouge'
   const state = params.state || 'LA'
   const zip = params.zip || '70810'
+
+  // If the street parameter contains the full address, strip the city/state/zip
+  const cityStateZip = `${city} ${state} ${zip}`.toLowerCase()
+  if (street.toLowerCase().endsWith(cityStateZip)) {
+    street = street.slice(0, -(cityStateZip.length)).trim()
+  } else if (street.toLowerCase().endsWith(`${state} ${zip}`.toLowerCase())) {
+    street = street.slice(0, -(`${state} ${zip}`.length)).trim()
+  }
 
   try {
     const supabase = getSupabase()
