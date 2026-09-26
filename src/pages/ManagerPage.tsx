@@ -329,6 +329,7 @@ export default function ManagerPage() {
           nameOf={nameOf}
           windowFrom={windowFrom}
           windowTo={windowTo}
+          organizationId={orgId}
         />
       )}
 
