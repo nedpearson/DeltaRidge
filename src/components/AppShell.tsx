@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { outboxCount } from '@/lib/db'
+import { UniversalSearch } from './UniversalSearch'
 
 export const NAV = [
   { to: '/', label: 'Today', icon: 'home' },
@@ -150,7 +151,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <div className="mt-0.5 text-[10px] uppercase tracking-widest text-text-secondary">Field</div>
             </div>
           </div>
-          <OnlinePill />
+          <div className="flex items-center gap-3">
+            <UniversalSearch />
+            <OnlinePill />
+          </div>
         </div>
       </header>
 

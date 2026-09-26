@@ -164,14 +164,16 @@ export default function HealthTab({ organizationId }: { organizationId: string |
       // GRIB2. Radar-estimated hail itself IS running, from NCEI SWDI's NEXRAD
       // Level-III detections, which is keyless, CORS-open and needs no server.
       ['mrms', 'NOAA MRMS grids', 'Gridded MESH — not built; radar hail runs from NCEI SWDI'],
-      ['contacts', 'Contact data', 'Needs a business agreement — see Contact data'],
+      ['contacts', 'Contact Providers', 'Needs a business agreement — see Contact data'],
+      ['supabase', 'Supabase', 'Database and Auth integration'],
+      ['notifications', 'Notifications', 'Push notification delivery'],
     ] as const) {
       built.push({
         key,
         label,
         detail,
         health: assessHealth(
-          { configured: false, successes: 0, failures: 0, lastSuccessAt: null, lastFailureAt: null, expectedWithinHours: null },
+          { configured: key === 'supabase' && supabase !== null, successes: key === 'supabase' && supabase !== null ? 1 : 0, failures: 0, lastSuccessAt: null, lastFailureAt: null, expectedWithinHours: null },
           now,
         ),
       })
@@ -226,6 +228,14 @@ export default function HealthTab({ organizationId }: { organizationId: string |
                         Last success {ago(row.health.lastSuccessAt)}
                       </p>
                     )}
+                    {row.health.lastFailureAt !== null && (
+                      <p className="text-[11px] text-text-secondary mt-1">
+                        Last failure {ago(row.health.lastFailureAt)}
+                      </p>
+                    )}
+                    <button className="mt-2 text-[11px] uppercase tracking-wide font-semibold text-brand-gold bg-brand-gold/10 px-2 py-1 rounded">
+                        Retry
+                    </button>
                   </div>
                 </li>
               )

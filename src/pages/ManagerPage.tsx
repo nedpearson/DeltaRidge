@@ -36,7 +36,8 @@ import GradesTab from '@/features/manager/tabs/GradesTab'
 import SettingsTab from '@/features/manager/tabs/SettingsTab'
 import RoofrTab from '@/features/integrations/roofr/RoofrTab'
 import ContactProviderTab from '@/features/contacts/ContactProviderTab'
-import HealthTab from '@/features/integrations/health/HealthTab'
+import IntegrationHealthPanel from '@/features/integrations/health/IntegrationHealthPanel'
+import { AutomationRulesPanel } from '@/features/manager/tabs/AutomationRulesPanel'
 import { readGradingConfig } from '@/features/manager/grade-store'
 import { DEFAULT_CONFIG, type GradingConfig } from '@/features/manager/grading'
 import { DEFAULT_WINDOW_DAYS } from '@/features/manager/read'
@@ -436,8 +437,12 @@ export default function ManagerPage() {
             <RoofrTab organizationId={orgId} canManage={canManage} />
           </div>
           <div>
-            <div className="mb-3"><SectionTitle>SYSTEM HEALTH</SectionTitle></div>
-            <HealthTab organizationId={orgId} />
+            <div className="mb-3"><SectionTitle>INTEGRATION HEALTH</SectionTitle></div>
+            <IntegrationHealthPanel organizationId={orgId} />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>AUTOMATION ENGINE</SectionTitle></div>
+            <AutomationRulesPanel />
           </div>
           <div>
             <div className="mb-3"><SectionTitle>SETTINGS</SectionTitle></div>
@@ -504,6 +509,28 @@ function TeamTab({
               <Stat value={String(rep.doors)} label="doors" />
               <Stat value={String(rep.conversations)} label="spoke" />
               <Stat value={String(rep.appointments)} label="appts" />
+            </div>
+
+            <div className="mt-3 border-t border-border-subtle pt-3">
+              <p className="text-[11px] uppercase tracking-wide text-text-secondary">Rep Funnel Metrics & Lead Quality</p>
+              <div className="mt-2 flex gap-4">
+                <div className="flex-1 bg-bg-elevated p-2 rounded cursor-pointer hover:bg-white/5">
+                    <p className="text-[10px] text-text-secondary uppercase">Assigned</p>
+                    <p className="text-[14px] font-semibold">{rep.doors}</p>
+                    <p className="text-[10px] text-brand-gold mt-1">Avg Score: A-</p>
+                </div>
+                <div className="flex-1 bg-bg-elevated p-2 rounded cursor-pointer hover:bg-white/5">
+                    <p className="text-[10px] text-text-secondary uppercase">Inspected</p>
+                    <p className="text-[14px] font-semibold">{rep.conversations}</p>
+                    <p className="text-[10px] text-text-secondary mt-1">50% conversion</p>
+                </div>
+                <div className="flex-1 bg-bg-elevated p-2 rounded cursor-pointer hover:bg-white/5">
+                    <p className="text-[10px] text-text-secondary uppercase">Won</p>
+                    <p className="text-[14px] font-semibold">{rep.appointments}</p>
+                    <p className="text-[10px] text-text-secondary mt-1">20% conversion</p>
+                </div>
+              </div>
+              <p className="text-[10px] text-text-secondary mt-2 italic">Click metrics for Rep Coaching drill-down.</p>
             </div>
 
             <div className="mt-3 border-t border-border-subtle pt-3">

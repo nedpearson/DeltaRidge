@@ -43,8 +43,8 @@ This checklist tracks the implementation of the complete product architecture, U
 
 ## 6. Territory, Campaigns & Routing
 - [x] Manager Lead Assignment (Decision-support system)
-- [ ] Territory Intelligence (Opportunities vs Coverage)
-- [ ] Campaign Management (Geographic area, storm, progress, gross profit)
+- [x] Territory Intelligence (Opportunities vs Coverage)
+- [x] Campaign Management (Geographic area, storm, progress, gross profit)
 - [ ] Routing (Logical stop ordering, current location)
 
 ## 7. Scheduling, Inspections & Proposals
@@ -58,8 +58,8 @@ This checklist tracks the implementation of the complete product architecture, U
 - [ ] Next Best Action Engine (Explainable recommendations)
 - [ ] Manager Performance (Funnel metrics, lead quality context)
 - [ ] Rep Coaching (Drill-down to Lead 360)
-- [ ] Manager Daily Brief (Factual morning report)
-- [ ] Lead Economics (Gross profit per generated opportunity, source attribution)
+- [x] Manager Daily Brief (Factual morning report)
+- [x] Lead Economics (Gross profit per generated opportunity, source attribution)
 
 ## 9. Global Systems & UI/UX
 - [ ] Universal Search (Global Cmd/Ctrl + K search)
