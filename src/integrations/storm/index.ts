@@ -1,12 +1,14 @@
 import { NoaaStormProvider } from './noaa'
 import { HailTraceStormProvider } from './hailtrace'
 import { SwdiStormProvider } from './swdi'
+import { MrmsStormProvider } from './mrms'
 import type { ProviderAvailability, StormProvider } from './types'
 
 export * from './types'
 export { NoaaStormProvider } from './noaa'
 export { HailTraceStormProvider } from './hailtrace'
 export { SwdiStormProvider, SwdiTruncatedError } from './swdi'
+export { MrmsStormProvider } from './mrms'
 
 /** A provider that is switched off entirely. Still a valid configuration. */
 class DisabledStormProvider implements StormProvider {
@@ -26,7 +28,7 @@ class DisabledStormProvider implements StormProvider {
 }
 
 export function createStormProvider(
-  which: 'noaa' | 'hailtrace' | 'swdi' | 'none',
+  which: 'noaa' | 'hailtrace' | 'swdi' | 'mrms' | 'none',
   fetchImpl: typeof fetch = globalThis.fetch,
 ): StormProvider {
   switch (which) {
@@ -34,6 +36,8 @@ export function createStormProvider(
       return new HailTraceStormProvider()
     case 'swdi':
       return new SwdiStormProvider(fetchImpl)
+    case 'mrms':
+      return new MrmsStormProvider()
     case 'none':
       return new DisabledStormProvider()
     case 'noaa':
