@@ -1,4 +1,5 @@
-import { Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import AppShell from '@/components/AppShell'
 import UpdateBanner from '@/components/UpdateBanner'
 import HomePage from '@/pages/HomePage'
@@ -19,6 +20,7 @@ import MapPage from '@/pages/MapPage'
 import MorePage from '@/pages/MorePage'
 import { SessionProvider } from '@/features/auth/session'
 import { useSync } from '@/features/auth/useSync'
+import { trackEvent } from '@/lib/analytics'
 
 /** Mounted once so the outbox drains app-wide, wherever the rep happens to be. */
 function SyncRunner() {
@@ -26,16 +28,28 @@ function SyncRunner() {
   return null
 }
 
+function RouteAnalytics() {
+  const location = useLocation()
+  
+  useEffect(() => {
+    trackEvent('page_view', { path: location.pathname })
+  }, [location])
+
+  return null
+}
+
 export default function App() {
   return (
     <SessionProvider>
+      <RouteAnalytics />
       <SyncRunner />
       <UpdateBanner />
       <AppShell>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/leads" element={<LeadsPage />} />
-          <Route path="/lead/:id" element={<LeadPage />} />`r`n          <Route path="/evidence/:id" element={<EvidencePackagePage />} />
+          <Route path="/lead/:id" element={<LeadPage />} />
+          <Route path="/evidence/:id" element={<EvidencePackagePage />} />
           <Route path="/property/:addressKey" element={<PropertyPage />} />
           <Route path="/estimate" element={<EstimatePage />} />
           <Route path="/estimate/:id" element={<EstimatePage />} />
@@ -54,4 +68,3 @@ export default function App() {
     </SessionProvider>
   )
 }
-
