@@ -938,6 +938,20 @@ export default function LeadsPage() {
     if (here) void refresh(next)
   }
 
+  const searchRadiusMiles = settings.searchRadiusMiles ?? 3
+  const locationProblem =
+    locationState === 'permission_denied'
+      ? 'Location permission is blocked for this site. Allow Location in your browser/app settings, then try again.'
+      : locationState === 'unsupported'
+        ? 'This browser or device does not provide location services.'
+        : locationState === 'timeout'
+          ? 'Location took too long to respond. Move somewhere with a clearer GPS signal and try again.'
+          : locationState === 'unavailable'
+            ? 'The device could not determine your location. Check Location Services and GPS signal.'
+            : locationState === 'unknown'
+              ? 'Location is unavailable right now.'
+              : null
+
   return (
     <div>
       <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 text-text-primary p-5 ring-1 ring-border-subtle">
@@ -950,10 +964,21 @@ export default function LeadsPage() {
           variant="gold"
           full
           className="mt-4"
-          onClick={() => void refresh(settings)}
-          disabled={busy}
+          onClick={() => {
+            if (locationState === 'ready') void refresh(settings)
+            else void acquireLocation(true)
+          }}
+          disabled={busy || locationState === 'locating'}
         >
-          {busy ? 'Building the list…' : run ? 'Refresh the list' : 'Build the list'}
+          {busy
+            ? 'Building the list…'
+            : locationState === 'locating'
+              ? 'Finding your location…'
+              : locationState !== 'ready'
+                ? 'Enable location to find leads'
+                : run
+                  ? 'Refresh from my location'
+                  : 'Build leads around me'}
         </Button>
       </div>
 
@@ -1016,8 +1041,55 @@ export default function LeadsPage() {
         </>
       ) : (
         <>
-          <SectionTitle>FILTERS</SectionTitle>
-          <Card className="grid grid-cols-2 gap-3">
+          <SectionTitle hint="These filters apply around where you are standing now.">
+            SEARCH AROUND MY LOCATION
+          </SectionTitle>
+
+          {locationState === 'ready' && here ? (
+            <Card className="border border-route-border bg-route-surface">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-display text-[11px] uppercase tracking-widest text-route-live">
+                    ● USING CURRENT LOCATION
+                  </p>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-route-text-secondary">
+                    GPS center acquired · accuracy ±{Math.round(here.accuracyMeters)} m
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-route-text-secondary">
+                    Current search: within {searchRadiusMiles} mi · ≥{settings.minHailInches}" hail · {run?.window.label ?? 'selected storm window'} · roof ≥{new Date().getFullYear() - settings.builtBefore} yrs
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 text-[11px] font-semibold text-route-live underline decoration-route-live/30 underline-offset-2"
+                  onClick={() => void acquireLocation(true)}
+                >
+                  Refresh GPS
+                </button>
+              </div>
+            </Card>
+          ) : (
+            <Card className="border border-warning-border bg-bg-card">
+              <p className="font-display text-[11px] uppercase tracking-widest text-status-warning">
+                LOCATION REQUIRED
+              </p>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-text-secondary">
+                {locationProblem ??
+                  'Turn on Location Services to find qualifying hail and roof opportunities around where you are now.'}
+              </p>
+              <Button
+                variant="secondary"
+                full
+                className="mt-3"
+                disabled={locationState === 'locating'}
+                onClick={() => void acquireLocation(true)}
+              >
+                {locationState === 'locating' ? 'Finding location…' : 'Enable / retry location'}
+              </Button>
+            </Card>
+          )}
+
+          <Card className="mt-3 grid grid-cols-2 gap-3">
             <Field label="Minimum hail">
               <Select
                 value={String(settings.minHailInches)}
@@ -1029,10 +1101,11 @@ export default function LeadsPage() {
                 <option value="1.75">1.75" and up</option>
               </Select>
             </Field>
-            <Field label="Radius">
+            <Field label="Radius from me">
               <Select
-                value={String(settings.radiusMiles)}
-                onChange={(e) => patch({ radiusMiles: Number(e.target.value) })}
+                value={String(searchRadiusMiles)}
+                onChange={(e) => patch({ searchRadiusMiles: Number(e.target.value) })}
+                disabled={locationState !== 'ready'}
               >
                 <option value="1">1 mile</option>
                 <option value="2">2 miles</option>
