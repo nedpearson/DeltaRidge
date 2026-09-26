@@ -56,21 +56,14 @@ export interface StormCoverage {
 }
 
 /**
- * Kept because runs cached before radar existed carry this status, and because
- * it remains the truthful description of gridded MRMS MESH, which is still not
- * wired up: MRMS publishes GRIB2 on S3, a browser cannot decode it, and this
- * application has no server.
- *
- * What IS wired up is NOAA NCEI's SWDI `nx3hail` — the NEXRAD Level-III hail
- * detection algorithm, MEHS per storm cell, plain CSV, CORS-open, no key. It
- * answers the same question without the grid. See integrations/storm/swdi.ts.
+ * Kept for workspaces where radar is unavailable or deliberately disabled.
+ * Delta Ridge can use either NOAA MRMS MESH from the server-side GRIB2 worker
+ * or NOAA NCEI SWDI NEXRAD hail detections from the browser.
  */
 export const RADAR_NOT_CONFIGURED: SourceStatus = {
   kind: 'not_configured',
   why:
-    'Live radar-estimated hail (MRMS/MESH) is not configured. It needs server-side ' +
-    'processing of NOAA GRIB2 grids, which a browser cannot do. Only official ' +
-    'ground reports are being used.',
+    'Radar-estimated hail is not configured for this workspace. Only official ground reports are being used.',
 }
 
 /** Radar deliberately switched off for this workspace. Not a failure. */
@@ -78,7 +71,7 @@ export const RADAR_OFF: SourceStatus = {
   kind: 'not_configured',
   why:
     'Radar-estimated hail is turned off for this workspace, so only official ground ' +
-    'reports are being used. Set VITE_RADAR_HAIL=swdi to turn it on.',
+    'reports are being used. Configure VITE_RADAR_HAIL=mrms or swdi to turn it on.',
 }
 
 export function radarFailed(why: string): SourceStatus {
@@ -134,18 +127,26 @@ export function radarLive(
   events: readonly StormEvent[],
   minInches: number,
   corroborated: number,
+  source: 'mrms' | 'swdi' = 'swdi',
 ): SourceStatus {
   const times = events.map((e) => e.occurredAt).sort()
   const floor = `${minInches}"`
+  const sourceText =
+    source === 'mrms'
+      ? 'NOAA MRMS MESH Max 30-minute grid cells'
+      : 'NEXRAD Level-III hail detection (NOAA NCEI SWDI), one reading per place per day'
+  const limitation =
+    source === 'mrms'
+      ? 'MESH is a radar-derived estimate of maximum hail size; it is not a ground observation.'
+      : 'Radar estimates hail aloft and can over-predict it.'
+
   return {
     kind: 'live',
     newestAt: times[times.length - 1] ?? null,
     count: events.length,
     note:
-      `NEXRAD Level-III hail detection (NOAA NCEI SWDI), one reading per place per day at ` +
-      `${floor} or larger. ${corroborated} of ${events.length} have a ground report within ` +
-      '10 miles the same day. Radar estimates hail aloft and over-predicts it; the rest are ' +
-      'radar only and are labelled that way on the lead.',
+      `${sourceText} at ${floor} or larger. ${corroborated} of ${events.length} have a ground report ` +
+      `within 10 miles the same day. ${limitation} Radar-only records are labelled that way on the lead.`,
   }
 }
 

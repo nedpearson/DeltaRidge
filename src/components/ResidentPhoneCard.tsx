@@ -25,7 +25,12 @@ export default function ResidentPhoneCard({
   phone?: string | null | undefined
   email?: string | null | undefined
   autoEnrich?: boolean | undefined
-  onPhoneSaved?: ((phone?: string | null, email?: string | null, name?: string | undefined) => void) | undefined
+  onPhoneSaved?: ((
+    phone?: string | null,
+    email?: string | null,
+    name?: string | undefined,
+    source?: 'public_record' | 'third_party_lookup' | 'unknown',
+  ) => void) | undefined
 }) {
   const [phone, setPhone] = useState<string | null | undefined>(initialPhone)
   const [email, setEmail] = useState<string | null | undefined>(initialEmail)
@@ -56,7 +61,12 @@ export default function ResidentPhoneCard({
           if (result.phone) setPhone(result.phone)
           if (result.email) setEmail(result.email)
           if (result.residentName) setResident(result.residentName)
-          onPhoneSaved?.(result.phone, result.email, result.residentName || ownerName || undefined)
+          onPhoneSaved?.(
+            result.phone,
+            result.email,
+            result.residentName || ownerName || undefined,
+            result.source ?? 'third_party_lookup',
+          )
         }
       }).catch(() => {
         if (active) setLoading(false)
@@ -75,7 +85,7 @@ export default function ResidentPhoneCard({
     if (!inputPhone.trim()) return
     const num = inputPhone.trim()
     setPhone(num)
-    onPhoneSaved?.(num, email, resident || ownerName || undefined)
+    onPhoneSaved?.(num, email, resident || ownerName || undefined, 'unknown')
     setEditing(false)
   }
 
@@ -103,30 +113,14 @@ export default function ResidentPhoneCard({
               </p>
             )}
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {phone && (
-              <>
-                <a href={`tel:${phone.replace(/\D/g, '')}`} className="contents">
-                  <Button variant="gold" className="!px-3 !py-1 text-[12px]">
-                    Call
-                  </Button>
-                </a>
-                <a href={`sms:${phone.replace(/\D/g, '')}`} className="contents">
-                  <Button variant="secondary" className="!px-3 !py-1 text-[12px]">
-                    Text
-                  </Button>
-                </a>
-              </>
-            )}
-            {email && (
-              <a href={`mailto:${email}`} className="contents">
-                <Button variant="secondary" className="!px-3 !py-1 text-[12px]">
-                  Email
-                </Button>
-              </a>
-            )}
+          <div className="shrink-0 rounded-full bg-warning-surface px-2.5 py-1 text-[10px] font-medium text-warning-highlight ring-1 ring-warning-border">
+            VERIFY BEFORE CONTACT
           </div>
         </div>
+        <p className="text-[10.5px] leading-relaxed text-text-muted">
+          A lookup result is identity data, not permission to call, text or email. Confirm the
+          homeowner and use the compliance-gated actions in Lead 360.
+        </p>
       </div>
     )
   }

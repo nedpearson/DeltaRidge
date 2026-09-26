@@ -1,24 +1,28 @@
-create table campaigns (
+-- Compatibility migration for repositories that predate CRM core campaigns.
+-- CRM migration 0003 already creates the production campaigns table with
+-- organization ownership and a MultiPolygon geography. This migration must
+-- therefore be additive/idempotent rather than attempting to recreate the
+-- table with a conflicting schema.
+
+create table if not exists campaigns (
     id uuid primary key default gen_random_uuid(),
-    created_at timestamptz not null default now(),
+    organization_id uuid references organizations (id) on delete cascade,
     name text not null,
+    description text,
+    area geography(MultiPolygon, 4326),
+    starts_on date,
+    ends_on date,
     is_active boolean not null default true,
-    area geography(Geometry, 4326) not null
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    created_by uuid references auth.users (id) on delete set null
 );
+
+create index if not exists campaigns_area_gix on campaigns using gist (area);
+create index if not exists campaigns_org_active_compat
+  on campaigns (organization_id, is_active, created_at desc);
 
 alter table campaigns enable row level security;
 
-create policy "Managers can read campaigns"
-    on campaigns for select
-    to authenticated
-    using (true);
-
-create policy "Managers can insert campaigns"
-    on campaigns for insert
-    to authenticated
-    with check (true);
-
-create policy "Managers can update campaigns"
-    on campaigns for update
-    to authenticated
-    using (true);
+-- Do not create permissive USING(true) policies here. Tenant-scoped policies
+-- are installed by the following hardening migration.

@@ -15,6 +15,8 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm ci
+    - name: Production contract checks
+      run: node scripts/check-production-contracts.mjs
     - name: Typecheck
       run: npm run typecheck
     - name: Lint

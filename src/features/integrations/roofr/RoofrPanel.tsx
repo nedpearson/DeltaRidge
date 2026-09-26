@@ -46,7 +46,7 @@ export default function RoofrPanel({ leadId }: { leadId: string }) {
   const load = useCallback(async () => {
     setLoading(true)
     const [nextLink, nextSettings] = await Promise.all([
-      readLink(leadId),
+      organizationId === null ? Promise.resolve(null) : readLink(organizationId, leadId),
       organizationId === null ? Promise.resolve(null) : readSettings(organizationId),
     ])
     setLink(nextLink)
@@ -66,7 +66,12 @@ export default function RoofrPanel({ leadId }: { leadId: string }) {
     setBusy(true)
     setError(null)
     setMessage(null)
-    const result = await pushLeadToRoofr(leadId)
+    if (organizationId === null) {
+      setError('No organization is available for this account.')
+      setBusy(false)
+      return
+    }
+    const result = await pushLeadToRoofr(organizationId, leadId)
     if (result.ok) {
       setMessage(result.state)
       await load()

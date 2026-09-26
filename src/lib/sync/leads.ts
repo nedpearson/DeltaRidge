@@ -187,6 +187,43 @@ export async function pushLead(localId: string, orgId: string, userId: string): 
   const remoteId = data.id as string
   await setRemoteId('lead', localId, remoteId)
 
+  // Field-generated prospects are one acquisition source too. Attribution is
+  // written after the lead itself succeeds and is deliberately best-effort:
+  // a reporting table must never strand real field work in the outbox. The
+  // unique partial index makes retries one logical source event.
+  try {
+    const { data: existingSource } = await supabase
+      .from('lead_acquisition_events')
+      .select('id')
+      .eq('organization_id', orgId)
+      .eq('lead_id', remoteId)
+      .eq('source_channel', 'door')
+      .eq('event_type', 'lead_created')
+      .limit(1)
+      .maybeSingle()
+
+    if (!existingSource) {
+      const { error: sourceError } = await supabase.from('lead_acquisition_events').insert({
+        organization_id: orgId,
+        lead_id: remoteId,
+        lead_client_id: lead.id,
+        source_channel: 'door',
+        event_type: 'lead_created',
+        occurred_at: lead.createdAt,
+        created_by: userId,
+        metadata: { ingest: 'field-sync' },
+      })
+      if (sourceError && sourceError.code !== UNIQUE_VIOLATION) {
+        console.warn('lead attribution was not recorded', sourceError.message)
+      }
+    }
+  } catch (err) {
+    console.warn(
+      'lead attribution was not recorded',
+      err instanceof Error ? err.message : String(err),
+    )
+  }
+
   if (lead.appointmentAt) await pushAppointment(lead, propertyId, customerId, orgId, userId)
   return remoteId
 }

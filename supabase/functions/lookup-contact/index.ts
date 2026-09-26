@@ -84,6 +84,7 @@ async function lookupBatchData(
       data?.results?.persons ||
       data?.results?.properties?.[0]?.persons ||
       data?.results?.[0]?.persons ||
+      data?.results?.[0]?.owner?.persons ||
       data?.data?.results?.persons ||
       []
 
@@ -163,7 +164,7 @@ async function lookupRealEstateApi(
   apiKey: string
 ): Promise<ContactResult | null> {
   try {
-    const res = await fetch('https://api.realestateapi.com/v2/PropertySkipTrace', {
+    const res = await fetch('https://api.realestateapi.com/v2/SkipTrace', {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
@@ -180,19 +181,41 @@ async function lookupRealEstateApi(
 
     if (!res.ok) return null
     const data = await res.json()
-    const match = data?.data?.[0] || data?.data
+    // Current v2 response centers each matched person under a persons array.
+    // Keep a small compatibility fallback for accounts still returning the
+    // previous data wrapper during provider rollout.
+    const match =
+      data?.persons?.[0] ||
+      data?.data?.persons?.[0] ||
+      data?.data?.[0] ||
+      data?.data ||
+      null
     if (!match) return null
 
-    const residentName = match.ownerName || `${match.firstName ?? ''} ${match.lastName ?? ''}`.trim() || null
-    const rawPhones = match.phoneNumbers || match.phones || []
+    const residentName =
+      match.name ||
+      match.full_name ||
+      match.fullName ||
+      `${match.first_name ?? match.firstName ?? ''} ${match.last_name ?? match.lastName ?? ''}`.trim() ||
+      null
+    const rawPhones = match.phones || match.phoneNumbers || []
     const phones = (Array.isArray(rawPhones) ? rawPhones : []).map((p: Record<string, unknown> | string) => {
-      const num = typeof p === 'string' ? p : String(p.phone || p.number || '')
-      const type = typeof p === 'object' && String(p.type || '').toLowerCase().includes('mobile') ? 'Wireless' : 'Landline'
+      const num = typeof p === 'string' ? p : String(p.phone || p.number || p.value || '')
+      const rawType = typeof p === 'object' ? String(p.type || p.phone_type || '') : ''
+      const type = rawType.toLowerCase().includes('mobile') || rawType.toLowerCase().includes('wireless')
+        ? 'Wireless'
+        : rawType ? 'Landline' : 'Unknown'
       return { phone: cleanPhone(num), type }
-    }).filter(p => p.phone.length >= 10)
+    }).filter((p: { phone: string }) => p.phone.replace(/\D/g, '').length >= 10)
 
     const emails = match.emails || []
-    const email = emails.length > 0 ? String(emails[0]) : null
+    const firstEmail = Array.isArray(emails) ? emails[0] : null
+    const email =
+      typeof firstEmail === 'string'
+        ? firstEmail
+        : firstEmail && typeof firstEmail === 'object'
+          ? String(firstEmail.email || firstEmail.value || '')
+          : null
 
     if (phones.length === 0 && !email) return null
 
@@ -237,6 +260,41 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: 'Unauthorized: Invalid token' }, 401)
   }
 
+  const { data: membership, error: membershipError } = await supabaseClient
+    .from('organization_members')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle()
+
+  if (membershipError || !membership?.organization_id) {
+    return json({ error: 'No active organization membership' }, 403)
+  }
+  const organizationId = membership.organization_id as string
+  const db =
+    SUPABASE_URL && SERVICE_ROLE_KEY
+      ? createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+      : null
+  let lookupEventId: string | null = null
+
+  const finishLookupEvent = async (
+    status: 'succeeded' | 'not_found' | 'failed' | 'blocked',
+    matched: boolean,
+    errorSummary?: string,
+  ) => {
+    if (!db || !lookupEventId) return
+    await db
+      .from('contact_lookup_events')
+      .update({
+        status,
+        matched,
+        completed_at: new Date().toISOString(),
+        error_summary: errorSummary?.slice(0, 240) ?? null,
+      })
+      .eq('id', lookupEventId)
+  }
+
   let body: Record<string, unknown>
   try {
     body = (await req.json()) as Record<string, unknown>
@@ -255,11 +313,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   try {
     // 1. Check Supabase CRM database cache first
-    if (SUPABASE_URL && SERVICE_ROLE_KEY) {
-      const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    if (db) {
       const { data: cached } = await db
         .from('leads')
         .select('contact_name, contact_phone')
+        .eq('organization_id', organizationId)
         .ilike('address_line1', street)
         .not('contact_phone', 'is', null)
         .limit(1)
@@ -278,24 +336,88 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // 2. Automated Skip-Tracing via BatchData API
+    // Commercial enrichment is an organization-level entitlement, not merely
+    // the presence of a secret. This prevents a key from silently turning on
+    // prospecting for an organization whose agreement has not been attested.
+    let commercialAllowed = false
+    let secondaryAllowed = false
+    if (db) {
+      const { data: providerSettings } = await db
+        .from('contact_provider_settings')
+        .select('entitlement, credential_present, commercial_use_confirmed, secondary_providers_enabled')
+        .eq('organization_id', organizationId)
+        .maybeSingle()
+
+      commercialAllowed =
+        providerSettings?.entitlement === 'business_api' &&
+        providerSettings?.credential_present === true &&
+        providerSettings?.commercial_use_confirmed === true
+      secondaryAllowed = providerSettings?.secondary_providers_enabled === true
+    }
+
+    if (!commercialAllowed) {
+      if (db) {
+        await db.from('contact_lookup_events').insert({
+          organization_id: organizationId,
+          requested_by: user.id,
+          provider: 'none',
+          status: 'blocked',
+          matched: false,
+          completed_at: new Date().toISOString(),
+          error_summary: 'commercial enrichment not enabled',
+        })
+      }
+      return json({
+        success: false,
+        configuredProvider: 'none',
+        message:
+          'Automated contact enrichment is not enabled for this organization. A business-use agreement and server credential must be confirmed in Settings → Contact data.',
+      })
+    }
+
+    const primaryProvider = BATCHDATA_API_KEY
+      ? 'batchdata'
+      : secondaryAllowed && REALESTATE_API_KEY
+        ? 'realestateapi'
+        : 'none'
+
+    if (db) {
+      const { data: eventRow } = await db
+        .from('contact_lookup_events')
+        .insert({
+          organization_id: organizationId,
+          requested_by: user.id,
+          provider: primaryProvider,
+          status: 'started',
+          matched: false,
+        })
+        .select('id')
+        .maybeSingle()
+      lookupEventId = (eventRow?.id as string | undefined) ?? null
+    }
+
+    // 2. Automated Skip-Tracing via the configured commercial provider.
     let ownerFromBatch: string | null = null
     if (BATCHDATA_API_KEY) {
       const batchResult = await lookupBatchData(street, city, state, zip, BATCHDATA_API_KEY)
       if (batchResult && batchResult.phone) {
+        await finishLookupEvent('succeeded', true)
         return json({ success: true, ...batchResult })
       }
       ownerFromBatch = await lookupBatchDataOwner(street, city, state, BATCHDATA_API_KEY)
     }
 
-    // 3. Automated Skip-Tracing via RealEstateAPI
-    if (REALESTATE_API_KEY) {
+    // 3. Optional paid fallback provider. Off unless an admin explicitly
+    // enabled fallback calls because every request has cost/compliance impact.
+    if (secondaryAllowed && REALESTATE_API_KEY) {
       const reResult = await lookupRealEstateApi(street, city, state, zip, REALESTATE_API_KEY)
       if (reResult && reResult.phone) {
+        await finishLookupEvent('succeeded', true)
         return json({ success: true, ...reResult })
       }
     }
 
+    await finishLookupEvent('not_found', false)
     return json({
       success: false,
       residentName: ownerFromBatch,
@@ -305,6 +427,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Lookup failed'
+    await finishLookupEvent('failed', false, message)
     return json({ error: message }, 500)
   }
 })

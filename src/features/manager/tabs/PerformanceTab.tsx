@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, SectionTitle } from '@/components/ui'
 import { Figure, Nothing, Stat, duration, pct } from './shared'
 import { performanceFor, pooled, type AssignedLead, type RepPerformance } from '../performance'
 import { MISSING_SEGMENTS, byScoreBand, bySubdivision, standout } from '../segments'
 import type { ActivityRow, BandRate, RouteRow } from '../metrics'
+import { readQuotedEconomics, sumQuotedEconomics, type QuotedLeadEconomics } from '../quoted-economics'
 
 /**
  * One rep's record, and the team's, with the arithmetic in view.
@@ -24,6 +25,7 @@ export default function PerformanceTab({
   nameOf,
   windowFrom,
   windowTo,
+  organizationId,
 }: {
   team: readonly { userId: string; role: string; isActive: boolean }[]
   activity: readonly ActivityRow[]
@@ -33,12 +35,27 @@ export default function PerformanceTab({
   nameOf: (id: string | null) => string
   windowFrom: string
   windowTo: string
+  organizationId: string | null
 }) {
   const reps = useMemo(
     () => team.filter((m) => m.isActive && m.role !== 'office').map((m) => m.userId),
     [team],
   )
   const [selected, setSelected] = useState<string | null>(null)
+  const [economics, setEconomics] = useState<QuotedLeadEconomics[]>([])
+  const [economicsError, setEconomicsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    void readQuotedEconomics(organizationId).then((result) => {
+      if (!active) return
+      setEconomics(result.rows)
+      setEconomicsError(result.error)
+    })
+    return () => {
+      active = false
+    }
+  }, [organizationId])
 
   const all = useMemo(
     () =>
@@ -111,6 +128,35 @@ export default function PerformanceTab({
         </p>
       </Card>
 
+      <SectionTitle hint="latest estimate version by lead">QUOTED ECONOMICS</SectionTitle>
+      <Card>
+        {economicsError ? (
+          <p className="text-[11.5px] leading-relaxed text-status-warning">
+            Quoted economics are unavailable: {economicsError}
+          </p>
+        ) : economics.length === 0 ? (
+          <p className="text-[11.5px] leading-relaxed text-text-secondary">
+            No lead-linked estimates are available yet. Currency stays blank until an estimate is actually tied to a lead.
+          </p>
+        ) : (() => {
+          const totals = sumQuotedEconomics(economics)
+          const dollars = (cents: number) =>
+            new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cents / 100)
+          return (
+            <>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <Stat value={String(totals.proposals)} label="priced leads" />
+                <Stat value={dollars(totals.quotedRevenueCents)} label="quoted revenue" />
+                <Stat value={dollars(totals.quotedMarginCents)} label="quoted margin" />
+              </div>
+              <p className="mt-3 border-t border-border-subtle pt-2 text-[10.5px] leading-relaxed text-text-secondary">
+                Quoted margin is estimate sell price minus estimated job cost from the latest version. It is not collected revenue or realised accounting gross profit.
+              </p>
+            </>
+          )
+        })()}
+      </Card>
+
       <SectionTitle hint="tap a rep">RANKINGS</SectionTitle>
       <div className="space-y-2">
         {[...all]
@@ -135,7 +181,15 @@ export default function PerformanceTab({
           ))}
       </div>
 
-      {chosen && <RepDetail rep={chosen} nameOf={nameOf} assignments={assignments} teamRates={teamRates} />}
+      {chosen && (
+        <RepDetail
+          rep={chosen}
+          nameOf={nameOf}
+          assignments={assignments}
+          economics={economics}
+          teamRates={teamRates}
+        />
+      )}
     </div>
   )
 }
@@ -144,11 +198,13 @@ function RepDetail({
   rep,
   nameOf,
   assignments,
+  economics,
   teamRates,
 }: {
   rep: RepPerformance
   nameOf: (id: string | null) => string
   assignments: readonly AssignedLead[]
+  economics: readonly QuotedLeadEconomics[]
   teamRates: {
     contact: { value: number | null; unavailable: string | null }
     appointment: { value: number | null; unavailable: string | null }
@@ -158,6 +214,15 @@ function RepDetail({
   }
 }) {
   const mine = assignments.filter((a) => a.repId === rep.repId)
+  const myLeadIds = new Set(mine.map((lead) => lead.leadClientId))
+  const myEconomics = economics.filter((row) => myLeadIds.has(row.leadClientId))
+  const myQuoted = sumQuotedEconomics(myEconomics)
+  const money = (cents: number) =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(cents / 100)
   const bands = byScoreBand(mine)
   const areas = bySubdivision(mine)
   const best = standout([...bands, ...areas])
@@ -225,11 +290,22 @@ function RepDetail({
             label="inspections sold"
           />
         </div>
-        <p className="mt-2 text-[11px] leading-relaxed text-text-secondary">
-          Revenue and gross profit are not here. They live on the estimate, and no estimate in this system
-          has been tied to a lead outcome yet — showing a currency figure that nothing computed would be
-          worse than showing none.
-        </p>
+        {myEconomics.length > 0 ? (
+          <>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <Stat value={String(myQuoted.proposals)} label="priced leads" />
+              <Stat value={money(myQuoted.quotedRevenueCents)} label="quoted revenue" />
+              <Stat value={money(myQuoted.quotedMarginCents)} label="quoted margin" />
+            </div>
+            <p className="mt-2 text-[10.5px] leading-relaxed text-text-secondary">
+              These are proposal economics from the latest lead-linked estimate, not collected revenue or realised gross profit.
+            </p>
+          </>
+        ) : (
+          <p className="mt-2 text-[11px] leading-relaxed text-text-secondary">
+            No lead-linked estimate exists for this rep in the current data, so the app does not invent a revenue or profit figure.
+          </p>
+        )}
       </Card>
 
       <Card>

@@ -17,10 +17,11 @@ const envSchema = z.object({
   VITE_STORM_PROVIDER: z.enum(['noaa', 'hailtrace', 'none']).default('noaa'),
   /**
    * Radar-estimated hail, alongside ground reports rather than instead of them.
-   * 'swdi' reads NOAA NCEI's NEXRAD Level-III hail detections; no key, no
-   * server. 'off' returns the product to ground reports only.
+   * 'mrms' reads server-ingested NOAA MRMS MESH grids. 'swdi' reads NOAA NCEI's
+   * NEXRAD Level-III hail detections directly in the browser. 'off' returns the
+   * product to ground reports only.
    */
-  VITE_RADAR_HAIL: z.enum(['swdi', 'off']).default('swdi'),
+  VITE_RADAR_HAIL: z.enum(['mrms', 'swdi', 'off']).default('swdi'),
   VITE_HANDOFF_MODE: z.enum(['companycam', 'pdf_email', 'disabled']).default('pdf_email'),
   VITE_AI_PROVIDER: z.enum(['anthropic', 'openai', 'none']).default('none'),
   VITE_SENTRY_DSN: z.string().optional(),

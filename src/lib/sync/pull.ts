@@ -8,6 +8,7 @@ import { asDoorOutcome } from '@/features/leads/pipeline'
 import type {
   ContactEvent,
   ContactKind,
+  ContactSource,
   KnockVerificationRecord,
   LeadStatus,
   ManagedLead,
@@ -159,6 +160,8 @@ interface LeadRow {
   longitude: number | null
   contact_name: string | null
   contact_phone: string | null
+  contact_email: string | null
+  contact_source: string | null
 }
 
 interface ActivityRow {
@@ -225,7 +228,22 @@ function toManagedLead(row: LeadRow, existing: ManagedLead | null): ManagedLead 
   if (row.subdivision) lead.subdivision = row.subdivision
   else if (existing?.subdivision) lead.subdivision = existing.subdivision
   if (row.contact_name) lead.contactName = row.contact_name
-  if (row.contact_phone) lead.contactPhone = row.contact_phone
+  if (row.contact_phone) {
+    lead.contactPhone = row.contact_phone
+    const knownSources = new Set<ContactSource>([
+      'homeowner_at_door',
+      'homeowner_by_phone',
+      'homeowner_in_writing',
+      'public_record',
+      'third_party_lookup',
+      'unknown',
+    ])
+    lead.contactSource =
+      row.contact_source && knownSources.has(row.contact_source as ContactSource)
+        ? (row.contact_source as ContactSource)
+        : 'unknown'
+  }
+  if (row.contact_email) lead.contactEmail = row.contact_email
   if (row.next_action_at) lead.nextActionAt = row.next_action_at
   // Consent and opt-out live only on the device today. Dropping them on a pull
   // would quietly re-open a channel someone asked to be left off, so whatever
@@ -236,6 +254,89 @@ function toManagedLead(row: LeadRow, existing: ManagedLead | null): ManagedLead 
   if (existing?.appointmentAt) lead.appointmentAt = existing.appointmentAt
   if (existing?.appointmentClientId) lead.appointmentClientId = existing.appointmentClientId
   return lead
+}
+
+export interface MaterializeLeadResult {
+  lead: ManagedLead | null
+  activities: number
+  error: string | null
+  source: 'local' | 'server' | 'unavailable'
+}
+
+/**
+ * Load one Lead 360 record by the stable client id on a device that has never
+ * seen it locally. This is required for manager/setter drill-downs.
+ *
+ * Existing local data always wins because it may contain unsent field work.
+ * RLS on the sync views remains the authorization boundary.
+ */
+export async function materializeLeadFromServer(input: {
+  orgId: string | null
+  userId: string | null
+  leadClientId: string
+}): Promise<MaterializeLeadResult> {
+  const existing = await readLead(input.leadClientId)
+  if (existing) return { lead: existing, activities: 0, error: null, source: 'local' }
+
+  const supabase = getSupabase()
+  if (!navigator.onLine) {
+    return {
+      lead: null,
+      activities: 0,
+      error: 'This lead is not stored on this device yet and the device is offline.',
+      source: 'unavailable',
+    }
+  }
+  if (!input.userId || !supabase) {
+    return { lead: null, activities: 0, error: 'Sign in to load this lead.', source: 'unavailable' }
+  }
+  if (!input.orgId) {
+    return { lead: null, activities: 0, error: 'No organization is available.', source: 'unavailable' }
+  }
+
+  setRemoteIdScope(input.orgId)
+
+  const { data, error } = await supabase
+    .from('lead_sync_rows')
+    .select('*')
+    .eq('organization_id', input.orgId)
+    .eq('client_id', input.leadClientId)
+    .maybeSingle()
+
+  if (error) return { lead: null, activities: 0, error: error.message, source: 'unavailable' }
+  if (!data) {
+    return {
+      lead: null,
+      activities: 0,
+      error: 'The server does not have this lead, or this account cannot read it.',
+      source: 'unavailable',
+    }
+  }
+
+  try {
+    const row = data as LeadRow
+    const lead = toManagedLead(row, null)
+    await saveLeadFromServer(lead)
+    await setRemoteId('lead', row.client_id, row.remote_id)
+
+    const errors: string[] = []
+    const { written, knocksByLead } = await pullActivities(input.orgId, [row.client_id], errors)
+    await reconcileKnockCounts(knocksByLead)
+
+    return {
+      lead: (await readLead(row.client_id)) ?? lead,
+      activities: written,
+      error: errors[0] ?? null,
+      source: 'server',
+    }
+  } catch (err) {
+    return {
+      lead: null,
+      activities: 0,
+      error: err instanceof Error ? err.message : String(err),
+      source: 'unavailable',
+    }
+  }
 }
 
 export async function pullLeads(orgId: string | null, userId: string | null): Promise<PullResult> {

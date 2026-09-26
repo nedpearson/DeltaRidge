@@ -80,11 +80,15 @@ export default function LeadMapStatic({
   doors,
   leads,
   storms,
+  searchCenter,
+  searchRadiusMiles,
   onOpenLead,
 }: {
   doors: readonly ScoredLead[]
   leads: readonly ManagedLead[]
   storms: readonly StormEvent[]
+  searchCenter?: { latitude: number; longitude: number }
+  searchRadiusMiles?: number
   onOpenLead: (leadId: string) => void
 }) {
   const [size, setSize] = useState<Size>(FALLBACK_SIZE)
@@ -176,6 +180,13 @@ export default function LeadMapStatic({
   const stormPoints = storms
     .filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude))
     .map((s) => ({ id: s.externalId, ...project(s, current, size), size: s.hailSizeInches ?? 1 }))
+  const searchCircle =
+    searchCenter && searchRadiusMiles
+      ? {
+          ...project(searchCenter, current, size),
+          radiusPx: (searchRadiusMiles / Math.max(0.01, spanMiles(current, size))) * size.width,
+        }
+      : null
 
   // Arrows rather than function declarations: a hoisted declaration is
   // analysed without the null check above it, and `current` is only known to
@@ -238,6 +249,20 @@ export default function LeadMapStatic({
             className="absolute inset-0 h-full w-full"
           >
             <g transform={`translate(${drag.x} ${drag.y})`}>
+              {searchCircle && (
+                <circle
+                  cx={searchCircle.x}
+                  cy={searchCircle.y}
+                  r={searchCircle.radiusPx}
+                  fill="#27C6E8"
+                  fillOpacity={0.035}
+                  stroke="#27C6E8"
+                  strokeOpacity={0.75}
+                  strokeWidth={2}
+                  strokeDasharray="6 6"
+                />
+              )}
+
               {/* Storm reports underneath: they are context, not the work. */}
               {stormPoints.map((s) => (
                 <circle

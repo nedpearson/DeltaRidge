@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useSession } from '@/features/auth/session'
 import LeadNotePanel from '@/components/LeadNotePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
 import { openSessionId } from '@/features/routes/route-store'
@@ -9,8 +10,10 @@ import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/component
 import ContactActions from '@/components/ContactActions'
 import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
 import IntegrityPanel from '@/features/leads/IntegrityPanel'
+import AppointmentBrief from '@/features/leads/AppointmentBrief'
 import { readLink } from '@/features/integrations/roofr/store'
 import { pendingWork } from '@/lib/sync'
+import { materializeLeadFromServer } from '@/lib/sync/pull'
 import {
   addEvent,
   listAttachments,
@@ -132,6 +135,7 @@ function Attachment({ item }: { item: LeadAttachment }) {
 export default function LeadPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { session, membership } = useSession()
   const [lead, setLead] = useState<ManagedLead | null>(null)
   const [editingNumber, setEditingNumber] = useState(false)
   const [newNumber, setNewNumber] = useState('')
@@ -150,8 +154,18 @@ export default function LeadPage() {
   const [queued, setQueued] = useState<{ total: number; stalled: number }>({ total: 0, stalled: 0 })
 
   const load = useCallback(async (leadId: string) => {
-    const [found, events, files] = await Promise.all([
-      readLead(leadId),
+    let found = await readLead(leadId)
+
+    if (!found) {
+      const materialized = await materializeLeadFromServer({
+        orgId: membership?.organizationId ?? null,
+        userId: session?.user.id ?? null,
+        leadClientId: leadId,
+      })
+      found = materialized.lead
+    }
+
+    const [events, files] = await Promise.all([
       readHistory(leadId),
       listAttachments(leadId),
     ])
@@ -160,17 +174,21 @@ export default function LeadPage() {
     setAttachments(files)
     setLoading(false)
 
-    // After the screen is usable, not before. Both of these can fail quietly;
-    // the panel reads their absence as "not sent to Roofr" and "nothing queued",
-    // which is what absence actually means here.
-    void readLink(leadId).then((link) => {
-      setRoofrJobId(link?.roofrJobId ?? null)
-      setRoofrLastEventAt(link?.lastEventAt ?? null)
-    })
+    const orgId = membership?.organizationId ?? null
+    if (orgId) {
+      void readLink(orgId, leadId).then((link) => {
+        setRoofrJobId(link?.roofrJobId ?? null)
+        setRoofrLastEventAt(link?.lastEventAt ?? null)
+      })
+    } else {
+      setRoofrJobId(null)
+      setRoofrLastEventAt(null)
+    }
+
     void pendingWork().then((work) =>
       setQueued({ total: work.total, stalled: work.stalled }),
     )
-  }, [])
+  }, [membership?.organizationId, session?.user.id])
 
   useEffect(() => {
     if (id) void load(id)
@@ -330,7 +348,11 @@ export default function LeadPage() {
     return (
       <Empty
         title="No such lead"
-        body="It may have been captured on another device and not pushed yet, or captured while signed out. A lead reaches the office on the next sync, not the moment it is written."
+        body={
+          navigator.onLine
+            ? 'This lead is not available to this account on the server and is not stored on this device.'
+            : 'This lead is not stored on this device yet. Reconnect to load the server copy.'
+        }
       />
     )
   }
@@ -659,6 +681,12 @@ export default function LeadPage() {
           </ol>
         </Card>
       )}
+
+      <AppointmentBrief
+        lead={lead}
+        history={history}
+        onOpenProperty={() => navigate(`/property/${encodeURIComponent(lead.addressKey)}`)}
+      />
 
       <IntegrityPanel
         evidence={{

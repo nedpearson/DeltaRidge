@@ -10,8 +10,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const CLIENT_ID = Deno.env.get('EAGLEVIEW_CLIENT_ID') || '0oa1e0h8kt7DH2RLq2p8'
-const CLIENT_SECRET = Deno.env.get('EAGLEVIEW_CLIENT_SECRET') || 'V9Lu0TAoMP5Ip7uL8beaK_KHcT03du2mCPdrLSUQfxHbAdrG1INErqElGUrvf-Oa'
+const CLIENT_ID = Deno.env.get('EAGLEVIEW_CLIENT_ID') ?? ''
+const CLIENT_SECRET = Deno.env.get('EAGLEVIEW_CLIENT_SECRET') ?? ''
 const ENVIRONMENT = Deno.env.get('EAGLEVIEW_ENV') || 'sandbox'
 const API = ENVIRONMENT === 'sandbox'
   ? 'https://sandbox.apis.eagleview.com'
@@ -134,33 +134,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (SUPABASE_URL === '' || ANON_KEY === '' || SERVICE_ROLE_KEY === '') return json({ error: 'server not configured' }, 500)
 
   const authorization = req.headers.get('authorization')
+  if (!authorization) return json({ error: 'Unauthorized' }, 401)
 
-  
-  let userId: string | null = null
-  let orgId: string | null = null
+  const asCaller = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: authorization } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { data: auth, error: authError } = await asCaller.auth.getUser()
+  if (authError || !auth?.user) return json({ error: 'Unauthorized' }, 401)
 
-  if (authorization) {
-    try {
-      const asCaller = createClient(SUPABASE_URL, ANON_KEY, {
-        global: { headers: { Authorization: authorization } },
-        auth: { persistSession: false, autoRefreshToken: false },
-      })
-      const { data: auth } = await asCaller.auth.getUser()
-      if (auth?.user) {
-        userId = auth.user.id
-        const { data: membership } = await asCaller
-          .from('organization_members')
-          .select('organization_id')
-          .eq('user_id', auth.user.id)
-          .eq('is_active', true)
-          .limit(1)
-          .maybeSingle()
-        if (membership) orgId = membership.organization_id
-      }
-    } catch {
-      // Allow through if valid apikey
-    }
+  const userId = auth.user.id
+  const { data: membership, error: membershipError } = await asCaller
+    .from('organization_members')
+    .select('organization_id')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle()
+
+  if (membershipError || !membership?.organization_id) {
+    return json({ error: 'No active organization membership' }, 403)
   }
+  const orgId = membership.organization_id as string
 
   let body: Record<string, unknown>
   try {
@@ -173,15 +168,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  if (!orgId) {
-    const { data: firstOrg } = await db.from('organizations').select('id').limit(1).maybeSingle()
-    if (firstOrg) orgId = firstOrg.id
-  }
-
   const action = string(body['action']) ?? 'unknown'
   let requestId: string | undefined = undefined
 
-  if (orgId) {
+  {
     const { data: requestRow } = await db.from('imagery_requests').insert({
       organization_id: orgId,
       provider: 'eagleview',
@@ -255,7 +245,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           status: 'succeeded', response_count: captures.length, completed_at: new Date().toISOString(),
         }).eq('id', requestId)
       }
-      if (captures.length > 0 && orgId) {
+      if (captures.length > 0) {
         await db.from('imagery_captures').upsert(captures.map((capture) => ({
           organization_id: orgId,
           provider: capture['provider'],
