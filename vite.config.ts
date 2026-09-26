@@ -42,6 +42,7 @@ export default defineConfig({
         // Take control on first activation so the very first visit is already
         // offline-capable, rather than only from the second load onward.
         clientsClaim: true,
+        skipWaiting: true,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         /**
          * The map library is NOT precached, on purpose.
