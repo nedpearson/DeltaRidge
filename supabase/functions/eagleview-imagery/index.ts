@@ -10,8 +10,12 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const CLIENT_ID = Deno.env.get('EAGLEVIEW_CLIENT_ID') || '0oa1e0h8kt7DH2RLq2p8'
-const CLIENT_SECRET = Deno.env.get('EAGLEVIEW_CLIENT_SECRET') || 'V9Lu0TAoMP5Ip7uL8beaK_KHcT03du2mCPdrLSUQfxHbAdrG1INErqElGUrvf-Oa'
+const CLIENT_ID = Deno.env.get('EAGLEVIEW_CLIENT_ID') ?? ''
+const CLIENT_SECRET = Deno.env.get('EAGLEVIEW_CLIENT_SECRET') ?? ''
+
+if (!CLIENT_ID || !CLIENT_SECRET) {
+  console.warn('EagleView credentials are not configured. The integration will report unavailable until server secrets are set.')
+}
 const ENVIRONMENT = Deno.env.get('EAGLEVIEW_ENV') || 'sandbox'
 const API = ENVIRONMENT === 'sandbox'
   ? 'https://sandbox.apis.eagleview.com'
