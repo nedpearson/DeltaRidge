@@ -379,9 +379,11 @@ export interface RunDeps {
  * Reading one key straight off the env source cannot throw, so there is
  * nothing to catch: anything other than an explicit 'off' means on.
  */
-function radarProviderId(): 'swdi' | 'off' {
+function radarProviderId(): 'mrms' | 'swdi' | 'off' {
   const raw = (import.meta.env as Record<string, unknown>)['VITE_RADAR_HAIL']
-  return raw === 'off' ? 'off' : 'swdi'
+  if (raw === 'off') return 'off'
+  if (raw === 'mrms') return 'mrms'
+  return 'swdi'
 }
 
 /**
@@ -443,7 +445,8 @@ export async function runLeadEngine(
 
   // Radar is on unless this workspace turned it off, or a cached run from
   // before radar existed is being re-run with its own settings.
-  const radarEnabled = settings.useRadar !== false && radarProviderId() === 'swdi'
+  const radarSource = radarProviderId()
+  const radarEnabled = settings.useRadar !== false && radarSource !== 'off'
   const radarMinInches = settings.radarMinHailInches ?? DEFAULT_SETTINGS.radarMinHailInches ?? 1.25
 
   const window = resolveWindow(settings.windowKey, now, settings.customRange)
@@ -464,7 +467,7 @@ export async function runLeadEngine(
       minHailSizeInches: settings.minHailInches,
     }),
     radarEnabled
-      ? createStormProvider('swdi', fetchImpl).searchEvents({
+      ? createStormProvider(radarSource, fetchImpl).searchEvents({
           bbox: searchBbox,
           from,
           to,
