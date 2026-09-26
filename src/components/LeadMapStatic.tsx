@@ -48,25 +48,25 @@ interface Marker {
  * has to be legible.
  */
 const COLOUR: Record<LeadStatus | 'door', string> = {
-  door: '#475569',
-  new: '#475569',
-  attempted: '#d97706',
-  follow_up: '#d97706',
-  need_visit: '#2563eb',
-  appointment: '#059669',
-  inspected: '#059669',
-  not_interested: '#dc2626',
+  door: '#8FA3B8',
+  new: '#8FA3B8',
+  attempted: '#D58B32',
+  follow_up: '#D58B32',
+  need_visit: '#4776E6',
+  appointment: '#D9A441',
+  inspected: '#D9A441',
+  not_interested: '#E75A64',
   // Grey, not red. A door that was never a prospect is not a rejection, and a
   // map that paints the two the same colour tells a manager the neighbourhood
   // is hostile when it is simply already re-roofed.
-  disqualified: '#64748b',
-  do_not_knock: '#dc2626',
+  disqualified: '#64768B',
+  do_not_knock: '#E75A64',
 }
 
 /** The legend sits on the app's dark card, where slate-600 is too dim. */
 const LEGEND_COLOUR: Record<LeadStatus | 'door', string> = {
   ...COLOUR,
-  door: '#94a3b8',
+  door: '#8FA3B8',
 }
 
 const LEGEND: { status: LeadStatus | 'door'; label: string }[] = [
