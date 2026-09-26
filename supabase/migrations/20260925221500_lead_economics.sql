@@ -53,7 +53,7 @@ select
   lv.version_created_at,
   rl.proposal_signed_at,
   rl.proposal_total_cents as roofr_proposal_total_cents,
-  coalesce(l.status = 'sold', rl.proposal_signed_at is not null) as closed_won
+  (l.status = 'sold' or rl.proposal_signed_at is not null) as closed_won
 from estimates e
 join latest_version lv
   on lv.estimate_id = e.id
