@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card } from '@/components/ui'
 import RouteMap, { type RouteMarker } from '@/components/RouteMap'
-import type { MapStyleKey } from '@/features/leads/basemap'
 import type { RoutePoint, RouteSession } from '@/features/routes/route-store'
 import { buildTimeline, type TimelineActivity, type TimelineEntry } from '@/features/routes/timeline'
 
@@ -53,7 +52,6 @@ export default function RoutePlayback({
   points: readonly RoutePoint[]
   activities: readonly TimelineActivity[]
 }) {
-  const [style, setStyle] = useState<MapStyleKey>('streets')
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(30)
   const listRef = useRef<HTMLDivElement>(null)
@@ -136,8 +134,6 @@ export default function RoutePlayback({
         points={points}
         markers={markers}
         through={cutoff}
-        style={style}
-        onStyleChange={setStyle}
         height={300}
       />
 
