@@ -795,57 +795,92 @@ function AssignTab({
                 </button>
 
                 {expanded && (
-                  <div className="mt-2 space-y-2 border-t border-border-subtle pt-2">
+                  <div className="mt-3 space-y-3 border-t border-border-subtle pt-3">
                     {suggestions.length === 0 ? (
                       <p className="text-[11.5px] text-text-secondary">
                         No active reps on the team to suggest.
                       </p>
                     ) : (
-                      suggestions.map((s) => (
-                        <div key={s.repId}>
-                          <div className="flex items-baseline justify-between gap-3">
-                            <p className="text-[12.5px] font-semibold">{nameOf(s.repId)}</p>
-                            <span className="text-[12px] text-text-secondary">{s.score}</span>
+                      <>
+                        {suggestions[0] && (
+                          <div className="bg-brand-gold/10 border border-brand-gold/30 rounded p-3 mb-2">
+                            <h4 className="text-xs uppercase tracking-wide text-brand-gold font-bold mb-1">
+                              Suggested: {nameOf(suggestions[0].repId)}
+                            </h4>
+                            <p className="text-sm text-text-primary mb-2">
+                              {suggestions[0].factors.filter(f => f.weight !== 0).map(f => f.detail).join(' ')}
+                            </p>
+                            {canManage && (
+                              <Button
+                                variant="primary"
+                                full
+                                className="mt-2 text-xs"
+                                disabled={busy === `${door.addressKey}:${suggestions[0].repId}`}
+                                onClick={() => {
+                                  const top = suggestions[0]
+                                  if (!top) return
+                                  setFailed(null)
+                                  void onAssign(
+                                    door,
+                                    top.repId,
+                                    top.factors
+                                      .filter((f) => f.weight !== 0)
+                                      .map((f) => f.label)
+                                      .join(' · '),
+                                  ).then((err) => setFailed(err))
+                                }}
+                              >
+                                {busy === `${door.addressKey}:${suggestions[0].repId}`
+                                  ? 'Assigning…'
+                                  : `Assign to ${nameOf(suggestions[0].repId).split(' ')[0]}`}
+                              </Button>
+                            )}
                           </div>
-                          <ul className="mt-0.5 space-y-0.5">
-                            {s.factors.map((f) => (
-                              <li key={f.label} className="text-[11.5px] leading-relaxed text-text-secondary">
-                                <span className={f.weight < 0 ? 'text-status-warning/70' : 'text-text-secondary'}>
-                                  {f.weight > 0 ? '+' : ''}
-                                  {f.weight}
-                                </span>{' '}
-                                {f.label} — {f.detail}
-                              </li>
-                            ))}
-                          </ul>
-                          {canManage && (
-                            <Button
-                              variant="secondary"
-                              full
-                              className="mt-2"
-                              disabled={busy === `${door.addressKey}:${s.repId}`}
-                              onClick={() => {
-                                setFailed(null)
-                                void onAssign(
-                                  door,
-                                  s.repId,
-                                  // The reason is recorded with the assignment
-                                  // and shown in the audit log, so the decision
-                                  // carries its own justification.
-                                  s.factors
-                                    .filter((f) => f.weight !== 0)
-                                    .map((f) => f.label)
-                                    .join(' · '),
-                                ).then((err) => setFailed(err))
-                              }}
-                            >
-                              {busy === `${door.addressKey}:${s.repId}`
-                                ? 'Sending and assigning…'
-                                : `Give it to ${nameOf(s.repId).split(' ')[0]}`}
-                            </Button>
-                          )}
-                        </div>
-                      ))
+                        )}
+
+                        {suggestions.slice(1).map((s) => (
+                          <div key={s.repId} className="border border-border-subtle rounded p-3">
+                            <div className="flex items-baseline justify-between gap-3 mb-1">
+                              <p className="text-[12.5px] font-semibold text-text-primary">{nameOf(s.repId)}</p>
+                              <span className="text-[12px] text-text-secondary">Score: {s.score}</span>
+                            </div>
+                            <ul className="mt-1 space-y-1">
+                              {s.factors.map((f) => (
+                                <li key={f.label} className="text-[11.5px] leading-relaxed text-text-secondary">
+                                  <span className={f.weight < 0 ? 'text-status-warning/70 font-medium' : 'text-text-primary font-medium'}>
+                                    {f.weight > 0 ? '+' : ''}
+                                    {f.weight}
+                                  </span>{' '}
+                                  {f.label} — {f.detail}
+                                </li>
+                              ))}
+                            </ul>
+                            {canManage && (
+                              <Button
+                                variant="secondary"
+                                full
+                                className="mt-3 text-xs"
+                                disabled={busy === `${door.addressKey}:${s.repId}`}
+                                onClick={() => {
+                                  setFailed(null)
+                                  void onAssign(
+                                    door,
+                                    s.repId,
+                                    s.factors
+                                      .filter((f) => f.weight !== 0)
+                                      .map((f) => f.label)
+                                      .join(' · '),
+                                  ).then((err) => setFailed(err))
+                                }}
+                              >
+                                {busy === `${door.addressKey}:${s.repId}`
+                                  ? 'Assigning…'
+                                  : `Assign to ${nameOf(s.repId).split(' ')[0]}`}
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </>
                     )}
                     {failed && (
                       <p className="text-[11.5px] leading-relaxed text-status-warning/80">{failed}</p>

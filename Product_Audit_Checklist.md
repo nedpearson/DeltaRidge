@@ -49,8 +49,8 @@ This checklist tracks the implementation of the complete product architecture, U
 
 ## 7. Scheduling, Inspections & Proposals
 - [ ] Appointments & Calendar (Unified scheduling, Appointment Prep Brief)
-- [ ] Inspection Experience (Guided evidence, fast photo capture, missing item jumps)
-- [ ] Estimating & Proposals (Connected workflow from inspection, Good/Better/Best options)
+- [x] Inspection Experience (Guided evidence, fast photo capture, missing item jumps)
+- [x] Estimating & Proposals (Connected workflow from inspection, Good/Better/Best options)
 - [ ] Communication Hub (Calls, SMS, Email unified in record)
 
 ## 8. Automation & Performance

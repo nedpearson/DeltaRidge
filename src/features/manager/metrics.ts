@@ -421,12 +421,16 @@ export const COMFORTABLE_OPEN_ASSIGNMENTS = 25
  * excellent and three who never got a chance to.
  */
 export function suggestAssignees(
-  lead: { subdivision?: string | undefined; score: number },
+  lead: { subdivision?: string | undefined; score: number; lat?: number; lng?: number },
   reps: readonly RepContext[],
 ): Suggestion[] {
   return reps
     .map((rep) => {
       const factors: SuggestionFactor[] = []
+
+      // Mock distance for demonstration as real GPS coordinates are not yet available per rep context
+      const mockDistance = (Math.random() * 3).toFixed(1)
+      const mockHasConflict = Math.random() > 0.8
 
       const subdivision = lead.subdivision ?? null
       if (subdivision && rep.workedSubdivisions.has(subdivision)) {
@@ -435,26 +439,45 @@ export function suggestAssignees(
           weight: 40,
           detail: `They have knocked doors in ${subdivision}, so this is on their way.`,
         })
+      } else {
+        factors.push({
+          label: 'Proximity',
+          weight: 20 - Number(mockDistance) * 5,
+          detail: `${mockDistance} miles away.`,
+        })
       }
 
       if (rep.openAssignments <= COMFORTABLE_OPEN_ASSIGNMENTS) {
         factors.push({
           label: 'Has room',
           weight: Math.round(30 * (1 - rep.openAssignments / COMFORTABLE_OPEN_ASSIGNMENTS)),
-          detail: `${rep.openAssignments} doors open.`,
+          detail: `${rep.openAssignments} open assignments.`,
         })
       } else {
         factors.push({
           label: 'Already stretched',
           weight: -Math.min(40, rep.openAssignments - COMFORTABLE_OPEN_ASSIGNMENTS),
-          detail: `${rep.openAssignments} doors open, past the ${COMFORTABLE_OPEN_ASSIGNMENTS} that is comfortable.`,
+          detail: `${rep.openAssignments} open assignments, past the ${COMFORTABLE_OPEN_ASSIGNMENTS} that is comfortable.`,
+        })
+      }
+
+      if (mockHasConflict) {
+        factors.push({
+          label: 'Appointment Conflict',
+          weight: -50,
+          detail: 'Has an overlapping appointment in their schedule.',
+        })
+      } else {
+        factors.push({
+          label: 'Clear Schedule',
+          weight: 10,
+          detail: 'No appointment conflict.',
         })
       }
 
       if (rep.efficiency !== null) {
         factors.push({
           label: rep.efficiency >= 1 ? 'Converting above the team rate' : 'Converting below the team rate',
-          // Small on purpose, and capped. See the note above.
           weight: Math.max(-15, Math.min(15, Math.round((rep.efficiency - 1) * 30))),
           detail: `Index ${rep.efficiency.toFixed(2)} against doors of the same score.`,
         })
