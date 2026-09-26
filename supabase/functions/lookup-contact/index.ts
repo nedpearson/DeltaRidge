@@ -113,6 +113,41 @@ async function lookupBatchData(
 }
 
 /**
+ * Property details / owner lookup via BatchData Property Search API.
+ */
+async function lookupBatchDataOwner(
+  street: string,
+  city: string,
+  state: string,
+  apiKey: string
+): Promise<string | null> {
+  try {
+    const res = await fetch('https://api.batchdata.com/api/v1/property/search', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        searchCriteria: {
+          'address.street': { equals: street },
+          'address.city': { equals: city },
+          'address.state': { equals: state },
+        },
+      }),
+      signal: AbortSignal.timeout(8000),
+    })
+
+    if (!res.ok) return null
+    const data = await res.json()
+    const prop = data?.results?.properties?.[0]
+    return prop?.owner?.fullName || prop?.owner?.names?.[0]?.full || null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Commercial Skip-Tracing API Lookup via RealEstateAPI.
  */
 async function lookupRealEstateApi(
@@ -219,11 +254,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 2. Automated Skip-Tracing via BatchData API
+    let ownerFromBatch: string | null = null
     if (BATCHDATA_API_KEY) {
       const batchResult = await lookupBatchData(street, city, state, zip, BATCHDATA_API_KEY)
       if (batchResult && batchResult.phone) {
         return json({ success: true, ...batchResult })
       }
+      ownerFromBatch = await lookupBatchDataOwner(street, city, state, BATCHDATA_API_KEY)
     }
 
     // 3. Automated Skip-Tracing via RealEstateAPI
@@ -236,6 +273,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     return json({
       success: false,
+      residentName: ownerFromBatch,
       configuredProvider: BATCHDATA_API_KEY ? 'batchdata' : REALESTATE_API_KEY ? 'realestateapi' : 'none',
       message: 'No phone number found yet for this property. Configure an automated skip-tracing API key in Supabase secrets for 85%+ auto-match rate.',
       searchUrl: `https://www.fastpeoplesearch.com/address/${street.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')}_${city.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${state.toLowerCase()}-${zip}`,
