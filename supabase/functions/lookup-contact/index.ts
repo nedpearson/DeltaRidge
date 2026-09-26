@@ -84,6 +84,7 @@ async function lookupBatchData(
       data?.results?.persons ||
       data?.results?.properties?.[0]?.persons ||
       data?.results?.[0]?.persons ||
+      data?.results?.[0]?.owner?.persons ||
       data?.data?.results?.persons ||
       []
 
@@ -163,7 +164,7 @@ async function lookupRealEstateApi(
   apiKey: string
 ): Promise<ContactResult | null> {
   try {
-    const res = await fetch('https://api.realestateapi.com/v2/PropertySkipTrace', {
+    const res = await fetch('https://api.realestateapi.com/v2/SkipTrace', {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
@@ -180,19 +181,41 @@ async function lookupRealEstateApi(
 
     if (!res.ok) return null
     const data = await res.json()
-    const match = data?.data?.[0] || data?.data
+    // Current v2 response centers each matched person under a persons array.
+    // Keep a small compatibility fallback for accounts still returning the
+    // previous data wrapper during provider rollout.
+    const match =
+      data?.persons?.[0] ||
+      data?.data?.persons?.[0] ||
+      data?.data?.[0] ||
+      data?.data ||
+      null
     if (!match) return null
 
-    const residentName = match.ownerName || `${match.firstName ?? ''} ${match.lastName ?? ''}`.trim() || null
-    const rawPhones = match.phoneNumbers || match.phones || []
+    const residentName =
+      match.name ||
+      match.full_name ||
+      match.fullName ||
+      `${match.first_name ?? match.firstName ?? ''} ${match.last_name ?? match.lastName ?? ''}`.trim() ||
+      null
+    const rawPhones = match.phones || match.phoneNumbers || []
     const phones = (Array.isArray(rawPhones) ? rawPhones : []).map((p: Record<string, unknown> | string) => {
-      const num = typeof p === 'string' ? p : String(p.phone || p.number || '')
-      const type = typeof p === 'object' && String(p.type || '').toLowerCase().includes('mobile') ? 'Wireless' : 'Landline'
+      const num = typeof p === 'string' ? p : String(p.phone || p.number || p.value || '')
+      const rawType = typeof p === 'object' ? String(p.type || p.phone_type || '') : ''
+      const type = rawType.toLowerCase().includes('mobile') || rawType.toLowerCase().includes('wireless')
+        ? 'Wireless'
+        : rawType ? 'Landline' : 'Unknown'
       return { phone: cleanPhone(num), type }
-    }).filter(p => p.phone.length >= 10)
+    }).filter((p: { phone: string }) => p.phone.replace(/\D/g, '').length >= 10)
 
     const emails = match.emails || []
-    const email = emails.length > 0 ? String(emails[0]) : null
+    const firstEmail = Array.isArray(emails) ? emails[0] : null
+    const email =
+      typeof firstEmail === 'string'
+        ? firstEmail
+        : firstEmail && typeof firstEmail === 'object'
+          ? String(firstEmail.email || firstEmail.value || '')
+          : null
 
     if (phones.length === 0 && !email) return null
 
