@@ -1142,6 +1142,8 @@ export default function LeadsPage() {
                 doors={visibleDoors}
                 leads={managed}
                 storms={run.stormEvents}
+                {...(settings.searchCenter ? { searchCenter: settings.searchCenter } : {})}
+                searchRadiusMiles={settings.searchRadiusMiles ?? 5}
                 onOpenLead={(leadId) => navigate(`/lead/${leadId}`)}
               />
 
