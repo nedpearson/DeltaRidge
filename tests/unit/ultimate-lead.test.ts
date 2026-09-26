@@ -70,9 +70,11 @@ describe('ultimate lead assessment', () => {
   })
 
   it('does not turn a strong property into an ultimate lead without homeowner intent', () => {
+    const withoutConsent = managed({ status: 'attempted' })
+    delete withoutConsent.consent
     const result = assessUltimateLead({
       scored,
-      managed: managed({ status: 'attempted', consent: undefined }),
+      managed: withoutConsent,
     })
     expect(result.propertyOpportunity.score).toBe(82)
     expect(result.homeownerIntent.score).toBe(10)
