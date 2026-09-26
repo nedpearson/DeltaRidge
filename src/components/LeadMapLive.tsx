@@ -16,6 +16,7 @@ import {
 import { STATUS_LABEL, type LeadStatus, type ManagedLead } from '@/features/leads/pipeline'
 import type { ScoredLead } from '@/features/leads/scoring'
 import type { StormEvent } from '@/integrations/storm'
+import { searchCircleGeoJson } from '@/features/leads/search-area'
 
 /**
  * A real map: pans under a finger, pinches to zoom, labels every street.
@@ -35,17 +36,25 @@ const DOORS_SOURCE = 'doors'
 const DOORS_LAYER = 'doors-circles'
 const STORMS_SOURCE = 'storms'
 const STORMS_LAYER = 'storms-circles'
+const SEARCH_SOURCE = 'search-area'
+const SEARCH_FILL_LAYER = 'search-area-fill'
+const SEARCH_LINE_LAYER = 'search-area-line'
+const SEARCH_CENTER_LAYER = 'search-area-center'
 
 export default function LeadMapLive({
   doors,
   leads,
   storms,
+  searchCenter = null,
+  searchRadiusMiles = 3,
   onOpenLead,
   onFailed,
 }: {
   doors: readonly ScoredLead[]
   leads: readonly ManagedLead[]
   storms: readonly StormEvent[]
+  searchCenter?: { latitude: number; longitude: number; accuracyMeters?: number } | null
+  searchRadiusMiles?: number
   onOpenLead: (leadId: string) => void
   /** Called when the map cannot run at all, so the caller can fall back. */
   onFailed: () => void
@@ -69,6 +78,71 @@ export default function LeadMapLive({
    * behaviour that silently empties the map if you forget it.
    */
   const paintLayers = useCallback((map: mapboxgl.Map) => {
+    if (searchCenter) {
+      const area = {
+        type: 'FeatureCollection',
+        features: [
+          searchCircleGeoJson(searchCenter, searchRadiusMiles),
+          {
+            type: 'Feature',
+            properties: { kind: 'center' },
+            geometry: {
+              type: 'Point',
+              coordinates: [searchCenter.longitude, searchCenter.latitude],
+            },
+          },
+        ],
+      } as const
+
+      if (!map.getSource(SEARCH_SOURCE)) {
+        map.addSource(SEARCH_SOURCE, { type: 'geojson', data: area as never })
+      } else {
+        const source = map.getSource(SEARCH_SOURCE)
+        if (source && 'setData' in source) {
+          ;(source as mapboxgl.GeoJSONSource).setData(area as never)
+        }
+      }
+
+      if (!map.getLayer(SEARCH_FILL_LAYER)) {
+        map.addLayer({
+          id: SEARCH_FILL_LAYER,
+          type: 'fill',
+          source: SEARCH_SOURCE,
+          filter: ['==', ['geometry-type'], 'Polygon'],
+          paint: {
+            'fill-color': '#27C6E8',
+            'fill-opacity': 0.055,
+          },
+        })
+      }
+      if (!map.getLayer(SEARCH_LINE_LAYER)) {
+        map.addLayer({
+          id: SEARCH_LINE_LAYER,
+          type: 'line',
+          source: SEARCH_SOURCE,
+          filter: ['==', ['geometry-type'], 'Polygon'],
+          paint: {
+            'line-color': '#27C6E8',
+            'line-opacity': 0.7,
+            'line-width': 2,
+          },
+        })
+      }
+      if (!map.getLayer(SEARCH_CENTER_LAYER)) {
+        map.addLayer({
+          id: SEARCH_CENTER_LAYER,
+          type: 'circle',
+          source: SEARCH_SOURCE,
+          filter: ['==', ['geometry-type'], 'Point'],
+          paint: {
+            'circle-radius': 6,
+            'circle-color': '#27C6E8',
+            'circle-stroke-color': '#F7FAFC',
+            'circle-stroke-width': 2,
+          },
+        })
+      }
+    }
     if (!map.getSource(STORMS_SOURCE)) {
       map.addSource(STORMS_SOURCE, { type: 'geojson', data: stormsToGeoJson(storms) as never })
     }
@@ -127,7 +201,7 @@ export default function LeadMapLive({
         },
       })
     }
-  }, [storms])
+  }, [searchCenter, searchRadiusMiles, storms])
 
   const attachMap = useCallback(
     (node: HTMLDivElement | null) => {
