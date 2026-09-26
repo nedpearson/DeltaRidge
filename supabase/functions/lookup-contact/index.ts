@@ -237,6 +237,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: 'Unauthorized: Invalid token' }, 401)
   }
 
+  const { data: membership, error: membershipError } = await supabaseClient
+    .from('organization_members')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle()
+
+  if (membershipError || !membership?.organization_id) {
+    return json({ error: 'No active organization membership' }, 403)
+  }
+  const organizationId = membership.organization_id as string
+
   let body: Record<string, unknown>
   try {
     body = (await req.json()) as Record<string, unknown>
@@ -260,6 +273,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const { data: cached } = await db
         .from('leads')
         .select('contact_name, contact_phone')
+        .eq('organization_id', organizationId)
         .ilike('address_line1', street)
         .not('contact_phone', 'is', null)
         .limit(1)
@@ -278,7 +292,36 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // 2. Automated Skip-Tracing via BatchData API
+    // Commercial enrichment is an organization-level entitlement, not merely
+    // the presence of a secret. This prevents a key from silently turning on
+    // prospecting for an organization whose agreement has not been attested.
+    let commercialAllowed = false
+    let secondaryAllowed = false
+    if (SUPABASE_URL && SERVICE_ROLE_KEY) {
+      const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+      const { data: providerSettings } = await db
+        .from('contact_provider_settings')
+        .select('entitlement, credential_present, commercial_use_confirmed, secondary_providers_enabled')
+        .eq('organization_id', organizationId)
+        .maybeSingle()
+
+      commercialAllowed =
+        providerSettings?.entitlement === 'business_api' &&
+        providerSettings?.credential_present === true &&
+        providerSettings?.commercial_use_confirmed === true
+      secondaryAllowed = providerSettings?.secondary_providers_enabled === true
+    }
+
+    if (!commercialAllowed) {
+      return json({
+        success: false,
+        configuredProvider: 'none',
+        message:
+          'Automated contact enrichment is not enabled for this organization. A business-use agreement and server credential must be confirmed in Settings → Contact data.',
+      })
+    }
+
+    // 2. Automated Skip-Tracing via the configured commercial provider.
     let ownerFromBatch: string | null = null
     if (BATCHDATA_API_KEY) {
       const batchResult = await lookupBatchData(street, city, state, zip, BATCHDATA_API_KEY)
@@ -288,8 +331,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       ownerFromBatch = await lookupBatchDataOwner(street, city, state, BATCHDATA_API_KEY)
     }
 
-    // 3. Automated Skip-Tracing via RealEstateAPI
-    if (REALESTATE_API_KEY) {
+    // 3. Optional paid fallback provider. Off unless an admin explicitly
+    // enabled fallback calls because every request has cost/compliance impact.
+    if (secondaryAllowed && REALESTATE_API_KEY) {
       const reResult = await lookupRealEstateApi(street, city, state, zip, REALESTATE_API_KEY)
       if (reResult && reResult.phone) {
         return json({ success: true, ...reResult })
