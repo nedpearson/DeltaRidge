@@ -92,7 +92,7 @@ export default function RoofrPanel({ leadId }: { leadId: string }) {
 
       {link === null ? (
         <div className="mt-3 space-y-3">
-          <p className="text-sm text-slate-600">This lead is not in Roofr yet.</p>
+          <p className="text-sm text-text-secondary">This lead is not in Roofr yet.</p>
           <Button onClick={() => void send()} disabled={busy}>
             {busy ? 'Sending…' : 'Create job in Roofr'}
           </Button>
@@ -106,13 +106,13 @@ export default function RoofrPanel({ leadId }: { leadId: string }) {
               </span>
             )}
             {link.roofrJobId !== null && (
-              <span className="text-xs text-slate-600">Roofr job {link.roofrJobId}</span>
+              <span className="text-xs text-text-secondary">Roofr job {link.roofrJobId}</span>
             )}
           </div>
 
           {total !== null && (
-            <p className="text-lg text-[var(--color-ink)]">
-              {total} <span className="text-xs text-slate-600">proposal total, per Roofr</span>
+            <p className="text-lg text-text-primary">
+              {total} <span className="text-xs text-text-secondary">proposal total, per Roofr</span>
             </p>
           )}
 
@@ -120,13 +120,13 @@ export default function RoofrPanel({ leadId }: { leadId: string }) {
             <ul className="space-y-1 text-sm">
               {milestones.map((m) => (
                 <li key={m.label} className="flex justify-between gap-4">
-                  <span className="text-slate-600">{m.label}</span>
-                  <span className="text-slate-600">{day(m.at)}</span>
+                  <span className="text-text-secondary">{m.label}</span>
+                  <span className="text-text-secondary">{day(m.at)}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-text-secondary">
               Linked to Roofr, but no proposal activity has come back yet.
             </p>
           )}
@@ -134,7 +134,7 @@ export default function RoofrPanel({ leadId }: { leadId: string }) {
       )}
 
       {message !== null && (
-        <p className="mt-3 rounded bg-slate-100 hover:bg-slate-200 px-3 py-2 text-sm text-slate-600">
+        <p className="mt-3 rounded bg-bg-page hover:bg-bg-elevated px-3 py-2 text-sm text-text-secondary">
           {/* Said this way on purpose: Zapier accepting a POST is not Roofr
               creating a job, and the panel will show the job the moment Roofr
               says so. */}
@@ -142,7 +142,7 @@ export default function RoofrPanel({ leadId }: { leadId: string }) {
         </p>
       )}
       {error !== null && (
-        <p className="mt-3 rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
+        <p className="mt-3 rounded bg-status-critical/10 px-3 py-2 text-sm text-status-critical">{error}</p>
       )}
     </Card>
   )

@@ -107,13 +107,13 @@ export default function CapturePanel({
       />
 
       {busy && (
-        <Card className="mb-3 !bg-brand-500/10 ring-brand-500/20">
-          <p className="text-[13px] text-brand-700">Processing photo and checking quality…</p>
+        <Card className="mb-3 !bg-brand-primary/10 ring-brand-primary/20">
+          <p className="text-[13px] text-brand-primary">Processing photo and checking quality…</p>
         </Card>
       )}
       {error && (
-        <Card className="mb-3 !bg-red-500/10 ring-red-500/20">
-          <p className="text-[13px] text-red-700">{error}</p>
+        <Card className="mb-3 !bg-status-critical/10 ring-red-500/20">
+          <p className="text-[13px] text-status-critical">{error}</p>
         </Card>
       )}
 
@@ -132,20 +132,20 @@ export default function CapturePanel({
                 <Card
                   key={category}
                   id={`cat-${category}`}
-                  className={`${focused ? 'ring-2 ring-gold-400' : ''} ${satisfied ? '' : isRequired ? 'ring-brand-500/25' : ''}`}
+                  className={`${focused ? 'ring-2 ring-gold-400' : ''} ${satisfied ? '' : isRequired ? 'ring-brand-primary/25' : ''}`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="flex items-center gap-2 text-[14px] font-semibold capitalize">
                         {CATEGORY_LABELS[category]}
                         {isRequired && !satisfied && (
-                          <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700">
+                          <span className="rounded bg-brand-primary/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-primary">
                             Required
                           </span>
                         )}
-                        {satisfied && <span className="text-[13px] text-emerald-400">✓</span>}
+                        {satisfied && <span className="text-[13px] text-status-success">✓</span>}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-slate-600">
+                      <p className="mt-0.5 text-[11px] text-text-secondary">
                         {shots.length === 0
                           ? 'No photo yet'
                           : `${usable.length} usable${shots.length > usable.length ? ` · ${shots.length - usable.length} flagged` : ''}`}
@@ -168,17 +168,17 @@ export default function CapturePanel({
                           <PhotoThumb
                             blob={p.thumbnail}
                             alt={CATEGORY_LABELS[category]}
-                            className={`size-20 rounded-lg object-cover ${p.retakeRecommended ? 'opacity-50 ring-2 ring-amber-500' : 'ring-1 ring-slate-200'}`}
+                            className={`size-20 rounded-lg object-cover ${p.retakeRecommended ? 'opacity-50 ring-2 ring-amber-500' : 'ring-1 ring-border-subtle'}`}
                           />
                           <button
                             onClick={() => void remove(p.id)}
                             aria-label="Delete photo"
-                            className="absolute -right-1 -top-1 grid size-6 !min-h-0 !min-w-0 place-items-center rounded-full bg-black/80 text-[13px] text-slate-600 ring-1 ring-slate-200"
+                            className="absolute -right-1 -top-1 grid size-6 !min-h-0 !min-w-0 place-items-center rounded-full bg-bg-elevated text-[13px] text-text-secondary ring-1 ring-border-subtle"
                           >
                             ×
                           </button>
                           {p.retakeRecommended && (
-                            <span className="absolute inset-x-0 bottom-0 rounded-b-lg bg-amber-500/90 py-0.5 text-center text-[9px] font-bold uppercase tracking-wide text-black">
+                            <span className="absolute inset-x-0 bottom-0 rounded-b-lg bg-status-warning/90 py-0.5 text-center text-[9px] font-bold uppercase tracking-wide text-bg-app">
                               {p.qualityFlag}
                             </span>
                           )}
@@ -188,7 +188,7 @@ export default function CapturePanel({
                   )}
 
                   {shots.some((p) => p.retakeRecommended) && (
-                    <p className="mt-2 text-[11px] leading-relaxed text-amber-300/80">
+                    <p className="mt-2 text-[11px] leading-relaxed text-status-warning/80">
                       A photo here was flagged automatically. Retake it or delete it — flagged photos do not count
                       toward completeness.
                     </p>

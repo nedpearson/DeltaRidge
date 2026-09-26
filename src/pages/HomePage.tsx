@@ -52,7 +52,7 @@ export default function HomePage() {
     <div>
       {topDoors.length > 0 ? (
         <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 shadow-lg ring-1 ring-brand-900/20">
-          <p className="font-display text-lg leading-tight tracking-wide text-white">
+          <p className="font-display text-lg leading-tight tracking-wide text-text-primary">
             {run?.leads.length} door{run?.leads.length === 1 ? '' : 's'} worth knocking.
           </p>
           <p className="mt-1 text-[12px] text-brand-100/90">
@@ -61,12 +61,12 @@ export default function HomePage() {
 
           <ul className="mt-3 space-y-2">
             {topDoors.map((lead) => (
-              <li key={lead.addressKey} className="rounded-xl bg-white px-3 py-2.5 shadow-sm ring-1 ring-slate-200">
+              <li key={lead.addressKey} className="rounded-xl bg-bg-card px-3 py-2.5 shadow-sm ring-1 ring-border-subtle">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="truncate text-[13.5px] font-semibold text-slate-900">{lead.address}</p>
+                  <p className="truncate text-[13.5px] font-semibold text-text-primary">{lead.address}</p>
                   <span className="shrink-0 font-display text-[15px] text-gold-500">{lead.score}</span>
                 </div>
-                <p className="mt-0.5 truncate text-[11.5px] text-slate-600">{lead.reasons[0]}</p>
+                <p className="mt-0.5 truncate text-[11.5px] text-text-secondary">{lead.reasons[0]}</p>
               </li>
             ))}
           </ul>
@@ -74,18 +74,18 @@ export default function HomePage() {
           <Button variant="gold" full className="mt-4" onClick={() => navigate('/leads')}>
             Open the door list
           </Button>
-          <Button variant="secondary" full className="mt-2 text-slate-900" onClick={() => navigate('/new')}>
+          <Button variant="secondary" full className="mt-2 text-text-primary" onClick={() => navigate('/new')}>
             Start an inspection
           </Button>
         </div>
       ) : (
-        <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 ring-1 ring-slate-200">
+        <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 ring-1 ring-border-subtle">
           <p className="font-display text-lg leading-tight tracking-wide">
             Document the roof.
             <br />
             Leave with nothing missing.
           </p>
-          <p className="mt-2 max-w-xs text-[13px] leading-relaxed text-slate-600">
+          <p className="mt-2 max-w-xs text-[13px] leading-relaxed text-text-secondary">
             Guided capture, on-device quality checks, and a completeness review before you drive away.
           </p>
           <Button variant="gold" full className="mt-4" onClick={() => navigate('/new')}>
@@ -98,8 +98,8 @@ export default function HomePage() {
       )}
 
       {!backend.configured && (
-        <Card className="mt-4 !bg-amber-100 ring-amber-300">
-          <p className="text-[12px] leading-relaxed text-amber-700/90">{backend.reason}</p>
+        <Card className="mt-4 !bg-status-warning ring-amber-300">
+          <p className="text-[12px] leading-relaxed text-status-warning/90">{backend.reason}</p>
         </Card>
       )}
 
@@ -112,7 +112,7 @@ export default function HomePage() {
       <Link to="/manager" className="block">
         <Card>
           <p className="text-[13.5px] font-semibold">Team</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
+          <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
             Who knocked what, who is out on a route, how doors were handed out and why.
           </p>
         </Card>
@@ -124,13 +124,13 @@ export default function HomePage() {
           <div className="space-y-2">
             {open.map((i) => (
               <Link key={i.id} to={`/inspection/${i.id}`} className="block">
-                <Card className="transition-colors hover:bg-[var(--color-surface-3)]">
+                <Card className="transition-colors hover:bg-bg-elevated">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-[15px] font-semibold">{inspectionTitle(i)}</p>
-                      <p className="mt-0.5 text-[12px] text-slate-600">Updated {relative(i.updatedAt)}</p>
+                      <p className="mt-0.5 text-[12px] text-text-secondary">Updated {relative(i.updatedAt)}</p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-brand-100 px-2.5 py-1 text-[11px] font-semibold text-brand-700 ring-1 ring-brand-300">
+                    <span className="shrink-0 rounded-full bg-brand-primary/20 px-2.5 py-1 text-[11px] font-semibold text-brand-primary ring-1 ring-brand-300">
                       Resume
                     </span>
                   </div>
@@ -159,7 +159,7 @@ export default function HomePage() {
               <Link key={i.id} to={`/inspection/${i.id}`} className="block">
                 <Card>
                   <p className="truncate text-[15px] font-semibold">{inspectionTitle(i)}</p>
-                  <p className="mt-0.5 text-[12px] text-slate-600">
+                  <p className="mt-0.5 text-[12px] text-text-secondary">
                     {i.sentToOfficeAt
                       ? `Sent to office ${relative(i.sentToOfficeAt)}`
                       : `Completed ${relative(i.completedAt ?? i.updatedAt)}`}
@@ -172,7 +172,7 @@ export default function HomePage() {
       )}
 
       {footprint > 0 && (
-        <p className="mt-6 text-center text-[11px] text-slate-600">
+        <p className="mt-6 text-center text-[11px] text-text-secondary">
           {formatBytes(footprint)} of photos stored on this device
         </p>
       )}

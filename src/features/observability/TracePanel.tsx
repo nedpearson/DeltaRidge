@@ -28,11 +28,11 @@ interface Row {
 }
 
 const TONE: Record<string, string> = {
-  ok: 'text-emerald-300',
-  started: 'text-slate-600',
-  refused: 'text-amber-300',
-  failed: 'text-red-300',
-  unknown: 'text-amber-300',
+  ok: 'text-status-success',
+  started: 'text-text-secondary',
+  refused: 'text-status-warning',
+  failed: 'text-status-critical',
+  unknown: 'text-status-warning',
 }
 
 function carriedLabel(seconds: number | null): string | null {
@@ -126,27 +126,27 @@ export default function TracePanel({ leadId }: { leadId?: string }) {
         />
       </div>
 
-      {note !== null && <p className="mt-2 text-[12px] text-slate-600">{note}</p>}
-      {loading && <p className="mt-2 text-[12px] text-slate-600">Loading…</p>}
+      {note !== null && <p className="mt-2 text-[12px] text-text-secondary">{note}</p>}
+      {loading && <p className="mt-2 text-[12px] text-text-secondary">Loading…</p>}
 
       {rows.length > 0 && (
         <ol className="mt-3 space-y-2">
           {rows.map((row, index) => (
             <li key={`${row.traceId}-${row.step}-${index}`} className="text-[12px] leading-relaxed">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                <span className={`min-w-0 break-words ${TONE[row.outcome] ?? 'text-slate-600'}`}>
+                <span className={`min-w-0 break-words ${TONE[row.outcome] ?? 'text-text-secondary'}`}>
                   {row.step.replace(/[._]/g, ' ')}
                 </span>
-                <span className="shrink-0 text-[11px] text-slate-600">
+                <span className="shrink-0 text-[11px] text-text-secondary">
                   {new Date(row.at).toLocaleTimeString()}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-600">
+              <p className="text-[11px] text-text-secondary">
                 {row.layer}
                 {carriedLabel(row.carriedSeconds) !== null && ` · ${carriedLabel(row.carriedSeconds)}`}
               </p>
               {row.detail !== null && (
-                <p className="mt-0.5 break-words text-[11.5px] text-amber-700/70">{row.detail}</p>
+                <p className="mt-0.5 break-words text-[11.5px] text-status-warning/70">{row.detail}</p>
               )}
             </li>
           ))}

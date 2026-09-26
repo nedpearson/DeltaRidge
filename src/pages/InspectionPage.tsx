@@ -60,13 +60,13 @@ export default function InspectionPage() {
   )
 
   if (loading) {
-    return <p className="pt-10 text-center text-[13px] text-slate-600">Loading inspection…</p>
+    return <p className="pt-10 text-center text-[13px] text-text-secondary">Loading inspection…</p>
   }
 
   if (!inspection) {
     return (
       <div className="pt-10 text-center">
-        <p className="text-[14px] text-slate-600">That inspection is not on this device.</p>
+        <p className="text-[14px] text-text-secondary">That inspection is not on this device.</p>
         <Button variant="ghost" className="mt-3" onClick={() => navigate('/')}>
           Back to home
         </Button>
@@ -112,12 +112,12 @@ export default function InspectionPage() {
   return (
     <div>
       <div className="flex items-start justify-between gap-3">
-        <button onClick={() => navigate(-1)} className="-ml-2 !min-h-0 px-2 py-1 text-[13px] text-slate-600">
+        <button onClick={() => navigate(-1)} className="-ml-2 !min-h-0 px-2 py-1 text-[13px] text-text-secondary">
           ← Back
         </button>
         <div className="flex items-center gap-2">
           {inspection.status === 'complete' && (
-            <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-300 ring-1 ring-emerald-500/25">
+            <span className="rounded-full bg-status-success/10 px-2.5 py-1 text-[11px] font-medium text-status-success ring-1 ring-emerald-500/25">
               Completed
             </span>
           )}
@@ -125,7 +125,7 @@ export default function InspectionPage() {
               from what was recorded rather than from memory at the truck. */}
           <Link
             to={`/estimate/${inspection.id}`}
-            className="rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-medium text-sky-700 ring-1 ring-sky-300"
+            className="rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-medium text-sky-700 ring-1 ring-brand-primary"
           >
             Price this roof
           </Link>
@@ -133,19 +133,19 @@ export default function InspectionPage() {
       </div>
 
       <h1 className="mt-1 font-display text-lg leading-tight tracking-wide">{inspection.addressLine1}</h1>
-      <p className="mt-0.5 text-[12px] text-slate-600">
+      <p className="mt-0.5 text-[12px] text-text-secondary">
         {[inspection.city, inspection.parish && `${inspection.parish} Parish`].filter(Boolean).join(' · ')}
         {usable > 0 && ` · ${usable} photo${usable === 1 ? '' : 's'}`}
       </p>
 
-      <div className="sticky top-[57px] z-10 -mx-4 mt-3 bg-[var(--color-surface)]/95 px-4 py-2 backdrop-blur">
-        <div className="grid grid-cols-3 gap-1 rounded-xl bg-[var(--color-surface-2)] p-1">
+      <div className="sticky top-[57px] z-10 -mx-4 mt-3 bg-bg-app px-4 py-2 backdrop-blur">
+        <div className="grid grid-cols-3 gap-1 rounded-xl bg-bg-card p-1">
           {TABS.map(([value, label]) => (
             <button
               key={value}
               onClick={() => setTab(value)}
               className={`rounded-lg py-2 text-[13px] font-semibold transition-colors ${
-                tab === value ? 'bg-brand-500 text-[var(--color-ink)]' : 'text-slate-600'
+                tab === value ? 'bg-brand-primary text-text-primary' : 'text-text-secondary'
               }`}
             >
               {label}

@@ -28,7 +28,7 @@ export function OwnerLine({ parcel }: { parcel: ParcelRecord | undefined }) {
     // Stated, not blank. "No owner shown" and "we did not look" are different
     // things and a rep should be able to tell which one he is looking at.
     return (
-      <p className="mt-2 text-[12.5px] text-slate-600">
+      <p className="mt-2 text-[12.5px] text-text-secondary">
         No parish parcel matched this address — no owner on record to show.
       </p>
     )
@@ -38,21 +38,21 @@ export function OwnerLine({ parcel }: { parcel: ParcelRecord | undefined }) {
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-      <p className="min-w-0 truncate text-[13.5px] font-semibold text-slate-600">
+      <p className="min-w-0 truncate text-[13.5px] font-semibold text-text-secondary">
         {parcel.ownerName}
       </p>
       {entity && (
-        <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-[10.5px] uppercase tracking-wider text-slate-600">
+        <span className="shrink-0 rounded-full bg-bg-elevated px-2 py-0.5 text-[10.5px] uppercase tracking-wider text-text-secondary">
           {entity}
         </span>
       )}
       {parcel.occupancy === 'owner_occupied' && (
-        <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10.5px] text-emerald-300">
+        <span className="shrink-0 rounded-full bg-status-success/15 px-2 py-0.5 text-[10.5px] text-status-success">
           Owner occupied
         </span>
       )}
       {parcel.occupancy === 'likely_absentee' && (
-        <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10.5px] text-amber-300">
+        <span className="shrink-0 rounded-full bg-status-warning/15 px-2 py-0.5 text-[10.5px] text-status-warning">
           Likely absentee
         </span>
       )}

@@ -84,9 +84,9 @@ export default function RouteMap({
 
   if (points.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-300 px-5 py-10 text-center">
-        <p className="font-display text-sm tracking-wide text-slate-600">No trail for this route</p>
-        <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-slate-600">
+      <div className="rounded-2xl border border-dashed border-border-subtle px-5 py-10 text-center">
+        <p className="font-display text-sm tracking-wide text-text-secondary">No trail for this route</p>
+        <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-text-secondary">
           The route was recorded but no GPS fixes reached the server. The doors and their outcomes are
           still on the timeline; there is simply nothing to draw.
         </p>
@@ -100,7 +100,7 @@ export default function RouteMap({
     <div>
       <div
         ref={box}
-        className="relative overflow-hidden rounded-2xl bg-[var(--color-surface-3)] ring-1 ring-slate-200"
+        className="relative overflow-hidden rounded-2xl bg-bg-elevated ring-1 ring-border-subtle"
         style={{ height }}
       >
         {image && (
@@ -179,13 +179,13 @@ export default function RouteMap({
         )}
 
         {onStyleChange && (
-          <div className="absolute right-2 top-2 flex gap-1 rounded-lg bg-black/55 p-1 backdrop-blur-sm">
+          <div className="absolute right-2 top-2 flex gap-1 rounded-lg bg-bg-elevated p-1 backdrop-blur-sm">
             {(Object.keys(MAP_STYLES) as MapStyleKey[]).map((key) => (
               <button
                 key={key}
                 onClick={() => onStyleChange(key)}
                 className={`rounded px-2 py-1 text-[11px] font-medium ${
-                  style === key ? 'bg-slate-200 text-white' : 'text-slate-600'
+                  style === key ? 'bg-bg-elevated text-text-primary' : 'text-text-secondary'
                 }`}
               >
                 {MAP_STYLES[key].label}
@@ -195,13 +195,13 @@ export default function RouteMap({
         )}
 
         {!image && (
-          <div className="absolute bottom-2 left-2 rounded bg-black/55 px-2 py-1 text-[10px] text-slate-600">
+          <div className="absolute bottom-2 left-2 rounded bg-bg-elevated px-2 py-1 text-[10px] text-text-secondary">
             No basemap configured — the trail is drawn on its own.
           </div>
         )}
       </div>
 
-      <p className="mt-1.5 text-[10.5px] leading-relaxed text-slate-600">
+      <p className="mt-1.5 text-[10.5px] leading-relaxed text-text-secondary">
         Dashed grey is a stretch with no recorded fixes. It is drawn as a gap rather than a path because
         nothing was recorded there. {image ? BASEMAP_ATTRIBUTION : ''}
       </p>

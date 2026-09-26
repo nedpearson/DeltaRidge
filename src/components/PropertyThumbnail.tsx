@@ -123,15 +123,15 @@ export default function PropertyThumbnail({
         }`}
       >
         <div className="relative size-10 opacity-80">
-          <div className="absolute left-1/2 top-0 h-2.5 w-px -translate-x-1/2 bg-white" />
-          <div className="absolute bottom-0 left-1/2 h-2.5 w-px -translate-x-1/2 bg-white" />
-          <div className="absolute left-0 top-1/2 h-px w-2.5 -translate-y-1/2 bg-white" />
-          <div className="absolute right-0 top-1/2 h-px w-2.5 -translate-y-1/2 bg-white" />
+          <div className="absolute left-1/2 top-0 h-2.5 w-px -translate-x-1/2 bg-bg-card" />
+          <div className="absolute bottom-0 left-1/2 h-2.5 w-px -translate-x-1/2 bg-bg-card" />
+          <div className="absolute left-0 top-1/2 h-px w-2.5 -translate-y-1/2 bg-bg-card" />
+          <div className="absolute right-0 top-1/2 h-px w-2.5 -translate-y-1/2 bg-bg-card" />
         </div>
       </div>
 
       {onOpen && (
-        <span className="pointer-events-none absolute right-2 top-2 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 backdrop-blur-sm">
+        <span className="pointer-events-none absolute right-2 top-2 rounded bg-bg-elevated px-1.5 py-0.5 text-[10px] font-medium text-text-secondary backdrop-blur-sm">
           Zoom
         </span>
       )}

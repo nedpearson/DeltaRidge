@@ -50,10 +50,10 @@ function StatusPill({ status }: { status: string }) {
   // what broke. A person should be able to read this column at a glance.
   const tone =
     status === 'processed' || status === 'acknowledged'
-      ? 'bg-emerald-500/15 text-emerald-300'
+      ? 'bg-status-success/15 text-status-success'
       : status === 'failed' || status === 'given_up'
-        ? 'bg-red-500/15 text-red-300'
-        : 'bg-amber-500/15 text-amber-300'
+        ? 'bg-status-critical/15 text-status-critical'
+        : 'bg-status-warning/15 text-status-warning'
   return <span className={`rounded px-2 py-0.5 text-xs ${tone}`}>{status}</span>
 }
 
@@ -127,16 +127,16 @@ export default function RoofrTab({
           Inbound webhook
         </SectionTitle>
 
-        <p className="mt-3 break-all rounded bg-black/30 px-3 py-2 font-mono text-xs text-slate-600">
+        <p className="mt-3 break-all rounded bg-bg-elevated px-3 py-2 font-mono text-xs text-text-secondary">
           {endpoint}
         </p>
 
-        <div className="mt-3 text-sm text-slate-600">
+        <div className="mt-3 text-sm text-text-secondary">
           {settings?.secretHint === null || settings?.secretHint === undefined ? (
             <p>No token yet. Roofr events will be rejected until one is created.</p>
           ) : (
             <p>
-              Token ending <span className="font-mono text-slate-600">{settings.secretHint}</span>,
+              Token ending <span className="font-mono text-text-secondary">{settings.secretHint}</span>,
               created {ago(settings.secretRotatedAt)}.
             </p>
           )}
@@ -153,8 +153,8 @@ export default function RoofrTab({
             <p className="text-sm text-gold-700">
               Copy this now. It is not stored and cannot be shown again.
             </p>
-            <p className="mt-2 break-all font-mono text-xs text-[var(--color-ink)]">{freshToken}</p>
-            <p className="mt-2 text-xs text-slate-600">
+            <p className="mt-2 break-all font-mono text-xs text-text-primary">{freshToken}</p>
+            <p className="mt-2 text-xs text-text-secondary">
               In the Zap’s webhook step, send it as the header{' '}
               <span className="font-mono">x-delta-ridge-token</span>.
             </p>
@@ -170,7 +170,7 @@ export default function RoofrTab({
           Sending leads to Roofr
         </SectionTitle>
 
-        <label className="mt-3 flex items-center gap-3 text-sm text-slate-600">
+        <label className="mt-3 flex items-center gap-3 text-sm text-text-secondary">
           <input
             type="checkbox"
             checked={settings?.pushEnabled === true}
@@ -179,7 +179,7 @@ export default function RoofrTab({
           />
           Allow Delta Ridge to create jobs in Roofr
         </label>
-        <p className="mt-1 text-xs text-slate-600">
+        <p className="mt-1 text-xs text-text-secondary">
           Roofr’s own documentation still describes the Zapier integration as one-way. Leave this off
           until a test Zap has actually created a job on your account.
         </p>
@@ -209,11 +209,11 @@ export default function RoofrTab({
         </SectionTitle>
 
         {error !== null && (
-          <p className="mt-3 rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
+          <p className="mt-3 rounded bg-status-critical/10 px-3 py-2 text-sm text-status-critical">{error}</p>
         )}
 
         {loading ? (
-          <p className="mt-3 text-sm text-slate-600">Loading…</p>
+          <p className="mt-3 text-sm text-text-secondary">Loading…</p>
         ) : log.length === 0 ? (
           <Nothing
             title="Nothing has come through yet"
@@ -223,14 +223,14 @@ export default function RoofrTab({
           <ul className="mt-3 divide-y divide-white/5">
             {log.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                <span className="w-16 shrink-0 text-xs text-slate-600">
+                <span className="w-16 shrink-0 text-xs text-text-secondary">
                   {r.direction === 'inbound' ? 'from' : 'to'} Roofr
                 </span>
-                <span className="flex-1 text-slate-600">{r.what.replace(/_/g, ' ')}</span>
+                <span className="flex-1 text-text-secondary">{r.what.replace(/_/g, ' ')}</span>
                 <StatusPill status={r.status} />
-                <span className="w-20 shrink-0 text-right text-xs text-slate-600">{ago(r.at)}</span>
+                <span className="w-20 shrink-0 text-right text-xs text-text-secondary">{ago(r.at)}</span>
                 {r.error !== null && (
-                  <span className="w-full text-xs text-amber-300/70">{r.error}</span>
+                  <span className="w-full text-xs text-status-warning/70">{r.error}</span>
                 )}
               </li>
             ))}

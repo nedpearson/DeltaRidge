@@ -86,31 +86,31 @@ export default function ContactProviderTab({
         <div
           className={`mt-3 rounded-xl px-3 py-3 ring-1 ${
             verdict.allowed
-              ? 'bg-emerald-500/8 ring-emerald-500/25'
-              : 'bg-amber-100 ring-amber-500/25'
+              ? 'bg-status-success/8 ring-emerald-500/25'
+              : 'bg-status-warning ring-amber-500/25'
           }`}
         >
-          <p className="text-[13px] font-semibold text-slate-600">
+          <p className="text-[13px] font-semibold text-text-secondary">
             {verdict.allowed ? 'Lookups are permitted' : 'Lookups are switched off'}
           </p>
           {!verdict.allowed && (
             <>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-amber-100/85">
+              <p className="mt-1 text-[12.5px] leading-relaxed text-status-warning/85">
                 {verdict.reason}
               </p>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-slate-600">{verdict.remedy}</p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-text-secondary">{verdict.remedy}</p>
             </>
           )}
         </div>
 
         <ul className="mt-3 space-y-2">
           {FINDINGS.map((f) => (
-            <li key={f.label} className="border-t border-slate-300 pt-2 first:border-t-0 first:pt-0">
+            <li key={f.label} className="border-t border-border-subtle pt-2 first:border-t-0 first:pt-0">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="min-w-0 shrink-0 text-[12.5px] text-slate-600">{f.label}</span>
+                <span className="min-w-0 shrink-0 text-[12.5px] text-text-secondary">{f.label}</span>
                 <span
                   className={`min-w-0 break-words text-right text-[12.5px] ${
-                    f.tone === 'warn' ? 'text-amber-700/85' : 'text-slate-600'
+                    f.tone === 'warn' ? 'text-status-warning/85' : 'text-text-secondary'
                   }`}
                 >
                   {f.value}
@@ -121,10 +121,10 @@ export default function ContactProviderTab({
         </ul>
 
         {error !== null && (
-          <p className="mt-3 rounded bg-red-500/10 px-3 py-2 text-[12.5px] text-red-300">{error}</p>
+          <p className="mt-3 rounded bg-status-critical/10 px-3 py-2 text-[12.5px] text-status-critical">{error}</p>
         )}
 
-        <div className="mt-4 border-t border-slate-300 pt-3">
+        <div className="mt-4 border-t border-border-subtle pt-3">
           <Field
             label="What we hold"
             hint="Setting this to a business agreement does not by itself permit anything; the confirmation below does."
@@ -142,7 +142,7 @@ export default function ContactProviderTab({
             </Select>
           </Field>
 
-          <label className="mt-3 flex items-center gap-3 text-[13px] text-slate-600">
+          <label className="mt-3 flex items-center gap-3 text-[13px] text-text-secondary">
             <input
               type="checkbox"
               checked={settings.credentialPresent}
@@ -158,11 +158,11 @@ export default function ContactProviderTab({
             "somebody ticked a box once" is not a record of who decided this.
           */}
           {settings.commercialUseConfirmed ? (
-            <div className="mt-3 rounded-xl bg-emerald-500/8 px-3 py-2.5 ring-1 ring-emerald-500/20">
-              <p className="text-[12.5px] text-emerald-700/90">
+            <div className="mt-3 rounded-xl bg-status-success/8 px-3 py-2.5 ring-1 ring-emerald-500/20">
+              <p className="text-[12.5px] text-status-success/90">
                 Commercial use confirmed{settings.basis ? `: ${settings.basis}` : ''}
               </p>
-              <p className="mt-0.5 text-[11px] text-slate-600">
+              <p className="mt-0.5 text-[11px] text-text-secondary">
                 {settings.confirmedAt
                   ? `Recorded ${new Date(settings.confirmedAt).toLocaleDateString()}`
                   : ''}
@@ -200,7 +200,7 @@ export default function ContactProviderTab({
             )
           )}
 
-          <label className="mt-4 flex items-center gap-3 text-[13px] text-slate-600">
+          <label className="mt-4 flex items-center gap-3 text-[13px] text-text-secondary">
             <input
               type="checkbox"
               checked={settings.secondaryProvidersEnabled}
@@ -209,12 +209,12 @@ export default function ContactProviderTab({
             />
             Allow paid fallback providers
           </label>
-          <p className="mt-1 text-[11px] text-slate-600">
+          <p className="mt-1 text-[11px] text-text-secondary">
             Off by default. Each call to a fallback provider costs money.
           </p>
         </div>
 
-        <p className="mt-3 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-slate-600">
+        <p className="mt-3 border-t border-border-subtle pt-2 text-[11.5px] leading-relaxed text-text-secondary">
           No credential is entered on this screen and there is no field that could hold one. The key
           belongs in an Edge Function secret where the browser cannot reach it.
         </p>
@@ -222,21 +222,21 @@ export default function ContactProviderTab({
 
       <Card>
         <SectionTitle hint="What works today, with no provider at all.">Getting a number</SectionTitle>
-        <ul className="mt-2 space-y-2 text-[12.5px] leading-relaxed text-slate-600">
+        <ul className="mt-2 space-y-2 text-[12.5px] leading-relaxed text-text-secondary">
           <li>
-            <span className="text-slate-600">The homeowner tells a rep.</span> Governed by nobody’s
+            <span className="text-text-secondary">The homeowner tells a rep.</span> Governed by nobody’s
             terms, and the only source this app will dial without further checks.
           </li>
           <li>
-            <span className="text-slate-600">A public record.</span> The parish roll is public by
+            <span className="text-text-secondary">A public record.</span> The parish roll is public by
             statute.
           </li>
           <li>
-            <span className="text-slate-600">A provider, under a business agreement.</span> Switched
+            <span className="text-text-secondary">A provider, under a business agreement.</span> Switched
             on above once one exists.
           </li>
         </ul>
-        <p className="mt-3 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-slate-600">
+        <p className="mt-3 border-t border-border-subtle pt-2 text-[11.5px] leading-relaxed text-text-secondary">
           Having a number is never permission to dial it. Consent, the internal do-not-call list and
           Louisiana’s calling hours all still apply, and they are checked separately on every lead.
         </p>

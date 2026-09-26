@@ -35,12 +35,12 @@ export default function AccountPanel() {
         <SectionTitle>SYNC</SectionTitle>
         <Card className="space-y-3">
           {sent ? (
-            <p className="text-[13px] leading-relaxed text-emerald-300">
+            <p className="text-[13px] leading-relaxed text-status-success">
               Check your email — the sign-in link is on its way. Opening it on this device signs you in here.
             </p>
           ) : (
             <>
-              <p className="text-[12.5px] leading-relaxed text-slate-600">
+              <p className="text-[12.5px] leading-relaxed text-text-secondary">
                 Inspections are saved on this device either way. Sign in to push them to the office.
               </p>
               <Field label="Work email">
@@ -52,7 +52,7 @@ export default function AccountPanel() {
                   autoComplete="email"
                 />
               </Field>
-              {error && <p className="text-[12px] text-red-300">{error}</p>}
+              {error && <p className="text-[12px] text-status-critical">{error}</p>}
               <Button full variant="secondary" onClick={() => void send()} disabled={busy || !email.includes('@')}>
                 {busy ? 'Sending…' : 'Email me a sign-in link'}
               </Button>
@@ -69,11 +69,11 @@ export default function AccountPanel() {
       <Card>
         <p className="text-[14px] font-semibold">{session.user.email}</p>
         {membership ? (
-          <p className="mt-0.5 text-[12px] text-slate-600">
+          <p className="mt-0.5 text-[12px] text-text-secondary">
             {membership.organizationName} · {membership.role}
           </p>
         ) : awaitingAccess ? (
-          <p className="mt-1.5 text-[12px] leading-relaxed text-amber-300/90">
+          <p className="mt-1.5 text-[12px] leading-relaxed text-status-warning/90">
             Signed in, but this account has not been added to Delta Ridge yet. Inspections stay safely on this
             device until it is — nothing is lost.
           </p>

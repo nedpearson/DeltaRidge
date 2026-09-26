@@ -117,8 +117,8 @@ export default function RoofView({
 
   if (!hasBasemap()) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-300 px-5 py-8 text-center">
-        <p className="text-[13px] text-slate-600">No satellite imagery is configured for this app.</p>
+      <div className="rounded-2xl border border-dashed border-border-subtle px-5 py-8 text-center">
+        <p className="text-[13px] text-text-secondary">No satellite imagery is configured for this app.</p>
       </div>
     )
   }
@@ -127,7 +127,7 @@ export default function RoofView({
     <div>
       <div
         ref={box}
-        className="relative w-full overflow-hidden rounded-2xl bg-[var(--color-surface-3)] ring-1 ring-slate-200"
+        className="relative w-full overflow-hidden rounded-2xl bg-bg-elevated ring-1 ring-border-subtle"
         // w-full with an aspect ratio and a max height: the width stays full and
         // only the height is capped. Capping with max-h alone makes the browser
         // honour the ratio by shrinking the WIDTH instead.
@@ -146,7 +146,7 @@ export default function RoofView({
 
         {failed && (
           <div className="flex size-full items-center justify-center px-6 text-center">
-            <p className="text-[12.5px] leading-relaxed text-slate-600">
+            <p className="text-[12.5px] leading-relaxed text-text-secondary">
               The imagery for this address did not load. Everything else about the door is unaffected.
             </p>
           </div>
@@ -175,10 +175,10 @@ export default function RoofView({
         {!outline && !failed && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="relative size-14">
-              <div className="absolute left-1/2 top-0 h-3.5 w-px -translate-x-1/2 bg-slate-200" />
-              <div className="absolute bottom-0 left-1/2 h-3.5 w-px -translate-x-1/2 bg-slate-200" />
-              <div className="absolute left-0 top-1/2 h-px w-3.5 -translate-y-1/2 bg-slate-200" />
-              <div className="absolute right-0 top-1/2 h-px w-3.5 -translate-y-1/2 bg-slate-200" />
+              <div className="absolute left-1/2 top-0 h-3.5 w-px -translate-x-1/2 bg-bg-elevated" />
+              <div className="absolute bottom-0 left-1/2 h-3.5 w-px -translate-x-1/2 bg-bg-elevated" />
+              <div className="absolute left-0 top-1/2 h-px w-3.5 -translate-y-1/2 bg-bg-elevated" />
+              <div className="absolute right-0 top-1/2 h-px w-3.5 -translate-y-1/2 bg-bg-elevated" />
             </div>
           </div>
         )}
@@ -188,7 +188,7 @@ export default function RoofView({
             onClick={() => setStep((s) => Math.max(0, s - 1))}
             disabled={!canZoomIn}
             aria-label="Zoom in"
-            className="size-9 rounded-lg bg-black/60 text-[18px] font-semibold text-white backdrop-blur-sm disabled:opacity-30"
+            className="size-9 rounded-lg bg-bg-elevated text-[18px] font-semibold text-text-primary backdrop-blur-sm disabled:opacity-30"
           >
             +
           </button>
@@ -196,7 +196,7 @@ export default function RoofView({
             onClick={() => setStep((s) => Math.min(SPAN_STEPS_METRES.length - 1, s + 1))}
             disabled={!canZoomOut}
             aria-label="Zoom out"
-            className="size-9 rounded-lg bg-black/60 text-[18px] font-semibold text-white backdrop-blur-sm disabled:opacity-30"
+            className="size-9 rounded-lg bg-bg-elevated text-[18px] font-semibold text-text-primary backdrop-blur-sm disabled:opacity-30"
           >
             −
           </button>
@@ -206,7 +206,7 @@ export default function RoofView({
           <button
             onClick={onClose}
             aria-label="Close"
-            className="absolute left-2 top-2 size-9 rounded-lg bg-black/60 text-[15px] text-white backdrop-blur-sm"
+            className="absolute left-2 top-2 size-9 rounded-lg bg-bg-elevated text-[15px] text-text-primary backdrop-blur-sm"
           >
             ✕
           </button>
@@ -221,7 +221,7 @@ export default function RoofView({
           roof against a number they already think in.
         */}
         <div
-          className="pointer-events-none absolute top-2 rounded bg-black/60 px-2 py-1 text-[10.5px] text-slate-600 backdrop-blur-sm"
+          className="pointer-events-none absolute top-2 rounded bg-bg-elevated px-2 py-1 text-[10.5px] text-text-secondary backdrop-blur-sm"
           // Clear of the close button when there is one.
           style={{ left: onClose ? '3.25rem' : '0.5rem' }}
         >
@@ -229,7 +229,7 @@ export default function RoofView({
         </div>
       </div>
 
-      <p className="mt-1.5 text-[10.5px] leading-relaxed text-slate-600">
+      <p className="mt-1.5 text-[10.5px] leading-relaxed text-text-secondary">
         {framed
           ? 'Outline is the parish parcel record, not a survey.'
           : 'Centred on this address — the parish has no lot outline for it.'}{' '}

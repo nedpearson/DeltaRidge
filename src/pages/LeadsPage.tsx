@@ -113,9 +113,9 @@ function shortDate(iso: string): string {
 }
 
 function tone(score: number): string {
-  if (score >= 60) return 'text-emerald-400'
+  if (score >= 60) return 'text-status-success'
   if (score >= 40) return 'text-gold-400'
-  return 'text-slate-600'
+  return 'text-text-secondary'
 }
 
 function mapsHref(lat: number, lon: number): string {
@@ -153,13 +153,13 @@ function DoorCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-[15px] font-semibold">{lead.address}</p>
-          <p className="mt-0.5 truncate text-[12px] text-slate-600">
+          <p className="mt-0.5 truncate text-[12px] text-text-secondary">
             {[lead.subdivision, lead.city].filter(Boolean).join(' · ') || 'East Baton Rouge Parish'}
           </p>
         </div>
         <div className="shrink-0 text-right">
           <p className={`font-display text-2xl leading-none ${tone(lead.score)}`}>{lead.score}</p>
-          <p className="mt-0.5 text-[10px] uppercase tracking-wider text-slate-600">priority</p>
+          <p className="mt-0.5 text-[10px] uppercase tracking-wider text-text-secondary">priority</p>
         </div>
       </div>
 
@@ -177,14 +177,14 @@ function DoorCard({
       />
 
       {managed && (
-        <p className="mt-2 inline-block rounded-full bg-slate-200 px-2.5 py-1 text-[11px] text-slate-600">
+        <p className="mt-2 inline-block rounded-full bg-bg-elevated px-2.5 py-1 text-[11px] text-text-secondary">
           {STATUS_LABEL[managed.status]} · knocked {managed.knockCount}x
         </p>
       )}
 
       <ul className="mt-2.5 space-y-1">
         {lead.reasons.map((reason) => (
-          <li key={reason} className="flex gap-2 text-[12.5px] leading-snug text-slate-600">
+          <li key={reason} className="flex gap-2 text-[12.5px] leading-snug text-text-secondary">
             <span className="mt-1.5 size-1 shrink-0 rounded-full bg-brand-400" />
             {reason}
           </li>
@@ -222,7 +222,7 @@ function DoorCard({
 
       <button
         onClick={() => setOpen((v) => !v)}
-        className="mt-2 w-full !min-h-0 py-1 text-[11px] text-slate-600"
+        className="mt-2 w-full !min-h-0 py-1 text-[11px] text-text-secondary"
       >
         {open ? 'Hide how this ranked' : 'How this ranked'}
       </button>
@@ -243,12 +243,12 @@ function RouteCard({ route, onPick }: { route: Route; onPick: () => void }) {
   return (
     <button
       onClick={onPick}
-      className="w-full rounded-2xl bg-white/[0.04] p-4 text-left ring-1 ring-slate-200"
+      className="w-full rounded-2xl bg-bg-card/[0.04] p-4 text-left ring-1 ring-border-subtle"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-[14.5px] font-semibold">{route.name}</p>
-          <p className="mt-0.5 text-[12px] text-slate-600">
+          <p className="mt-0.5 text-[12px] text-text-secondary">
             {route.doors.length} door{route.doors.length === 1 ? '' : 's'}
             {route.milesAway !== undefined && ` · ${route.milesAway} mi away`}
             {route.spreadMiles > 0 && ` · about ${route.spreadMiles} mi across`}
@@ -258,7 +258,7 @@ function RouteCard({ route, onPick }: { route: Route; onPick: () => void }) {
           <p className={`font-display text-xl leading-none ${tone(route.topScore)}`}>
             {route.topScore}
           </p>
-          <p className="mt-0.5 text-[10px] uppercase tracking-wider text-slate-600">best door</p>
+          <p className="mt-0.5 text-[10px] uppercase tracking-wider text-text-secondary">best door</p>
         </div>
       </div>
     </button>
@@ -289,7 +289,7 @@ function RouteHeader({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-[14.5px] font-semibold">{route.name}</p>
-          <p className="mt-0.5 text-[11.5px] text-slate-600">
+          <p className="mt-0.5 text-[11.5px] text-text-secondary">
             {ordered.length} door{ordered.length === 1 ? '' : 's'} in walking order
             {miles > 0 && ` · about ${miles} mi on foot`}
           </p>
@@ -298,7 +298,7 @@ function RouteHeader({
           All routes
         </Button>
       </div>
-      <p className="mt-2 text-[10.5px] leading-relaxed text-slate-600">
+      <p className="mt-2 text-[10.5px] leading-relaxed text-text-secondary">
         Ordered by the shortest walk between the dots, starting{' '}
         {route.milesAway !== undefined ? 'from where you are' : 'at the best door'}. It does not
         know about one-way streets, cul-de-sacs or which side of the road a house is on.
@@ -330,10 +330,10 @@ function ScoreSpread({ doors }: { doors: readonly ScoredLead[] }) {
 
   return (
     <Card className="!py-2.5">
-      <p className="text-[11.5px] leading-relaxed text-slate-600">
+      <p className="text-[11.5px] leading-relaxed text-text-secondary">
         Priority runs {low}–{high} across this list. Every door here already has an old roof under
         a storm with no re-roof permit since, so what separates the top from the bottom is mostly{' '}
-        <span className="text-slate-600">job size and how close the hail fell</span> — not whether
+        <span className="text-text-secondary">job size and how close the hail fell</span> — not whether
         the door is worth knocking. They all are.
       </p>
     </Card>
@@ -350,25 +350,25 @@ function ScoreSpread({ doors }: { doors: readonly ScoredLead[] }) {
  */
 function ScoreBreakdown({ lead }: { lead: ScoredLead }) {
   return (
-    <div className="mt-1 border-t border-slate-300 pt-2">
+    <div className="mt-1 border-t border-border-subtle pt-2">
       <ul className="space-y-1">
         {lead.breakdown.map((factor) => (
           <li key={factor.label} className="flex items-baseline gap-2 text-[12px]">
             <span className="w-9 shrink-0 text-right font-display text-gold-400">
               +{factor.points}
             </span>
-            <span className="min-w-0 flex-1 text-slate-600">
+            <span className="min-w-0 flex-1 text-text-secondary">
               {factor.label}
-              <span className="text-slate-600"> — {factor.detail}</span>
+              <span className="text-text-secondary"> — {factor.detail}</span>
             </span>
           </li>
         ))}
       </ul>
-      <div className="mt-1.5 flex items-baseline gap-2 border-t border-slate-300 pt-1.5 text-[12px]">
-        <span className="w-9 shrink-0 text-right font-display text-slate-600">{lead.score}</span>
-        <span className="text-slate-600">Priority</span>
+      <div className="mt-1.5 flex items-baseline gap-2 border-t border-border-subtle pt-1.5 text-[12px]">
+        <span className="w-9 shrink-0 text-right font-display text-text-secondary">{lead.score}</span>
+        <span className="text-text-secondary">Priority</span>
       </div>
-      <p className="mt-1.5 text-[10.5px] leading-relaxed text-slate-600">
+      <p className="mt-1.5 text-[10.5px] leading-relaxed text-text-secondary">
         Weights are hand-set, not learned. This ranks documentation-worthy opportunity, not the
         chance of a sale — there is no closed-won history in this system yet to learn one from.
       </p>
@@ -404,7 +404,7 @@ function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-[15px] font-semibold">{lead.contactName ?? lead.address}</p>
-          <p className="mt-0.5 truncate text-[12px] text-slate-600">
+          <p className="mt-0.5 truncate text-[12px] text-text-secondary">
             {lead.contactName
               ? lead.address
               : [lead.subdivision, lead.city].filter(Boolean).join(' · ')}
@@ -413,7 +413,7 @@ function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
         {due && (
           <span
             className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] ${
-              overdue ? 'bg-gold-500/20 text-gold-300' : 'bg-slate-200 text-slate-600'
+              overdue ? 'bg-gold-500/20 text-gold-300' : 'bg-bg-elevated text-text-secondary'
             }`}
           >
             {due}
@@ -421,7 +421,7 @@ function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
         )}
       </div>
 
-      <p className="mt-2 text-[12px] text-slate-600">
+      <p className="mt-2 text-[12px] text-text-secondary">
         {STATUS_LABEL[lead.status]} · knocked {lead.knockCount}x · added {relativeDay(lead.createdAt)}
       </p>
 
@@ -477,16 +477,16 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
       <SectionTitle hint={coverage.window.label}>STORM DATA</SectionTitle>
       <Card className="!py-3">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-[13px] text-slate-600">Official ground reports</p>
+          <p className="text-[13px] text-text-secondary">Official ground reports</p>
           {official.kind === 'live' ? (
-            <p className="shrink-0 font-display text-[15px] text-emerald-400">{official.count}</p>
+            <p className="shrink-0 font-display text-[15px] text-status-success">{official.count}</p>
           ) : (
-            <p className="shrink-0 text-[11px] uppercase tracking-wider text-amber-300">
+            <p className="shrink-0 text-[11px] uppercase tracking-wider text-status-warning">
               {official.kind === 'failed' ? 'unavailable' : 'off'}
             </p>
           )}
         </div>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
+        <p className="mt-0.5 text-[11px] leading-relaxed text-text-secondary">
           NWS Local Storm Reports — someone on the ground reported hail and the NWS logged it.
           {official.kind === 'live' && official.newestAt
             ? ` Most recent: ${shortDate(official.newestAt)}.`
@@ -494,19 +494,19 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
           {official.kind === 'failed' ? ` ${official.why}` : ''}
         </p>
 
-        <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-slate-300 pt-3">
-          <p className="text-[13px] text-slate-600">Radar-estimated hail (NEXRAD)</p>
+        <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-border-subtle pt-3">
+          <p className="text-[13px] text-text-secondary">Radar-estimated hail (NEXRAD)</p>
           {coverage.radar.kind === 'live' ? (
-            <p className="shrink-0 font-display text-[15px] text-emerald-400">
+            <p className="shrink-0 font-display text-[15px] text-status-success">
               {coverage.radar.count}
             </p>
           ) : (
-            <p className="shrink-0 text-[11px] uppercase tracking-wider text-amber-300">
+            <p className="shrink-0 text-[11px] uppercase tracking-wider text-status-warning">
               {coverage.radar.kind === 'failed' ? 'unavailable' : 'not configured'}
             </p>
           )}
         </div>
-        <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
+        <p className="mt-0.5 text-[11px] leading-relaxed text-text-secondary">
           {coverage.radar.kind === 'live'
             ? (coverage.radar.note ?? 'Radar-estimated hail is running.')
             : coverage.radar.why}
@@ -516,11 +516,11 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
         </p>
 
         {coverage.byYear.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-300 pt-3">
+          <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border-subtle pt-3">
             {coverage.byYear.map((y) => (
               <span
                 key={y.year}
-                className="rounded-full bg-slate-200 px-2.5 py-1 text-[11px] text-slate-600"
+                className="rounded-full bg-bg-elevated px-2.5 py-1 text-[11px] text-text-secondary"
               >
                 {y.year} · {y.count}
               </span>
@@ -530,14 +530,14 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
 
         <button
           onClick={() => setOpen((v) => !v)}
-          className="mt-2 w-full !min-h-0 py-1 text-[11px] text-slate-600"
+          className="mt-2 w-full !min-h-0 py-1 text-[11px] text-text-secondary"
         >
           {open ? 'Hide storms' : `View ${events.length} storm${events.length === 1 ? '' : 's'}`}
         </button>
         {open && (
-          <ul className="mt-1 space-y-1.5 border-t border-slate-300 pt-2">
+          <ul className="mt-1 space-y-1.5 border-t border-border-subtle pt-2">
             {events.length === 0 && (
-              <li className="text-[11.5px] leading-relaxed text-slate-600">
+              <li className="text-[11.5px] leading-relaxed text-text-secondary">
                 Nothing qualified in this window. That is the feed answering, not the feed failing.
               </li>
             )}
@@ -546,7 +546,7 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
               .map((e) => (
                 <li key={e.externalId} className="flex items-baseline justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-[12.5px] text-slate-600">
+                    <p className="truncate text-[12.5px] text-text-secondary">
                       {[e.city, e.countyParish].filter(Boolean).join(', ') ||
                         // A radar detection is a grid square, not a town. Its
                         // coordinates are the only honest name it has.
@@ -558,7 +558,7 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
                       until radar landed and would have mislabelled every radar
                       estimate the moment it did.
                     */}
-                    <p className="text-[10.5px] text-slate-600">
+                    <p className="text-[10.5px] text-text-secondary">
                       {shortDate(e.occurredAt)} ·{' '}
                       {observationOf(e) === 'official_report'
                         ? 'official report'
@@ -594,11 +594,11 @@ function Chip({
     <button
       onClick={onClick}
       className={`flex shrink-0 items-baseline gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
-        active ? 'bg-gold-500 text-brand-950' : 'bg-slate-200 text-slate-600'
+        active ? 'bg-gold-500 text-brand-950' : 'bg-bg-elevated text-text-secondary'
       }`}
     >
       {label}
-      <span className={`font-display text-[13px] ${active ? 'text-brand-950' : 'text-slate-600'}`}>
+      <span className={`font-display text-[13px] ${active ? 'text-brand-950' : 'text-text-secondary'}`}>
         {count}
       </span>
     </button>
@@ -830,9 +830,9 @@ export default function LeadsPage() {
 
   return (
     <div>
-      <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 text-[var(--color-ink)] p-5 ring-1 ring-slate-200">
+      <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 text-text-primary p-5 ring-1 ring-border-subtle">
         <p className="font-display text-lg leading-tight tracking-wide">Knock the right doors.</p>
-        <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-slate-600">
+        <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-text-secondary">
           Hail reports crossed with parish permit records: roofs old enough to sell, under a storm,
           with no re-roof permit filed since.
         </p>
@@ -875,8 +875,8 @@ export default function LeadsPage() {
       </div>
 
       {error && (
-        <Card className="mt-3 !bg-amber-100 ring-amber-300">
-          <p className="text-[12.5px] leading-relaxed font-medium text-amber-900">{error}</p>
+        <Card className="mt-3 !bg-status-warning ring-amber-300">
+          <p className="text-[12.5px] leading-relaxed font-medium text-status-warning">{error}</p>
         </Card>
       )}
 
@@ -958,9 +958,9 @@ export default function LeadsPage() {
           {run && (
             <>
               {run.notes.length > 0 && (
-                <Card className="mt-3 !bg-amber-100 ring-amber-300">
+                <Card className="mt-3 !bg-status-warning ring-amber-300">
                   {run.notes.map((note) => (
-                    <p key={note} className="text-[12.5px] leading-relaxed text-amber-700/90">
+                    <p key={note} className="text-[12.5px] leading-relaxed text-status-warning/90">
                       {note}
                     </p>
                   ))}
@@ -990,7 +990,7 @@ export default function LeadsPage() {
               <ScoreSpread doors={visibleDoors} />
 
               <Card className="!py-2.5">
-                <p className="text-[11.5px] leading-relaxed text-slate-600">
+                <p className="text-[11.5px] leading-relaxed text-text-secondary">
                   From {run.counts.candidatesConsidered.toLocaleString()} properties and{' '}
                   {run.counts.stormsConsidered} official hail reports in{' '}
                   {run.window.label.toLowerCase()}.{' '}
@@ -1002,7 +1002,7 @@ export default function LeadsPage() {
                     </>
                   )}
                   {run.counts.suppressedAlreadyReplaced > 0 && (
-                    <span className="text-emerald-300/80">
+                    <span className="text-status-success/80">
                       {run.counts.suppressedAlreadyReplaced} already re-roofed since the storm —
                       dropped.{' '}
                     </span>
@@ -1030,8 +1030,8 @@ export default function LeadsPage() {
                   }}
                   className={`mt-2 w-full rounded-full px-4 py-2 text-[12.5px] ${
                     ownerOccupiedOnly
-                      ? 'bg-emerald-500/20 text-emerald-300'
-                      : 'bg-slate-200 text-slate-600'
+                      ? 'bg-status-success/20 text-status-success'
+                      : 'bg-bg-elevated text-text-secondary'
                   }`}
                 >
                   {ownerOccupiedOnly
@@ -1110,23 +1110,23 @@ export default function LeadsPage() {
                       {showCompetitors ? 'Hide' : 'Show re-roof permits by contractor'}
                     </Button>
                     {showCompetitors && (
-                      <ul className="mt-3 space-y-2 border-t border-slate-300 pt-3">
+                      <ul className="mt-3 space-y-2 border-t border-border-subtle pt-3">
                         {run.competitors.map((c) => (
                           <li
                             key={c.contractorName}
                             className="flex items-baseline justify-between gap-3"
                           >
                             <div className="min-w-0">
-                              <p className="truncate text-[13px] text-slate-600">
+                              <p className="truncate text-[13px] text-text-secondary">
                                 {c.contractorName}
                               </p>
                               {c.subdivisions.length > 0 && (
-                                <p className="truncate text-[11px] text-slate-600">
+                                <p className="truncate text-[11px] text-text-secondary">
                                   {c.subdivisions.join(', ')}
                                 </p>
                               )}
                             </div>
-                            <span className="shrink-0 font-display text-[13px] text-slate-600">
+                            <span className="shrink-0 font-display text-[13px] text-text-secondary">
                               {c.permits}
                             </span>
                           </li>
@@ -1137,7 +1137,7 @@ export default function LeadsPage() {
                 </>
               )}
 
-              <p className="mt-6 text-center text-[10.5px] leading-relaxed text-slate-600">
+              <p className="mt-6 text-center text-[10.5px] leading-relaxed text-text-secondary">
                 NWS Local Storm Reports via Iowa Environmental Mesonet · City of Baton Rouge / East
                 Baton Rouge Parish Open Data. East Baton Rouge only — Ascension and Livingston
                 publish no permit feed yet.

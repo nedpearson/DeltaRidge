@@ -110,7 +110,7 @@ export default function NewInspectionPage() {
     <div className="space-y-4 pb-4">
       <div>
         <h1 className="font-display text-xl tracking-wide">New inspection</h1>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-600">
+        <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
           Address is all that is required to start. Everything else can be filled in from the roof.
         </p>
       </div>
@@ -187,7 +187,7 @@ export default function NewInspectionPage() {
       </Card>
 
       {error && (
-        <p className="rounded-lg bg-amber-100 px-3 py-2 text-[13px] text-amber-700 ring-1 ring-amber-300">
+        <p className="rounded-lg bg-status-warning px-3 py-2 text-[13px] text-status-warning ring-1 ring-amber-300">
           {error}
         </p>
       )}

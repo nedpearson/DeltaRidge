@@ -57,11 +57,11 @@ export default function SyncPanel() {
       <SectionTitle {...(running ? { hint: 'syncing…' } : {})}>SYNC</SectionTitle>
 
       {stalled.length > 0 && (
-        <Card className="!bg-amber-100 ring-amber-300">
-          <p className="text-[13.5px] font-semibold text-amber-700">
+        <Card className="!bg-status-warning ring-amber-300">
+          <p className="text-[13.5px] font-semibold text-status-warning">
             {summarise(stalled)} could not be sent.
           </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-amber-100/70">
+          <p className="mt-1 text-[12px] leading-relaxed text-status-warning/70">
             Everything is still saved on this device — nothing has been lost. The app has stopped retrying on its
             own so it is not draining your battery on a request that keeps failing.
           </p>
@@ -74,12 +74,12 @@ export default function SyncPanel() {
             </Button>
           </div>
           {showDetail && (
-            <ul className="mt-3 space-y-2 border-t border-slate-300 pt-3">
+            <ul className="mt-3 space-y-2 border-t border-border-subtle pt-3">
               {stalled.map((item) => (
                 <li key={item.id} className="text-[12px] leading-relaxed">
-                  <span className="font-semibold text-slate-600">{LABEL[item.entity]}</span>
-                  <span className="text-slate-600"> · {item.attempts} attempts</span>
-                  <p className="mt-0.5 break-words text-slate-600">{item.lastError ?? 'No error recorded.'}</p>
+                  <span className="font-semibold text-text-secondary">{LABEL[item.entity]}</span>
+                  <span className="text-text-secondary"> · {item.attempts} attempts</span>
+                  <p className="mt-0.5 break-words text-text-secondary">{item.lastError ?? 'No error recorded.'}</p>
                 </li>
               ))}
             </ul>
@@ -101,11 +101,11 @@ export default function SyncPanel() {
 
       {foreign > 0 && (
         <Card className="mt-2">
-          <p className="text-[13.5px] font-semibold text-slate-600">
+          <p className="text-[13.5px] font-semibold text-text-secondary">
             {foreign} item{foreign === 1 ? '' : 's'} on this phone{' '}
             {foreign === 1 ? 'belongs' : 'belong'} to another sign-in.
           </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
+          <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
             They are safe and they are not being sent under your account. Whoever captured them can sign in on this
             phone and they will go up under their own name.
           </p>
@@ -117,7 +117,7 @@ export default function SyncPanel() {
           <p className="text-[13.5px]">
             {mine} field update{mine === 1 ? '' : 's'} waiting to sync.
           </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
+          <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
             {signedOut
               ? 'Saved on this device. Sign in above and it will go up on its own.'
               : noOrg
@@ -134,7 +134,7 @@ export default function SyncPanel() {
         </Card>
       )}
 
-      <Link to="/diagnostics" className="mt-2 block text-center text-[11.5px] text-slate-600 underline">
+      <Link to="/diagnostics" className="mt-2 block text-center text-[11.5px] text-text-secondary underline">
         Sync diagnostics
       </Link>
     </>

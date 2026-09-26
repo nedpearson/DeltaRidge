@@ -185,7 +185,7 @@ export default function RoutePanel() {
         <SectionTitle>ROUTE SUMMARY</SectionTitle>
         <Card>
           <p className="text-[13.5px] font-semibold">Route saved.</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
+          <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
             Everything below is on this phone already. It reaches the office as soon as there is signal —
             you do not have to wait here for it.
           </p>
@@ -200,14 +200,14 @@ export default function RoutePanel() {
           </div>
 
           {stats.gapCount > 0 && (
-            <p className="mt-2 text-[11.5px] leading-relaxed text-amber-700/70">
+            <p className="mt-2 text-[11.5px] leading-relaxed text-status-warning/70">
               {stats.gapCount} stretch{stats.gapCount === 1 ? '' : 'es'} with no GPS, {duration(stats.gapSeconds)} in
               total. The doors you recorded in them are saved; the trail just has holes where the phone had
               no fix.
             </p>
           )}
 
-          <p className="mt-2 text-[11.5px] leading-relaxed text-slate-600">
+          <p className="mt-2 text-[11.5px] leading-relaxed text-text-secondary">
             Distance counts only stretches the phone actually recorded. Gaps are left out rather than
             guessed at.
           </p>
@@ -217,13 +217,13 @@ export default function RoutePanel() {
             ones that happened - a screen of zeros in a driveway is noise.
           */}
           {outcomes.length > 0 && (
-            <div className="mt-4 border-t border-slate-300 pt-3">
-              <p className="text-[11px] uppercase tracking-wider text-slate-600">Doors worked</p>
+            <div className="mt-4 border-t border-border-subtle pt-3">
+              <p className="text-[11px] uppercase tracking-wider text-text-secondary">Doors worked</p>
               <ul className="mt-2 space-y-1">
                 {outcomes.map((row) => (
                   <li key={row.outcome} className="flex items-baseline justify-between gap-3">
-                    <span className="text-[12.5px] text-slate-600">{row.label}</span>
-                    <span className="font-display text-[13px] text-slate-600">{row.count}</span>
+                    <span className="text-[12.5px] text-text-secondary">{row.label}</span>
+                    <span className="font-display text-[13px] text-text-secondary">{row.count}</span>
                   </li>
                 ))}
               </ul>
@@ -234,15 +234,15 @@ export default function RoutePanel() {
             The funnel. Each rate is against the stage above it, and a stage
             with nothing above it shows a dash rather than 0% - see recap.ts.
           */}
-          <div className="mt-4 border-t border-slate-300 pt-3">
-            <p className="text-[11px] uppercase tracking-wider text-slate-600">How the day converted</p>
+          <div className="mt-4 border-t border-border-subtle pt-3">
+            <p className="text-[11px] uppercase tracking-wider text-text-secondary">How the day converted</p>
             <ul className="mt-2 space-y-1">
               {funnel.stages.map((stage) => (
                 <li key={stage.key} className="flex items-baseline justify-between gap-3">
-                  <span className="text-[12.5px] text-slate-600">{stage.label}</span>
+                  <span className="text-[12.5px] text-text-secondary">{stage.label}</span>
                   <span className="flex items-baseline gap-2">
-                    <span className="font-display text-[13px] text-slate-600">{stage.count}</span>
-                    <span className="w-10 text-right text-[11px] text-slate-600">
+                    <span className="font-display text-[13px] text-text-secondary">{stage.count}</span>
+                    <span className="w-10 text-right text-[11px] text-text-secondary">
                       {rateLabel(stage.rate)}
                     </span>
                   </span>
@@ -250,7 +250,7 @@ export default function RoutePanel() {
               ))}
             </ul>
             {funnel.unmeasured.length > 0 && (
-              <p className="mt-2 text-[11.5px] leading-relaxed text-slate-600">
+              <p className="mt-2 text-[11.5px] leading-relaxed text-text-secondary">
                 {funnel.unmeasured.map((k) => FUNNEL_LABEL[k].toLowerCase()).join(', ')} are not
                 counted on this screen. They are left out rather than shown as zero, because a zero
                 here would read as a bad day instead of a number nobody collected.
@@ -264,18 +264,18 @@ export default function RoutePanel() {
             does it. Named records only - never a judgement about the rep.
           */}
           {summary.open.length > 0 && (
-            <div className="mt-4 border-t border-slate-300 pt-3">
-              <p className="text-[11px] uppercase tracking-wider text-amber-700/60">
+            <div className="mt-4 border-t border-border-subtle pt-3">
+              <p className="text-[11px] uppercase tracking-wider text-status-warning/60">
                 Still open · {summary.open.length}
               </p>
               <ul className="mt-2 space-y-2">
                 {groupOpenItems(summary.open).map((group) => (
                   <li key={group.kind}>
-                    <p className="text-[11.5px] text-slate-600">{group.label}</p>
+                    <p className="text-[11.5px] text-text-secondary">{group.label}</p>
                     {group.items.map((item) => (
-                      <p key={item.leadId} className="truncate text-[12.5px] text-slate-600">
+                      <p key={item.leadId} className="truncate text-[12.5px] text-text-secondary">
                         {item.address}
-                        <span className="text-slate-600"> — {item.detail}</span>
+                        <span className="text-text-secondary"> — {item.detail}</span>
                       </p>
                     ))}
                   </li>
@@ -298,7 +298,7 @@ export default function RoutePanel() {
         <SectionTitle>FIELD ROUTE</SectionTitle>
         <Card>
           <p className="text-[13.5px]">Not started.</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
+          <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
             Starting a route records where you walk until you stop it, so a knock can be checked against
             where the phone actually was. Nothing is recorded before you start, after you stop, or while
             you are paused.
@@ -309,7 +309,7 @@ export default function RoutePanel() {
           {/* The only way into history. A route nobody can reopen was not worth recording. */}
           <Link
             to="/routes"
-            className="mt-3 block text-center text-[12px] text-slate-600 underline underline-offset-2"
+            className="mt-3 block text-center text-[12px] text-text-secondary underline underline-offset-2"
           >
             Past routes
           </Link>
@@ -327,14 +327,14 @@ export default function RoutePanel() {
       <Card
         className={
           paused
-            ? '!bg-amber-100 ring-amber-300'
-            : '!bg-emerald-100 ring-emerald-300'
+            ? '!bg-status-warning ring-amber-300'
+            : '!bg-status-success ring-emerald-300'
         }
       >
-        <p className={`text-[13.5px] font-semibold ${paused ? 'text-amber-900' : 'text-emerald-900'}`}>
+        <p className={`text-[13.5px] font-semibold ${paused ? 'text-status-warning' : 'text-status-success'}`}>
           {paused ? '⏸ Paused — nothing is being recorded.' : '● Recording your route.'}
         </p>
-        <p className="mt-0.5 text-[11.5px] text-slate-600">
+        <p className="mt-0.5 text-[11.5px] text-text-secondary">
           Started {new Date(session.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} ·{' '}
           {duration(elapsed)} elapsed{onBreak > 0 ? ` · ${duration(onBreak)} paused` : ''}
         </p>
@@ -348,7 +348,7 @@ export default function RoutePanel() {
           <Stat value={counts.queued === 0 ? 'clear' : String(counts.queued)} label="waiting to send" />
         </div>
 
-        {problem && <p className="mt-2 text-[12px] leading-relaxed text-amber-700/80">{problem}</p>}
+        {problem && <p className="mt-2 text-[12px] leading-relaxed text-status-warning/80">{problem}</p>}
 
         {confirmStop ? (
           <div className="mt-3">
@@ -359,30 +359,30 @@ export default function RoutePanel() {
               teaches them to stop starting routes at all.
             */}
             {pendingOpen !== null && pendingOpen.length > 0 && (
-              <div className="mb-3 rounded-lg border border-amber-300/20 bg-amber-300/5 p-3">
-                <p className="text-[12.5px] font-semibold text-amber-100/90">
+              <div className="mb-3 rounded-lg border border-amber-300/20 bg-status-warning/5 p-3">
+                <p className="text-[12.5px] font-semibold text-status-warning/90">
                   {pendingOpen.length} still open
                 </p>
                 <ul className="mt-2 space-y-1.5">
                   {groupOpenItems(pendingOpen).map((group) => (
                     <li key={group.kind}>
-                      <p className="text-[11px] uppercase tracking-wider text-amber-700/50">
+                      <p className="text-[11px] uppercase tracking-wider text-status-warning/50">
                         {group.label} · {group.items.length}
                       </p>
                       {group.items.slice(0, 3).map((item) => (
-                        <p key={item.leadId} className="truncate text-[12px] text-slate-600">
+                        <p key={item.leadId} className="truncate text-[12px] text-text-secondary">
                           {item.address}
                         </p>
                       ))}
                       {group.items.length > 3 && (
-                        <p className="text-[11.5px] text-slate-600">
+                        <p className="text-[11.5px] text-text-secondary">
                           and {group.items.length - 3} more
                         </p>
                       )}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-[11.5px] leading-relaxed text-slate-600">
+                <p className="mt-2 text-[11.5px] leading-relaxed text-text-secondary">
                   These are on the summary after you end, and they stay on the doors. Ending the
                   route does not lose them.
                 </p>
@@ -428,7 +428,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <p className="text-[16px] font-semibold tabular-nums">{value}</p>
-      <p className="text-[10px] uppercase tracking-wide text-slate-600">{label}</p>
+      <p className="text-[10px] uppercase tracking-wide text-text-secondary">{label}</p>
     </div>
   )
 }

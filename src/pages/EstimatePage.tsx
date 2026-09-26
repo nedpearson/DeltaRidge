@@ -229,7 +229,7 @@ export default function EstimatePage() {
     }
   }
 
-  if (loading) return <p className="text-[13px] text-slate-600">Loading…</p>
+  if (loading) return <p className="text-[13px] text-text-secondary">Loading…</p>
 
   const hasArea = num(form.areaSqFt) > 0
   const ready = isUsable(costs)
@@ -240,7 +240,7 @@ export default function EstimatePage() {
     <div className="space-y-4 pb-4">
       <div>
         <h1 className="font-display text-xl tracking-wide">Estimate</h1>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-600">
+        <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
           {inspection?.addressLine1
             ? inspection.addressLine1
             : 'Every number is explainable and every line says why it is there.'}
@@ -249,7 +249,7 @@ export default function EstimatePage() {
 
       {!ready && (
         <Card>
-          <p className="text-[13px] leading-relaxed text-amber-700">
+          <p className="text-[13px] leading-relaxed text-status-warning">
             Your costs are not entered yet, so nothing can be priced. This is not a setup step to
             skip — the estimator refuses to invent a price.
           </p>
@@ -261,19 +261,19 @@ export default function EstimatePage() {
 
       {saved && (
         <Card>
-          <p className="text-[13px] leading-relaxed text-slate-600">
+          <p className="text-[13px] leading-relaxed text-text-secondary">
             Version {saved.versionNumber} saved {new Date(saved.createdAt).toLocaleString()} at{' '}
-            <span className="font-semibold text-[var(--color-ink)]">{money(saved.sellPriceCents as Cents)}</span>.
+            <span className="font-semibold text-text-primary">{money(saved.sellPriceCents as Cents)}</span>.
           </p>
           {drifted && (
-            <p className="mt-2 text-[12px] leading-relaxed text-amber-700">
+            <p className="mt-2 text-[12px] leading-relaxed text-status-warning">
               Your cost sheet has changed since this was priced. The figures below are recalculated
               at today&apos;s costs — the saved version keeps the price the homeowner was given.
               Save a new version to record the change.
             </p>
           )}
           {estimate && estimate.versions.length > 1 && (
-            <p className="mt-2 text-[12px] text-slate-600">
+            <p className="mt-2 text-[12px] text-text-secondary">
               {estimate.versions.length} versions kept. Nothing is overwritten.
             </p>
           )}
@@ -286,23 +286,23 @@ export default function EstimatePage() {
             WHAT THE ROOF SAID
           </SectionTitle>
           <Card>
-            <p className="mb-3 text-[12px] leading-relaxed text-slate-600">
+            <p className="mb-3 text-[12px] leading-relaxed text-text-secondary">
               Derived from what was actually recorded. These are suggestions, not scope — confirm
               each one before it reaches a customer.
             </p>
             <div className="space-y-3">
               {suggestions.map((s) => (
                 <div key={s.key} className="border-l-2 border-sky-400/30 pl-3">
-                  <p className="text-[13px] font-semibold text-slate-600">
+                  <p className="text-[13px] font-semibold text-text-secondary">
                     {s.description}
                     {s.quantity > 0 && (
-                      <span className="ml-2 font-normal text-slate-600">
+                      <span className="ml-2 font-normal text-text-secondary">
                         {s.quantity.toFixed(s.unit === 'EA' ? 0 : 2)} {s.unit}
                       </span>
                     )}
                   </p>
-                  <p className="mt-0.5 text-[12px] leading-relaxed text-slate-600">{s.rationale}</p>
-                  <p className="mt-0.5 text-[11px] uppercase tracking-wide text-slate-600">
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-text-secondary">{s.rationale}</p>
+                  <p className="mt-0.5 text-[11px] uppercase tracking-wide text-text-secondary">
                     {s.confidence} confidence
                     {s.needsQuantity ? ' · needs a quantity from you' : ''}
                     {s.evidence[0] ? ` · ${s.evidence[0].kind.replace(/_/g, ' ')}` : ''}
@@ -341,18 +341,18 @@ export default function EstimatePage() {
           </SectionTitle>
           <Card>
             {built.lines.length === 0 ? (
-              <p className="text-[13px] text-slate-600">
+              <p className="text-[13px] text-text-secondary">
                 Nothing could be priced yet.
               </p>
             ) : (
               <div className="space-y-2">
                 {built.lines.map((line) => (
                   <div key={line.id} className="flex items-baseline gap-3 text-[13px]">
-                    <span className="flex-1 text-slate-600">{line.description}</span>
-                    <span className="tabular-nums text-slate-600">
+                    <span className="flex-1 text-text-secondary">{line.description}</span>
+                    <span className="tabular-nums text-text-secondary">
                       {line.quantity.toFixed(line.unit === 'EA' ? 0 : 2)} {line.unit}
                     </span>
-                    <span className="w-20 text-right tabular-nums text-slate-600">
+                    <span className="w-20 text-right tabular-nums text-text-secondary">
                       {money(line.cost)}
                     </span>
                   </div>
@@ -363,18 +363,18 @@ export default function EstimatePage() {
 
           {built.gaps.length > 0 && (
             <Card>
-              <p className="text-[13px] font-semibold text-amber-700">
+              <p className="text-[13px] font-semibold text-status-warning">
                 {built.gaps.length} item{built.gaps.length === 1 ? '' : 's'} could not be priced
               </p>
-              <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
+              <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
                 These are measured and needed. They are left out rather than priced at zero, so the
                 total below is short by whatever they cost.
               </p>
               <div className="mt-2 space-y-1">
                 {built.gaps.map((gap) => (
                   <div key={gap.key} className="flex items-baseline gap-3 text-[13px]">
-                    <span className="flex-1 text-amber-100/80">{gap.description}</span>
-                    <span className="tabular-nums text-slate-600">
+                    <span className="flex-1 text-status-warning/80">{gap.description}</span>
+                    <span className="tabular-nums text-text-secondary">
                       {gap.quantity.toFixed(gap.unit === 'EA' ? 0 : 2)} {gap.unit}
                     </span>
                   </div>
@@ -400,15 +400,15 @@ export default function EstimatePage() {
                       <span
                         className={
                           flag.severity === 'blocker'
-                            ? 'shrink-0 font-semibold text-rose-300'
+                            ? 'shrink-0 font-semibold text-status-critical'
                             : flag.severity === 'warning'
-                              ? 'shrink-0 font-semibold text-amber-300'
-                              : 'shrink-0 font-semibold text-slate-600'
+                              ? 'shrink-0 font-semibold text-status-warning'
+                              : 'shrink-0 font-semibold text-text-secondary'
                         }
                       >
                         {flag.severity === 'blocker' ? 'STOP' : flag.severity === 'warning' ? 'CHECK' : 'NOTE'}
                       </span>
-                      <span className="text-slate-600">{flag.message}</span>
+                      <span className="text-text-secondary">{flag.message}</span>
                     </div>
                   ))}
                 </div>
@@ -422,7 +422,7 @@ export default function EstimatePage() {
               <Row label="Direct cost" value={money(built.directCost)} />
               <Row label="Overhead" value={money(built.overhead)} />
               <Row label="Job cost" value={money(built.jobCost)} strong />
-              <div className="my-2 h-px bg-slate-200" />
+              <div className="my-2 h-px bg-bg-elevated" />
               <Row
                 label={`Recommended (${(built.recommended.realisedMargin / 100).toFixed(1)}% margin)`}
                 value={money(built.recommended.price)}
@@ -441,7 +441,7 @@ export default function EstimatePage() {
               <Row label="Manager floor" value={money(built.ladder.floor)} />
               <Row label="Stop — decline below this" value={money(built.ladder.stop)} strong />
             </div>
-            <p className="mt-3 text-[12px] leading-relaxed text-slate-600">
+            <p className="mt-3 text-[12px] leading-relaxed text-text-secondary">
               Every rung already has commission taken out of it, so each one leaves the margin it
               is named for. A rung priced without commission would look lower and quietly miss its
               margin by the whole commission.
@@ -453,10 +453,10 @@ export default function EstimatePage() {
             <div className="space-y-2">
               {built.lines.map((line) => (
                 <div key={line.id} className="text-[12px] leading-relaxed">
-                  <span className="text-slate-600">{line.description}</span>
-                  <span className="text-slate-600"> — {line.reason.replace(/_/g, ' ')}</span>
+                  <span className="text-text-secondary">{line.description}</span>
+                  <span className="text-text-secondary"> — {line.reason.replace(/_/g, ' ')}</span>
                   {line.evidence[0] && (
-                    <span className="text-slate-600"> · {line.evidence[0].summary}</span>
+                    <span className="text-text-secondary"> · {line.evidence[0].summary}</span>
                   )}
                 </div>
               ))}
@@ -467,14 +467,14 @@ export default function EstimatePage() {
 
       {!hasArea && (
         <Card>
-          <p className="text-[13px] text-slate-600">
+          <p className="text-[13px] text-text-secondary">
             Enter the roof area to price it.
           </p>
         </Card>
       )}
 
       {saveError && (
-        <p className="rounded-lg bg-amber-100 px-3 py-2 text-[13px] text-amber-700 ring-1 ring-amber-300">
+        <p className="rounded-lg bg-status-warning px-3 py-2 text-[13px] text-status-warning ring-1 ring-amber-300">
           {saveError}
         </p>
       )}
@@ -501,14 +501,14 @@ export default function EstimatePage() {
                     onClick={() => reopen(s)}
                     className="flex w-full items-baseline gap-3 text-left text-[13px]"
                   >
-                    <span className={`flex-1 truncate ${open ? 'text-sky-700' : 'text-slate-600'}`}>
+                    <span className={`flex-1 truncate ${open ? 'text-sky-700' : 'text-text-secondary'}`}>
                       {s.label}
                       {open && ' · open'}
                     </span>
-                    <span className="shrink-0 text-[11px] text-slate-600">
+                    <span className="shrink-0 text-[11px] text-text-secondary">
                       v{v?.versionNumber ?? 0} · {new Date(s.updatedAt).toLocaleDateString()}
                     </span>
-                    <span className="w-20 shrink-0 text-right tabular-nums text-slate-600">
+                    <span className="w-20 shrink-0 text-right tabular-nums text-text-secondary">
                       {v ? money(v.sellPriceCents as Cents) : '—'}
                     </span>
                   </button>
@@ -525,9 +525,9 @@ export default function EstimatePage() {
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="flex items-baseline gap-3">
-      <span className={`flex-1 ${strong ? 'text-slate-600' : 'text-slate-600'}`}>{label}</span>
+      <span className={`flex-1 ${strong ? 'text-text-secondary' : 'text-text-secondary'}`}>{label}</span>
       <span
-        className={`tabular-nums ${strong ? 'font-semibold text-[var(--color-ink)]' : 'text-slate-600'}`}
+        className={`tabular-nums ${strong ? 'font-semibold text-text-primary' : 'text-text-secondary'}`}
       >
         {value}
       </span>

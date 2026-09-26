@@ -19,12 +19,12 @@ import { assessHealth, needsAttention, worstFirst, type Health, type HealthState
  */
 
 const TONE: Record<HealthState, { dot: string; word: string }> = {
-  down: { dot: 'bg-red-400', word: 'Down' },
-  degraded: { dot: 'bg-amber-400', word: 'Unreliable' },
-  stale: { dot: 'bg-amber-400', word: 'Gone quiet' },
-  never_used: { dot: 'bg-slate-200', word: 'Unproven' },
-  healthy: { dot: 'bg-emerald-400', word: 'Working' },
-  not_configured: { dot: 'bg-slate-200', word: 'Not set up' },
+  down: { dot: 'bg-status-critical', word: 'Down' },
+  degraded: { dot: 'bg-status-warning', word: 'Unreliable' },
+  stale: { dot: 'bg-status-warning', word: 'Gone quiet' },
+  never_used: { dot: 'bg-bg-elevated', word: 'Unproven' },
+  healthy: { dot: 'bg-status-success', word: 'Working' },
+  not_configured: { dot: 'bg-bg-elevated', word: 'Not set up' },
 }
 
 interface Row {
@@ -194,12 +194,12 @@ export default function HealthTab({ organizationId }: { organizationId: string |
       </SectionTitle>
 
       {loading ? (
-        <p className="mt-3 text-[12.5px] text-slate-600">Loading…</p>
+        <p className="mt-3 text-[12.5px] text-text-secondary">Loading…</p>
       ) : rows.length === 0 ? (
         <Nothing title="Nothing to report" body="No integrations are configured yet." />
       ) : (
         <>
-          <p className={`mt-2 text-[12.5px] ${attention > 0 ? 'text-amber-300' : 'text-slate-600'}`}>
+          <p className={`mt-2 text-[12.5px] ${attention > 0 ? 'text-status-warning' : 'text-text-secondary'}`}>
             {attention > 0
               ? `${attention} need${attention === 1 ? 's' : ''} a look`
               : 'Nothing needs attention'}
@@ -213,16 +213,16 @@ export default function HealthTab({ organizationId }: { organizationId: string |
                   <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${tone.dot}`} aria-hidden="true" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                      <span className="min-w-0 break-words text-[13px] text-slate-600">{row.label}</span>
+                      <span className="min-w-0 break-words text-[13px] text-text-secondary">{row.label}</span>
                       {/* Spelled out, not left to the colour — the screen gets
                           read in sunlight, and by people who cannot tell amber
                           from green. */}
-                      <span className="shrink-0 text-[11px] text-slate-600">{tone.word}</span>
+                      <span className="shrink-0 text-[11px] text-text-secondary">{tone.word}</span>
                     </div>
-                    <p className="text-[11.5px] text-slate-600">{row.health.summary}</p>
-                    <p className="text-[11px] text-slate-600">{row.detail}</p>
+                    <p className="text-[11.5px] text-text-secondary">{row.health.summary}</p>
+                    <p className="text-[11px] text-text-secondary">{row.detail}</p>
                     {row.health.lastSuccessAt !== null && (
-                      <p className="text-[11px] text-slate-600">
+                      <p className="text-[11px] text-text-secondary">
                         Last success {ago(row.health.lastSuccessAt)}
                       </p>
                     )}

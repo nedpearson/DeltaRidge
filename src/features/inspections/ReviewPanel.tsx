@@ -5,9 +5,9 @@ import { evaluateCompleteness, type CompletenessIssue } from './completeness'
 import { CATEGORY_LABELS, type PhotoCategory } from './photo-categories'
 
 const TONE: Record<CompletenessIssue['severity'], { ring: string; dot: string; label: string }> = {
-  blocker: { ring: 'ring-red-500/30 bg-red-500/8', dot: 'bg-red-400', label: 'Office needs this' },
-  warning: { ring: 'ring-amber-500/25 bg-amber-100', dot: 'bg-amber-400', label: 'Office will call' },
-  advisory: { ring: 'ring-slate-200 bg-slate-200', dot: 'bg-slate-200', label: 'Worth adding' },
+  blocker: { ring: 'ring-red-500/30 bg-status-critical/8', dot: 'bg-status-critical', label: 'Office needs this' },
+  warning: { ring: 'ring-amber-500/25 bg-status-warning', dot: 'bg-status-warning', label: 'Office will call' },
+  advisory: { ring: 'ring-border-subtle bg-bg-elevated', dot: 'bg-bg-elevated', label: 'Worth adding' },
 }
 
 export default function ReviewPanel({
@@ -67,26 +67,26 @@ export default function ReviewPanel({
 
   const usablePhotos = photos.filter((p) => !p.retakeRecommended)
   const scoreTone =
-    report.score >= 90 ? 'text-emerald-400' : report.score >= 70 ? 'text-gold-400' : 'text-amber-400'
+    report.score >= 90 ? 'text-status-success' : report.score >= 70 ? 'text-gold-400' : 'text-status-warning'
 
   return (
     <div className="pb-4">
       <Card className="text-center">
-        <p className="font-display text-[11px] tracking-[0.16em] text-slate-600">DOCUMENTATION COMPLETENESS</p>
+        <p className="font-display text-[11px] tracking-[0.16em] text-text-secondary">DOCUMENTATION COMPLETENESS</p>
         <p className={`mt-1 font-display text-5xl ${scoreTone}`}>{report.score}</p>
-        <p className="mt-1 text-[12px] text-slate-600">
+        <p className="mt-1 text-[12px] text-text-secondary">
           {usablePhotos.length} usable photo{usablePhotos.length === 1 ? '' : 's'} · {observations.length} observation
           {observations.length === 1 ? '' : 's'}
         </p>
-        <p className="mx-auto mt-3 max-w-xs text-[11px] leading-relaxed text-slate-600">
+        <p className="mx-auto mt-3 max-w-xs text-[11px] leading-relaxed text-text-secondary">
           This scores how well the roof is documented — not its condition.
         </p>
       </Card>
 
       {report.issues.length === 0 ? (
-        <Card className="mt-3 !bg-emerald-500/8 ring-emerald-500/20">
-          <p className="text-[14px] font-semibold text-emerald-300">Nothing missing.</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-emerald-700/70">
+        <Card className="mt-3 !bg-status-success/8 ring-emerald-500/20">
+          <p className="text-[14px] font-semibold text-status-success">Nothing missing.</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-status-success/70">
             Every required photo is captured, every observation has a supporting picture, and the office has what it
             needs to price this.
           </p>
@@ -102,7 +102,7 @@ export default function ReviewPanel({
                   <div className="flex items-start gap-2.5">
                     <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${tone.dot}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">{tone.label}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{tone.label}</p>
                       <p className="mt-0.5 text-[13.5px] leading-snug">{issue.message}</p>
                       {issue.fix?.kind === 'camera' && (
                         <Button
@@ -174,28 +174,28 @@ export default function ReviewPanel({
           {showPackage ? 'Hide preview' : 'Preview what the office receives'}
         </Button>
         {showPackage && (
-          <div className="mt-3 space-y-3 rounded-xl bg-black/25 p-3.5 text-[12.5px] leading-relaxed">
+          <div className="mt-3 space-y-3 rounded-xl bg-bg-elevated p-3.5 text-[12.5px] leading-relaxed">
             <div>
-              <p className="font-display text-[10px] tracking-widest text-slate-600">CUSTOMER</p>
+              <p className="font-display text-[10px] tracking-widest text-text-secondary">CUSTOMER</p>
               <p className="mt-0.5">
                 {[inspection.customerFirstName, inspection.customerLastName].filter(Boolean).join(' ') ||
-                  inspection.customerCompanyName || <span className="text-red-400">— missing —</span>}
+                  inspection.customerCompanyName || <span className="text-status-critical">— missing —</span>}
               </p>
-              <p className="text-slate-600">
+              <p className="text-text-secondary">
                 {inspection.customerPhone ?? inspection.customerEmail ?? (
-                  <span className="text-red-400">no contact recorded</span>
+                  <span className="text-status-critical">no contact recorded</span>
                 )}
               </p>
             </div>
             <div>
-              <p className="font-display text-[10px] tracking-widest text-slate-600">PROPERTY</p>
+              <p className="font-display text-[10px] tracking-widest text-text-secondary">PROPERTY</p>
               <p className="mt-0.5">{inspection.addressLine1}</p>
-              <p className="text-slate-600">
+              <p className="text-text-secondary">
                 {[inspection.city, inspection.parish && `${inspection.parish} Parish`, inspection.postalCode]
                   .filter(Boolean)
                   .join(', ')}
               </p>
-              <p className="mt-1 text-slate-600">
+              <p className="mt-1 text-text-secondary">
                 {inspection.roofMaterial.replace(/_/g, ' ')} · {inspection.stories ?? '?'} stor
                 {inspection.stories === 1 ? 'y' : 'ies'}
                 {inspection.homeownerStatedRoofAgeYears
@@ -204,13 +204,13 @@ export default function ReviewPanel({
               </p>
             </div>
             <div>
-              <p className="font-display text-[10px] tracking-widest text-slate-600">OBSERVED CONDITIONS</p>
+              <p className="font-display text-[10px] tracking-widest text-text-secondary">OBSERVED CONDITIONS</p>
               {observations.length === 0 ? (
-                <p className="mt-0.5 text-slate-600">None recorded.</p>
+                <p className="mt-0.5 text-text-secondary">None recorded.</p>
               ) : (
                 <ul className="mt-0.5 space-y-1">
                   {observations.map((o) => (
-                    <li key={o.id} className="text-slate-600">
+                    <li key={o.id} className="text-text-secondary">
                       • {o.finding}
                       {o.area ? ` (${o.area})` : ''} — {o.severity.replace(/_/g, ' ')}
                     </li>
@@ -219,29 +219,29 @@ export default function ReviewPanel({
               )}
             </div>
             <div>
-              <p className="font-display text-[10px] tracking-widest text-slate-600">PHOTO REPORT</p>
-              <p className="mt-0.5 text-slate-600">
+              <p className="font-display text-[10px] tracking-widest text-text-secondary">PHOTO REPORT</p>
+              <p className="mt-0.5 text-text-secondary">
                 {usablePhotos.length} photo{usablePhotos.length === 1 ? '' : 's'} across{' '}
                 {new Set(usablePhotos.map((p) => p.category)).size} categories
               </p>
             </div>
             <div>
-              <p className="font-display text-[10px] tracking-widest text-slate-600">RECOMMENDED ACTION</p>
-              <p className="mt-0.5 text-slate-600">
-                {inspection.inspectorRecommendation || <span className="text-slate-600">Not yet written.</span>}
+              <p className="font-display text-[10px] tracking-widest text-text-secondary">RECOMMENDED ACTION</p>
+              <p className="mt-0.5 text-text-secondary">
+                {inspection.inspectorRecommendation || <span className="text-text-secondary">Not yet written.</span>}
               </p>
             </div>
             {inspection.overriddenIssueCodes && inspection.overriddenIssueCodes.length > 0 && (
-              <div className="rounded-lg bg-amber-100 px-3 py-2 ring-1 ring-amber-300">
-                <p className="font-display text-[10px] tracking-widest text-amber-300/70">FINISHED WITH GAPS</p>
-                <p className="mt-0.5 text-[12px] leading-relaxed text-slate-600">
+              <div className="rounded-lg bg-status-warning px-3 py-2 ring-1 ring-amber-300">
+                <p className="font-display text-[10px] tracking-widest text-status-warning/70">FINISHED WITH GAPS</p>
+                <p className="mt-0.5 text-[12px] leading-relaxed text-text-secondary">
                   The rep closed this out with {inspection.overriddenIssueCodes.length} item
                   {inspection.overriddenIssueCodes.length === 1 ? '' : 's'} outstanding.
                   {inspection.overrideNote ? ` "${inspection.overrideNote}"` : ''}
                 </p>
               </div>
             )}
-            <p className="border-t border-slate-300 pt-2.5 text-[11px] text-slate-600">
+            <p className="border-t border-border-subtle pt-2.5 text-[11px] text-text-secondary">
               Sending puts this package in the office queue on the Delta Ridge server, where the office can open it.
               Automatic delivery into CompanyCam — which syncs onward into Roofr — turns on once an API token is
               configured.
@@ -252,9 +252,9 @@ export default function ReviewPanel({
 
       <div className="mt-5">
         {inspection.sentToOfficeAt ? (
-          <Card className="!bg-emerald-500/8 ring-emerald-500/20">
-            <p className="text-[14px] font-semibold text-emerald-300">The office has this.</p>
-            <p className="mt-1 text-[12px] leading-relaxed text-emerald-700/70">
+          <Card className="!bg-status-success/8 ring-emerald-500/20">
+            <p className="text-[14px] font-semibold text-status-success">The office has this.</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-status-success/70">
               Sent {new Date(inspection.sentToOfficeAt).toLocaleString()}. If it is still listed as waiting to sync,
               the package is safe on this device and will go up on its own.
             </p>
@@ -267,12 +267,12 @@ export default function ReviewPanel({
             <SectionTitle>SEND WITHOUT THESE?</SectionTitle>
             <ul className="mt-2 space-y-1.5">
               {report.blockers.map((b) => (
-                <li key={b.code} className="text-[13px] leading-relaxed text-slate-600">
+                <li key={b.code} className="text-[13px] leading-relaxed text-text-secondary">
                   • {b.message}
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-[12px] leading-relaxed text-slate-600">
+            <p className="mt-3 text-[12px] leading-relaxed text-text-secondary">
               This gets recorded on the inspection so the office knows what is missing before they price it.
             </p>
             <div className="mt-3">
@@ -312,12 +312,12 @@ export default function ReviewPanel({
               {report.canSend ? 'Send to office' : `Send anyway — ${report.blockers.length} unresolved`}
             </Button>
             {report.blockers.length > 0 && (
-              <p className="mt-2 text-center text-[11px] text-slate-600">
+              <p className="mt-2 text-center text-[11px] text-text-secondary">
                 Nothing here is mandatory. You will be asked to confirm what is missing.
               </p>
             )}
             {report.warnings.length > 0 && report.canSend && (
-              <p className="mt-2 text-center text-[11px] text-amber-300/70">
+              <p className="mt-2 text-center text-[11px] text-status-warning/70">
                 {report.warnings.length} warning{report.warnings.length === 1 ? '' : 's'} will not stop you — but each
                 one is a likely callback.
               </p>

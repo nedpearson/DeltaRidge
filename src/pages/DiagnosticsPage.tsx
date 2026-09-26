@@ -56,8 +56,8 @@ function ago(iso: string | null): string {
 function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-1.5">
-      <span className="text-[12px] text-slate-600">{label}</span>
-      <span className={`text-right text-[12.5px] ${muted ? 'text-slate-600' : 'text-slate-600'}`}>{value}</span>
+      <span className="text-[12px] text-text-secondary">{label}</span>
+      <span className={`text-right text-[12.5px] ${muted ? 'text-text-secondary' : 'text-text-secondary'}`}>{value}</span>
     </div>
   )
 }
@@ -135,7 +135,7 @@ export default function DiagnosticsPage() {
         <Row label="Leads the server holds" value={server ? String(server.leads) : '—'} />
         <Row label="Knocks the server holds" value={server ? String(server.activities) : '—'} muted />
         {!server && (
-          <p className="mt-1 text-[12px] leading-relaxed text-slate-600">
+          <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
             {orgId ? 'Could not reach the server just now.' : 'Sign in to see what the server holds.'}
           </p>
         )}
@@ -177,7 +177,7 @@ export default function DiagnosticsPage() {
         <Row label="Knocks read back" value={lastPull ? String(lastPull.activities) : '—'} muted />
         {lastPull?.skipped && <Row label="Last pull skipped" value={lastPull.skipped} muted />}
         {lastPull?.errors.map((e, i) => (
-          <p key={i} className="mt-1 break-words text-[12px] text-amber-700/70">
+          <p key={i} className="mt-1 break-words text-[12px] text-status-warning/70">
             {e}
           </p>
         ))}
@@ -194,13 +194,13 @@ export default function DiagnosticsPage() {
               return (
                 <li key={item.id} className="py-2 text-[12px] leading-relaxed">
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="font-semibold text-slate-600">{ENTITY_LABEL[item.entity]}</span>
-                    <span className="text-slate-600">{STATUS_LABEL[status]}</span>
+                    <span className="font-semibold text-text-secondary">{ENTITY_LABEL[item.entity]}</span>
+                    <span className="text-text-secondary">{STATUS_LABEL[status]}</span>
                   </div>
-                  <p className="text-slate-600">
+                  <p className="text-text-secondary">
                     queued {ago(item.queuedAt)} · {item.attempts} attempt{item.attempts === 1 ? '' : 's'}
                   </p>
-                  {item.lastError && <p className="mt-0.5 break-words text-slate-600">{item.lastError}</p>}
+                  {item.lastError && <p className="mt-0.5 break-words text-text-secondary">{item.lastError}</p>}
                 </li>
               )
             })}
@@ -209,7 +209,7 @@ export default function DiagnosticsPage() {
       )}
 
       {items.length === 0 && (
-        <p className="px-1 text-[12px] leading-relaxed text-slate-600">
+        <p className="px-1 text-[12px] leading-relaxed text-text-secondary">
           The queue is empty. That means everything captured on this device has been accepted by the server — not
           that nothing was captured. Check "last accepted by server" above.
         </p>

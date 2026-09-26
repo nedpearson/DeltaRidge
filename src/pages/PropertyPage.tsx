@@ -120,7 +120,7 @@ export default function PropertyPage() {
   }, [lead, permits, run])
 
   if (!run) {
-    return <p className="mt-8 text-center text-[13px] text-slate-600">Opening the property…</p>
+    return <p className="mt-8 text-center text-[13px] text-text-secondary">Opening the property…</p>
   }
 
   if (!lead || !profile) {
@@ -136,7 +136,7 @@ export default function PropertyPage() {
     <div>
       <button
         onClick={() => navigate('/leads')}
-        className="!min-h-0 py-1 text-[12px] text-slate-600"
+        className="!min-h-0 py-1 text-[12px] text-text-secondary"
       >
         ← Doors
       </button>
@@ -151,7 +151,7 @@ export default function PropertyPage() {
 
       <Card className="mt-2">
         <p className="text-[17px] font-semibold leading-tight">{lead.address}</p>
-        <p className="mt-0.5 text-[12px] text-slate-600">
+        <p className="mt-0.5 text-[12px] text-text-secondary">
           {[lead.subdivision, lead.city].filter(Boolean).join(' · ') || 'East Baton Rouge Parish'}
         </p>
         <OwnerLine parcel={lead.parcel} />
@@ -194,7 +194,7 @@ export default function PropertyPage() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] ${
-              tab === t.key ? 'bg-gold-500/20 text-gold-300' : 'bg-slate-200 text-slate-600'
+              tab === t.key ? 'bg-gold-500/20 text-gold-300' : 'bg-bg-elevated text-text-secondary'
             }`}
           >
             {t.label}
@@ -248,7 +248,7 @@ function FactRow<T>({
 }) {
   const known = fact.value !== null && fact.certainty !== 'unknown'
   return (
-    <div className="border-t border-slate-300 py-2 first:border-t-0 first:pt-0">
+    <div className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
       {/*
         `min-w-0` on both children, and it is not cosmetic. A flex item defaults
         to `min-width: auto`, which refuses to shrink below its content — so a
@@ -260,16 +260,16 @@ function FactRow<T>({
         rep cannot tell what was cut off.
       */}
       <div className="flex items-baseline justify-between gap-3">
-        <p className="min-w-0 shrink-0 text-[12.5px] text-slate-600">{label}</p>
+        <p className="min-w-0 shrink-0 text-[12.5px] text-text-secondary">{label}</p>
         <p
-          className={`min-w-0 break-words text-right text-[13.5px] ${known ? 'text-slate-600' : 'text-slate-600'}`}
+          className={`min-w-0 break-words text-right text-[13.5px] ${known ? 'text-text-secondary' : 'text-text-secondary'}`}
         >
           {known ? format(fact.value as T) : 'Not on record'}
         </p>
       </div>
-      <p className="mt-0.5 text-[10.5px] leading-relaxed text-slate-600">
+      <p className="mt-0.5 text-[10.5px] leading-relaxed text-text-secondary">
         {known && (
-          <span className="uppercase tracking-wider text-slate-600">{fact.certainty} · </span>
+          <span className="uppercase tracking-wider text-text-secondary">{fact.certainty} · </span>
         )}
         {fact.source.label}
         {fact.basis ? ` — ${fact.basis}` : ''}
@@ -302,15 +302,15 @@ function PropertyTab({
         {/* Named, with a reason each. An empty row reads as a loading state or
             a zero; a stated gap reads as a gap, and tells Ned exactly what a
             licensed data contract would buy him. */}
-        <p className="text-[11.5px] leading-relaxed text-slate-600">
+        <p className="text-[11.5px] leading-relaxed text-text-secondary">
           These are not published by the parish and are not in the permit feed. Filling them needs a
           licensed property-data provider under contract.
         </p>
         <ul className="mt-2 space-y-1">
           {profile.unavailable.map((f) => (
             <li key={f.field} className="flex justify-between gap-3 text-[12px]">
-              <span className="text-slate-600">{f.label}</span>
-              <span className="text-right text-[11px] text-slate-600">{f.reason}</span>
+              <span className="text-text-secondary">{f.label}</span>
+              <span className="text-right text-[11px] text-text-secondary">{f.reason}</span>
             </li>
           ))}
         </ul>
@@ -350,7 +350,7 @@ function OwnerTab({
         }
       />
       {parcel && (
-        <p className="mt-2 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-slate-600">
+        <p className="mt-2 border-t border-border-subtle pt-2 text-[11.5px] leading-relaxed text-text-secondary">
           {occupancyEvidence(parcel)}
         </p>
       )}
@@ -401,16 +401,16 @@ function StormsTab({ profile }: { profile: PropertyProfile }) {
   return (
     <Card>
       {profile.storms.map((s: StormEvent) => (
-        <div key={s.externalId} className="border-t border-slate-300 py-2 first:border-t-0 first:pt-0">
+        <div key={s.externalId} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="text-[13px] text-slate-600">
+            <p className="text-[13px] text-text-secondary">
               {[s.city, s.countyParish].filter(Boolean).join(', ') || 'Unnamed location'}
             </p>
             <p className="shrink-0 font-display text-[15px] text-gold-400">
               {s.hailSizeInches !== undefined ? `${s.hailSizeInches}"` : '—'}
             </p>
           </div>
-          <p className="mt-0.5 text-[10.5px] text-slate-600">
+          <p className="mt-0.5 text-[10.5px] text-text-secondary">
             {shortDate(s.occurredAt)} · official ground report · NWS
           </p>
         </div>
@@ -437,7 +437,7 @@ function PermitsTab({
     )
   }
   if (permits === null) {
-    return <p className="text-center text-[13px] text-slate-600">Reading the permit record…</p>
+    return <p className="text-center text-[13px] text-text-secondary">Reading the permit record…</p>
   }
   if (permits.length === 0) {
     return (
@@ -453,17 +453,17 @@ function PermitsTab({
       {[...permits]
         .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))
         .map((p) => (
-          <div key={p.externalId} className="border-t border-slate-300 py-2 first:border-t-0 first:pt-0">
+          <div key={p.externalId} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
             <div className="flex items-baseline justify-between gap-3">
-              <p className="min-w-0 text-[13px] text-slate-600">{p.permitType}</p>
-              <p className="shrink-0 text-[11.5px] text-slate-600">{shortDate(p.issuedAt)}</p>
+              <p className="min-w-0 text-[13px] text-text-secondary">{p.permitType}</p>
+              <p className="shrink-0 text-[11.5px] text-text-secondary">{shortDate(p.issuedAt)}</p>
             </div>
             {p.contractorName && (
-              <p className="mt-0.5 truncate text-[11px] text-slate-600">{p.contractorName}</p>
+              <p className="mt-0.5 truncate text-[11px] text-text-secondary">{p.contractorName}</p>
             )}
           </div>
         ))}
-      <p className="mt-2 border-t border-slate-300 pt-2 text-[10.5px] leading-relaxed text-slate-600">
+      <p className="mt-2 border-t border-border-subtle pt-2 text-[10.5px] leading-relaxed text-text-secondary">
         {profile.roof.lastReroofAt.value === null
           ? 'No re-roof permit appears above. A roof replaced without a permit leaves no record here, so this is strong evidence rather than proof.'
           : 'A re-roof permit records that work was authorised, not that it was finished.'}

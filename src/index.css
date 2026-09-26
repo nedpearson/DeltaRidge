@@ -1,54 +1,56 @@
 @import 'tailwindcss';
 
-/* Delta Ridge field palette: crisp neutral surfaces, a deep-navy frame and
-   saturated accents. Every text token below is chosen to remain readable in
-   bright outdoor light; pale colors are reserved for backgrounds, never copy. */
 @theme {
   --font-display: 'Oswald', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50: #eff6ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-200: #bfdbfe;
-  --color-brand-300: #7dd3fc;
-  --color-brand-400: #38bdf8;
-  --color-brand-500: #2563eb;
-  --color-brand-600: #1d4ed8;
-  --color-brand-700: #1e40af;
-  --color-brand-800: #172554;
-  --color-brand-900: #0b1f3a;
-  --color-brand-950: #08152e;
+  /* Backgrounds */
+  --color-bg-app: #07111F;
+  --color-bg-page: #0B1728;
+  --color-bg-card: #102238;
+  --color-bg-elevated: #162C46;
+  
+  /* Borders */
+  --color-border-strong: #294563;
+  --color-border-subtle: #1D344C;
+  
+  /* Primary brand/action */
+  --color-brand-primary: #287CFF;
+  --color-brand-hover: #4594FF;
+  --color-brand-pressed: #1764D9;
+  
+  /* Intelligence / live data */
+  --color-brand-intel: #20D4F5;
+  
+  /* Premium / high-value */
+  --color-brand-gold: #F2B84B;
+  --color-brand-gold-highlight: #FFCA65;
+  
+  /* Semantic states */
+  --color-status-success: #27D39A;
+  --color-status-warning: #FFB020;
+  --color-status-critical: #F05252;
+  --color-status-ai: #9B7BFF;
+  
+  /* Typography */
+  --color-text-primary: #F7FAFC;
+  --color-text-secondary: #CAD5E2;
+  --color-text-muted: #91A4BA;
+  --color-text-disabled: #64768B;
 
-  --color-gold-50: #fffbeb;
-  --color-gold-100: #fef3c7;
-  --color-gold-200: #fde68a;
-  --color-gold-300: #fcd34d;
-  --color-gold-400: #d97706;
-  --color-gold-500: #b45309;
-  --color-gold-600: #92400e;
-  --color-gold-700: #92400e;
-  --color-gold-800: #78350f;
-  --color-gold-900: #451a03;
-
-  --color-ink: #0f172a;
-  --color-muted: #475569;
-  --color-surface: #f3f6fb;
-  --color-surface-2: #ffffff;
-  --color-surface-3: #cbd5e1;
-
-  /* Status Colors: kept accessible for light background */
-  --color-status-untouched: #64748b;
-  --color-status-target: #b45309;
-  --color-status-attempted: #7e22ce;
-  --color-status-noanswer: #475569;
-  --color-status-spoke: #0284c7;
-  --color-status-interested: #0e7490;
-  --color-status-appointment: #1e40af;
-  --color-status-inspected: #6d28d9;
-  --color-status-proposal: #d97706;
-  --color-status-sold: #047857;
-  --color-status-lost: #b91c1c;
-  --color-status-dnc: #0f172a;
+  /* Retained Status Colors (adapted slightly for dark theme visibility or kept for logic) */
+  --color-status-untouched: #64768B;
+  --color-status-target: #FFB020;
+  --color-status-attempted: #9B7BFF;
+  --color-status-noanswer: #91A4BA;
+  --color-status-spoke: #20D4F5;
+  --color-status-interested: #287CFF;
+  --color-status-appointment: #4594FF;
+  --color-status-inspected: #9B7BFF;
+  --color-status-proposal: #F2B84B;
+  --color-status-sold: #27D39A;
+  --color-status-lost: #F05252;
+  --color-status-dnc: #1D344C;
 }
 
 @layer base {
@@ -59,15 +61,14 @@
 
   body {
     margin: 0;
-    background-color: var(--color-surface);
-    background-image: linear-gradient(180deg, #e8eef7 0, #f3f6fb 180px);
-    background-attachment: fixed;
-    color: var(--color-ink);
+    background-color: var(--color-bg-app);
+    color: var(--color-text-primary);
     font-family: var(--font-sans);
-    /* Respect notches and the iOS home indicator. */
     padding: env(safe-area-inset-top) env(safe-area-inset-right)
       env(safe-area-inset-bottom) env(safe-area-inset-left);
     overscroll-behavior-y: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4 {
@@ -77,12 +78,10 @@
   }
 
   ::selection {
-    background: #bfdbfe;
-    color: #08152e;
+    background: var(--color-brand-primary);
+    color: var(--color-text-primary);
   }
 
-  /* Field ergonomics: every interactive target clears 44px, the minimum
-     a gloved thumb can hit reliably while standing on a roof. */
   button, a[role='button'], [data-field-target] {
     min-height: 44px;
     min-width: 44px;
@@ -98,40 +97,13 @@
 }
 
 @layer utilities {
-  /* The first light-theme pass emitted this incomplete utility in hundreds of
-     places. Give it one explicit, accessible meaning while those call sites
-     are migrated to semantic tokens. #475569 clears 7:1 on white. */
-  [class~='text-[var(--color-ink)]/'] {
-    color: var(--color-muted);
+  .text-glow {
+    text-shadow: 0 0 10px rgba(40, 124, 255, 0.5);
   }
-
-  /* Saturated display colors from the dark theme were too pale on white.
-     These aliases preserve their intent and raise them above WCAG AA. */
-  [class~='text-emerald-300'],
-  [class~='text-emerald-400'],
-  [class*='text-emerald-300/'],
-  [class*='text-emerald-400/'] {
-    color: #047857;
+  .text-glow-intel {
+    text-shadow: 0 0 10px rgba(32, 212, 245, 0.5);
   }
-
-  [class~='text-amber-300'],
-  [class~='text-gold-300'],
-  [class~='text-gold-400'],
-  [class*='text-amber-300/'],
-  [class*='text-gold-300/'],
-  [class*='text-gold-400/'] {
-    color: #92400e;
-  }
-
-  [class~='text-red-300'] {
-    color: #b91c1c;
-  }
-
-  [class~='text-sky-300'] {
-    color: #0369a1;
-  }
-
-  [class~='text-green-400'] {
-    color: #15803d;
+  .box-glow {
+    box-shadow: 0 0 15px rgba(40, 124, 255, 0.15);
   }
 }

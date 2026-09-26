@@ -113,25 +113,25 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
 
   return (
     <Card className="animate-in fade-in slide-in-from-top-2">
-      <h3 className="mb-4 text-sm font-semibold text-[var(--color-ink)]">New Campaign Scope</h3>
+      <h3 className="mb-4 text-sm font-semibold text-text-primary">New Campaign Scope</h3>
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs text-slate-600">Campaign Name</label>
+          <label className="mb-1 block text-xs text-text-secondary">Campaign Name</label>
           <input 
             type="text" 
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-xl bg-surface-3 px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus:ring-2 focus:ring-brand-500" 
+            className="w-full rounded-xl bg-bg-app-3 px-4 py-3 text-sm text-text-primary outline-none focus:ring-2 focus:ring-brand-primary" 
             placeholder="e.g., Spring Hail Storm - Area 4" 
           />
         </div>
         <div>
-          <label className="mb-1 flex items-center justify-between text-xs text-slate-600">
+          <label className="mb-1 flex items-center justify-between text-xs text-text-secondary">
             <span>Target Area (Draw Polygon)</span>
-            {!area && <span className="font-semibold text-brand-700">Required</span>}
-            {area && <span className="font-semibold text-green-700">Area Defined</span>}
+            {!area && <span className="font-semibold text-brand-primary">Required</span>}
+            {area && <span className="font-semibold text-status-success">Area Defined</span>}
           </label>
-          <div className="overflow-hidden rounded-xl border border-slate-300">
+          <div className="overflow-hidden rounded-xl border border-border-subtle">
             <div ref={mapContainer} className="h-64 w-full" />
           </div>
         </div>

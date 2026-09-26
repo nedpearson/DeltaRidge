@@ -20,8 +20,8 @@ interface Choice {
   tone: string
 }
 
-const NEUTRAL = 'bg-slate-200 ring-1 ring-slate-200'
-const QUIET = 'bg-slate-100 hover:bg-slate-200 ring-1 ring-slate-200'
+const NEUTRAL = 'bg-bg-elevated ring-1 ring-border-subtle'
+const QUIET = 'bg-bg-page hover:bg-bg-elevated ring-1 ring-border-subtle'
 
 /**
  * The six that get tapped all day.
@@ -37,15 +37,15 @@ const PRIMARY: Choice[] = [
   { outcome: 'no_answer', hint: 'Back in 2 days', tone: NEUTRAL },
   { outcome: 'spoke', hint: 'Talked, nothing agreed', tone: NEUTRAL },
   { outcome: 'come_back', hint: 'Back in 3 days', tone: NEUTRAL },
-  { outcome: 'interested', hint: 'Needs a visit', tone: 'bg-brand-500/20 ring-1 ring-brand-400/30' },
-  { outcome: 'wants_inspection', hint: 'Asked for a look', tone: 'bg-brand-500/20 ring-1 ring-brand-400/30' },
+  { outcome: 'interested', hint: 'Needs a visit', tone: 'bg-brand-primary/20 ring-1 ring-brand-400/30' },
+  { outcome: 'wants_inspection', hint: 'Asked for a look', tone: 'bg-brand-primary/20 ring-1 ring-brand-400/30' },
   { outcome: 'appointment_set', hint: 'Pick a time', tone: 'bg-gold-500/20 ring-1 ring-gold-400/30' },
 ]
 
 /** Real outcomes, just not hourly ones. */
 const MORE: Choice[] = [
   { outcome: 'left_info', hint: 'Card or hanger left', tone: NEUTRAL },
-  { outcome: 'inspect_now', hint: 'Opens an inspection', tone: 'bg-emerald-500/15 ring-1 ring-emerald-400/25' },
+  { outcome: 'inspect_now', hint: 'Opens an inspection', tone: 'bg-status-success/15 ring-1 ring-emerald-400/25' },
   { outcome: 'not_interested', hint: 'Turned it down', tone: QUIET },
   { outcome: 'renter', hint: 'Owner still to reach', tone: QUIET },
   { outcome: 'roof_replaced', hint: 'Already re-roofed', tone: QUIET },
@@ -106,14 +106,14 @@ export default function DoorOutcomeSheet({
       }`}
     >
       <span className="block text-[13.5px] font-semibold">{OUTCOME_LABEL[c.outcome]}</span>
-      <span className="mt-0.5 block text-[10.5px] text-slate-600">{c.hint}</span>
+      <span className="mt-0.5 block text-[10.5px] text-text-secondary">{c.hint}</span>
     </button>
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-[var(--color-surface-2)] p-4 pb-8 ring-1 ring-slate-200">
-        <p className="text-[11px] uppercase tracking-wider text-slate-600">What happened at</p>
+    <div className="fixed inset-0 z-50 flex items-end bg-bg-elevated backdrop-blur-sm">
+      <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-bg-card p-4 pb-8 ring-1 ring-border-subtle">
+        <p className="text-[11px] uppercase tracking-wider text-text-secondary">What happened at</p>
         <p className="mt-0.5 truncate text-[15px] font-semibold">{address}</p>
 
         <div className="mt-3 grid grid-cols-2 gap-2">{PRIMARY.map(tile)}</div>
@@ -123,7 +123,7 @@ export default function DoorOutcomeSheet({
         ) : (
           <button
             onClick={() => setShowMore(true)}
-            className="mt-2 w-full rounded-xl bg-slate-100 hover:bg-slate-200 px-3 py-2.5 text-[12.5px] font-medium text-slate-600 ring-1 ring-slate-200"
+            className="mt-2 w-full rounded-xl bg-bg-page hover:bg-bg-elevated px-3 py-2.5 text-[12.5px] font-medium text-text-secondary ring-1 ring-border-subtle"
           >
             Something else happened
           </button>
@@ -131,7 +131,7 @@ export default function DoorOutcomeSheet({
 
         <button
           onClick={() => setPicked('do_not_knock')}
-          className={`mt-2 w-full rounded-xl bg-red-500/12 px-3 py-2.5 text-[12.5px] font-semibold text-red-300 ring-1 ring-red-500/25 ${
+          className={`mt-2 w-full rounded-xl bg-status-critical/12 px-3 py-2.5 text-[12.5px] font-semibold text-status-critical ring-1 ring-red-500/25 ${
             picked === 'do_not_knock' ? 'outline outline-2 outline-red-400' : ''
           }`}
         >
@@ -191,7 +191,7 @@ export default function DoorOutcomeSheet({
             {needsTime && toIso(when) === undefined ? 'Pick a time' : needsNote ? 'Add a note' : 'Record it'}
           </Button>
         </div>
-        <p className="mt-2 text-center text-[10.5px] leading-relaxed text-slate-600">
+        <p className="mt-2 text-center text-[10.5px] leading-relaxed text-text-secondary">
           Saved on this device straight away. Nothing here claims a call was answered or a text
           was delivered — only that it was placed.
         </p>

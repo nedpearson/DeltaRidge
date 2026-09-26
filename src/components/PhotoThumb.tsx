@@ -11,6 +11,6 @@ export default function PhotoThumb({ blob, alt, className = '' }: { blob: Blob; 
     return () => URL.revokeObjectURL(objectUrl)
   }, [blob])
 
-  if (!url) return <div className={`animate-pulse bg-slate-100 hover:bg-slate-200 ${className}`} />
+  if (!url) return <div className={`animate-pulse bg-bg-page hover:bg-bg-elevated ${className}`} />
   return <img src={url} alt={alt} loading="lazy" className={className} />
 }

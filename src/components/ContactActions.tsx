@@ -50,7 +50,7 @@ function Action({
           {label}
         </Button>
         {availability.reason !== null && (
-          <p id={`why-${label}`} className="text-[10.5px] leading-tight text-amber-700/70">
+          <p id={`why-${label}`} className="text-[10.5px] leading-tight text-status-warning/70">
             {availability.reason}
           </p>
         )}
@@ -100,7 +100,7 @@ export default function ContactActions({
      * belongs to the navigation, and a second fixed bar down there is how the
      * two end up on top of each other on a small phone.
      */
-    <div className="sticky top-[57px] z-10 -mx-4 mb-3 border-b border-slate-300 bg-[var(--color-surface)]/95 px-4 py-3 backdrop-blur">
+    <div className="sticky top-[57px] z-10 -mx-4 mb-3 border-b border-border-subtle bg-bg-app px-4 py-3 backdrop-blur">
       {phone !== null ? (
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
           {/* A phone number is a thing people read aloud and type; it gets to be
@@ -108,20 +108,20 @@ export default function ContactActions({
           <a
             href={call.allowed ? `tel:${phone}` : undefined}
             onClick={call.allowed ? onCall : undefined}
-            className="text-[19px] font-semibold tracking-tight text-[var(--color-ink)]"
+            className="text-[19px] font-semibold tracking-tight text-text-primary"
           >
             {phone}
           </a>
           {phoneNote !== null && (
-            <span className="text-[11.5px] text-slate-600">{phoneNote}</span>
+            <span className="text-[11.5px] text-text-secondary">{phoneNote}</span>
           )}
         </div>
       ) : (
-        <p className="text-[13px] text-slate-600">No phone number on this lead yet.</p>
+        <p className="text-[13px] text-text-secondary">No phone number on this lead yet.</p>
       )}
 
       {email !== null && (
-        <p className="mt-0.5 break-all text-[12.5px] text-slate-600">{email}</p>
+        <p className="mt-0.5 break-all text-[12.5px] text-text-secondary">{email}</p>
       )}
 
       <div className="mt-2.5 grid grid-cols-3 gap-2">

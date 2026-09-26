@@ -195,13 +195,13 @@ export default function LeadNotePanel({
       </div>
 
       {pending.length > 0 && (
-        <ul className="mt-3 space-y-1.5 border-t border-slate-300 pt-3">
+        <ul className="mt-3 space-y-1.5 border-t border-border-subtle pt-3">
           {pending.map((p, i) => (
             <li key={p.attachment.id} className="flex items-center justify-between gap-3">
-              <span className="truncate text-[12.5px] text-slate-600">{p.label}</span>
+              <span className="truncate text-[12.5px] text-text-secondary">{p.label}</span>
               <button
                 onClick={() => setPending((prev) => prev.filter((_, j) => j !== i))}
-                className="shrink-0 text-[11px] text-slate-600"
+                className="shrink-0 text-[11px] text-text-secondary"
               >
                 Remove
               </button>
@@ -210,13 +210,13 @@ export default function LeadNotePanel({
         </ul>
       )}
 
-      {error && <p className="mt-2 text-[12.5px] leading-relaxed text-red-300">{error}</p>}
+      {error && <p className="mt-2 text-[12.5px] leading-relaxed text-status-critical">{error}</p>}
 
       <Button variant="secondary" full className="mt-3" onClick={() => void save()} disabled={!canSave}>
         {busy ? 'Saving…' : 'Add the note'}
       </Button>
 
-      <p className="mt-2 text-[10.5px] leading-relaxed text-slate-600">
+      <p className="mt-2 text-[10.5px] leading-relaxed text-text-secondary">
         Recordings and photos here are your own notes on this lead. They are kept apart from
         inspection photos on purpose — nothing captured here goes into the package the office sends
         an adjuster.

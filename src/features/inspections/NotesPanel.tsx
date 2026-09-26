@@ -14,10 +14,10 @@ const SEVERITIES: Array<[LocalObservation['severity'], string]> = [
 ]
 
 const SEVERITY_TONE: Record<LocalObservation['severity'], string> = {
-  none_noted: 'bg-slate-100 hover:bg-slate-200 text-slate-600 ring-slate-200',
+  none_noted: 'bg-bg-page hover:bg-bg-elevated text-text-secondary ring-border-subtle',
   minor: 'bg-sky-500/10 text-sky-300 ring-sky-500/25',
-  moderate: 'bg-amber-500/10 text-amber-300 ring-amber-500/25',
-  significant: 'bg-red-500/10 text-red-300 ring-red-500/25',
+  moderate: 'bg-status-warning/10 text-status-warning ring-amber-500/25',
+  significant: 'bg-status-critical/10 text-status-critical ring-red-500/25',
   requires_verification: 'bg-violet-500/10 text-violet-300 ring-violet-500/25',
 }
 
@@ -31,13 +31,13 @@ function AudioNote({ note }: { note: LocalVoiceNote }) {
   return (
     <Card>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[12px] text-slate-600">
+        <p className="text-[12px] text-text-secondary">
           {new Date(note.recordedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} ·{' '}
           {note.durationSeconds}s
         </p>
       </div>
       {url && <audio controls src={url} className="mt-2 w-full" />}
-      <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
+      <p className="mt-2 text-[11px] leading-relaxed text-text-secondary">
         Saved on this device. Automatic transcription turns on once an AI provider is connected — until then, type
         the important parts as observations so they reach the office.
       </p>
@@ -144,7 +144,7 @@ export default function NotesPanel({
       <SectionTitle>VOICE NOTE</SectionTitle>
       <Card>
         {recError ? (
-          <p className="text-[13px] text-red-300">{recError}</p>
+          <p className="text-[13px] text-status-critical">{recError}</p>
         ) : (
           <>
             <Button
@@ -154,7 +154,7 @@ export default function NotesPanel({
             >
               {recording ? `Stop recording · ${elapsed}s` : 'Record a voice note'}
             </Button>
-            <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
+            <p className="mt-2 text-[11px] leading-relaxed text-text-secondary">
               Talk through the roof as you walk it. Audio is stored on the device with the inspection.
             </p>
           </>
@@ -183,7 +183,7 @@ export default function NotesPanel({
               value={area}
               onChange={(e) => setArea(e.target.value)}
               placeholder="rear slope"
-              className="w-full rounded-xl bg-[var(--color-surface-3)] px-3.5 py-3 text-[15px] text-[var(--color-ink)] ring-1 ring-slate-200 outline-none placeholder:text-slate-600 focus:ring-2 focus:ring-brand-400"
+              className="w-full rounded-xl bg-bg-elevated px-3.5 py-3 text-[15px] text-text-primary ring-1 ring-border-subtle outline-none placeholder:text-text-secondary focus:ring-2 focus:ring-brand-primary"
             />
           </Field>
           <Field label="Severity">
@@ -217,7 +217,7 @@ export default function NotesPanel({
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${SEVERITY_TONE[o.severity]}`}>
                       {SEVERITIES.find(([v]) => v === o.severity)?.[1]}
                     </span>
-                    {o.area && <span className="text-[11px] text-slate-600">{o.area}</span>}
+                    {o.area && <span className="text-[11px] text-text-secondary">{o.area}</span>}
                     {o.source === 'ai' && !o.confirmedAt && (
                       <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] text-violet-300">
                         AI suggestion — unconfirmed
@@ -228,7 +228,7 @@ export default function NotesPanel({
                 <button
                   onClick={() => void deleteObservation(o.id).then(onChanged)}
                   aria-label="Delete observation"
-                  className="shrink-0 text-slate-600 hover:text-slate-600"
+                  className="shrink-0 text-text-secondary hover:text-text-secondary"
                 >
                   ×
                 </button>

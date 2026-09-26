@@ -160,22 +160,22 @@ export default function RoutePlayback({
               className="w-full accent-gold-400"
               aria-label="Route timeline"
             />
-            <div className="mt-0.5 flex justify-between text-[10.5px] text-slate-600">
+            <div className="mt-0.5 flex justify-between text-[10.5px] text-text-secondary">
               <span>{clock(session.startedAt)}</span>
-              <span className="font-semibold text-slate-600">{clock(cutoff)}</span>
+              <span className="font-semibold text-text-secondary">{clock(cutoff)}</span>
               <span>{session.endedAt ? clock(session.endedAt) : 'now'}</span>
             </div>
           </div>
         </div>
 
         <div className="mt-2 flex items-center gap-1">
-          <span className="text-[10.5px] uppercase tracking-wide text-slate-600">Speed</span>
+          <span className="text-[10.5px] uppercase tracking-wide text-text-secondary">Speed</span>
           {SPEEDS.map((s) => (
             <button
               key={s}
               onClick={() => setSpeed(s)}
               className={`rounded px-2 py-0.5 text-[11px] ${
-                speed === s ? 'bg-slate-200 text-white' : 'text-slate-600'
+                speed === s ? 'bg-bg-elevated text-text-primary' : 'text-text-secondary'
               }`}
             >
               {s}×
@@ -186,7 +186,7 @@ export default function RoutePlayback({
 
       <div
         ref={listRef}
-        className="max-h-80 overflow-y-auto rounded-2xl bg-[var(--color-surface-2)] p-1 ring-1 ring-slate-200"
+        className="max-h-80 overflow-y-auto rounded-2xl bg-bg-card p-1 ring-1 ring-border-subtle"
       >
         {timeline.map((entry, index) => {
           const reached = Date.parse(entry.at) <= startMs + offset
@@ -214,10 +214,10 @@ function TimelineRow({
     <div
       data-active={active}
       className={`flex gap-3 rounded-xl px-3 py-2 transition-opacity ${
-        active ? 'bg-slate-200' : ''
+        active ? 'bg-bg-elevated' : ''
       } ${reached ? 'opacity-100' : 'opacity-35'}`}
     >
-      <span className="w-14 shrink-0 pt-0.5 text-[11px] tabular-nums text-slate-600">
+      <span className="w-14 shrink-0 pt-0.5 text-[11px] tabular-nums text-text-secondary">
         {clock(entry.at)}
       </span>
       <span
@@ -227,7 +227,7 @@ function TimelineRow({
       <div className="min-w-0">
         <p className="truncate text-[13px] font-medium">{entry.title}</p>
         {entry.detail && (
-          <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-600">{entry.detail}</p>
+          <p className="mt-0.5 text-[11.5px] leading-relaxed text-text-secondary">{entry.detail}</p>
         )}
       </div>
     </div>

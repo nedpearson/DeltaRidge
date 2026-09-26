@@ -33,7 +33,7 @@ function Loading() {
     <>
       <SectionTitle>MAP</SectionTitle>
       <Card className="!p-0 overflow-hidden">
-        <div className="flex h-96 w-full items-center justify-center bg-[#e8e6e1]">
+        <div className="flex h-96 w-full items-center justify-center bg-bg-elevated">
           <p className="text-[12.5px] text-brand-950/50">Loading the map…</p>
         </div>
       </Card>

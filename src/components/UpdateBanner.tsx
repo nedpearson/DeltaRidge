@@ -69,8 +69,8 @@ export default function UpdateBanner() {
         bottom: 'calc(var(--bottom-nav-height, 0px) + env(safe-area-inset-bottom, 0px) + 0.75rem)',
       }}
     >
-      <div className="flex items-center gap-3 rounded-xl bg-[#1b2740] px-4 py-3 shadow-lg ring-1 ring-sky-300">
-        <p className="flex-1 text-[13px] leading-snug text-slate-600">
+      <div className="flex items-center gap-3 rounded-xl bg-bg-card px-4 py-3 shadow-lg ring-1 ring-brand-primary">
+        <p className="flex-1 text-[13px] leading-snug text-text-secondary">
           {held ? (
             <>
               A new version is ready. It will install by itself when you finish
@@ -85,14 +85,14 @@ export default function UpdateBanner() {
         {!held && !deferred && (
           <button
             onClick={() => setDeferred(true)}
-            className="shrink-0 rounded-lg px-2 py-2 text-[13px] text-slate-600"
+            className="shrink-0 rounded-lg px-2 py-2 text-[13px] text-text-secondary"
           >
             Not now
           </button>
         )}
         <button
           onClick={applyUpdate}
-          className="shrink-0 rounded-lg bg-sky-100 px-3 py-2 text-[13px] font-semibold text-sky-700 ring-1 ring-sky-300"
+          className="shrink-0 rounded-lg bg-sky-100 px-3 py-2 text-[13px] font-semibold text-sky-700 ring-1 ring-brand-primary"
         >
           {held || deferred ? 'Update now' : 'Update'}
         </button>

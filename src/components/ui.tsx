@@ -3,11 +3,11 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAt
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'gold'
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand-500 text-white shadow-md shadow-brand-500/20 hover:bg-brand-400 active:scale-[0.98]',
-  gold: 'bg-gold-500 text-white shadow-md shadow-gold-500/20 hover:bg-gold-400 active:scale-[0.98]',
-  secondary: 'bg-white text-[var(--color-ink)] ring-1 ring-[var(--color-surface-3)] hover:bg-slate-50 shadow-sm active:scale-[0.98]',
-  ghost: 'text-slate-60070 hover:bg-[var(--color-surface-3)] hover:text-[var(--color-ink)]',
-  danger: 'bg-red-50 text-red-600 ring-1 ring-red-200 hover:bg-red-100',
+  primary: 'bg-brand-primary text-text-primary shadow-md box-glow hover:bg-brand-400 active:scale-[0.98]',
+  gold: 'bg-gold-500 text-text-primary shadow-md shadow-gold-500/20 hover:bg-gold-400 active:scale-[0.98]',
+  secondary: 'bg-bg-card text-text-primary ring-1 ring-[var(--color-surface-3)] hover:bg-bg-app shadow-sm active:scale-[0.98]',
+  ghost: 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary',
+  danger: 'bg-red-50 text-status-critical ring-1 ring-red-200 hover:bg-status-critical',
 }
 
 export function Button({
@@ -37,7 +37,7 @@ export function Card({
   id?: string
 }) {
   return (
-    <div id={id} className={`rounded-2xl bg-[var(--color-surface-2)] p-4 ring-1 ring-slate-200 shadow-sm ${className}`}>
+    <div id={id} className={`rounded-2xl bg-bg-card p-4 ring-1 ring-border-subtle shadow-sm ${className}`}>
       {children}
     </div>
   )
@@ -63,7 +63,7 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12px] font-medium text-slate-60070">{label}</span>
+      <span className="mb-1.5 block text-[12px] font-medium text-text-secondary">{label}</span>
       {children}
       {hint && <span className="mt-1 block text-[11px] text-slate-60040">{hint}</span>}
     </label>
@@ -71,7 +71,7 @@ export function Field({
 }
 
 const CONTROL =
-  'w-full rounded-xl bg-white px-3.5 py-3 text-[15px] text-[var(--color-ink)] ring-1 ring-[var(--color-surface-3)] outline-none placeholder:text-slate-60030 focus:ring-2 focus:ring-brand-500 shadow-sm'
+  'w-full rounded-xl bg-bg-card px-3.5 py-3 text-[15px] text-text-primary ring-1 ring-[var(--color-surface-3)] outline-none placeholder:text-slate-60030 focus:ring-2 focus:ring-brand-primary shadow-sm'
 
 export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${CONTROL} ${props.className ?? ''}`} />
@@ -87,7 +87,7 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
 
 export function Empty({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 px-5 py-10 text-center">
+    <div className="rounded-2xl border border-dashed border-border-subtle bg-bg-app/50 px-5 py-10 text-center">
       <p className="font-display text-sm tracking-wide text-slate-60080">{title}</p>
       <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-slate-60050">{body}</p>
     </div>

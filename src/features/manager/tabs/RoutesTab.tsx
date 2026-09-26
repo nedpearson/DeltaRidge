@@ -36,7 +36,7 @@ export default function RoutesTab({
   if (routes.length === 0) {
     return loading ? (
       <Card>
-        <p className="text-[12.5px] text-slate-600">Reading routes…</p>
+        <p className="text-[12.5px] text-text-secondary">Reading routes…</p>
       </Card>
     ) : (
       <Nothing
@@ -60,11 +60,11 @@ export default function RoutesTab({
         <Card key={route.id}>
           <div className="flex items-baseline justify-between gap-3">
             <p className="truncate text-[14px] font-semibold">{nameOf(route.userId)}</p>
-            <span className="shrink-0 text-[11px] text-slate-600">
+            <span className="shrink-0 text-[11px] text-text-secondary">
               {new Date(route.startedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
             </span>
           </div>
-          <p className="mt-0.5 text-[11.5px] text-slate-600">
+          <p className="mt-0.5 text-[11.5px] text-text-secondary">
             {new Date(route.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
             {route.endedAt
               ? ` – ${new Date(route.endedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · ${duration(
@@ -73,7 +73,7 @@ export default function RoutesTab({
               : ' · still open'}
             {route.label ? ` · ${route.label}` : ''}
           </p>
-          <p className="mt-1 text-[11.5px] text-slate-600">
+          <p className="mt-1 text-[11.5px] text-text-secondary">
             {route.pointCount} fix{route.pointCount === 1 ? '' : 'es'}
             {route.pointCount === 0 ? ' — no trail was recorded for this one' : ''}
           </p>
@@ -162,13 +162,13 @@ function OneRoute({
 
   return (
     <div className="space-y-3">
-      <button onClick={onBack} className="text-[12.5px] font-medium text-slate-600">
+      <button onClick={onBack} className="text-[12.5px] font-medium text-text-secondary">
         ← All routes
       </button>
 
       <Card>
         <p className="text-[14px] font-semibold">{nameOf(route.userId)}</p>
-        <p className="mt-0.5 text-[11.5px] text-slate-600">
+        <p className="mt-0.5 text-[11.5px] text-text-secondary">
           {new Date(route.startedAt).toLocaleString([], {
             weekday: 'short',
             month: 'short',
@@ -188,7 +188,7 @@ function OneRoute({
           <Stat value={String(stats.doors.appointments)} label="booked" />
         </div>
 
-        <div className="mt-3 space-y-1 border-t border-slate-300 pt-2 text-[11.5px] leading-relaxed text-slate-600">
+        <div className="mt-3 space-y-1 border-t border-border-subtle pt-2 text-[11.5px] leading-relaxed text-text-secondary">
           <p>
             Tracked {duration(stats.trackedSeconds)} from first fix to last. Paused{' '}
             {duration(stats.pausedSeconds)}. {stats.gapCount} gap{stats.gapCount === 1 ? '' : 's'} totalling{' '}
@@ -209,7 +209,7 @@ function OneRoute({
       </Card>
 
       {signals.length > 0 && (
-        <Card className={needsReview(signals) ? '!bg-amber-100 ring-amber-300' : ''}>
+        <Card className={needsReview(signals) ? '!bg-status-warning ring-amber-300' : ''}>
           <p className="text-[13px] font-semibold">
             {needsReview(signals) ? 'Worth opening before you draw a conclusion' : 'Worth knowing'}
           </p>
@@ -217,14 +217,14 @@ function OneRoute({
             {signals.map((signal) => (
               <div key={signal.code}>
                 <p className="text-[12.5px] font-medium">{signal.observed}</p>
-                <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-600">
+                <p className="mt-0.5 text-[11.5px] leading-relaxed text-text-secondary">
                   Usually: {signal.ordinary}
                 </p>
-                <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-600">{signal.check}</p>
+                <p className="mt-0.5 text-[11.5px] leading-relaxed text-text-secondary">{signal.check}</p>
               </div>
             ))}
           </div>
-          <p className="mt-2.5 border-t border-slate-300 pt-2 text-[11px] leading-relaxed text-slate-600">
+          <p className="mt-2.5 border-t border-border-subtle pt-2 text-[11px] leading-relaxed text-text-secondary">
             None of this is a finding about the rep. These are shapes in the data with an ordinary
             explanation attached to each one.
           </p>
@@ -232,20 +232,20 @@ function OneRoute({
       )}
 
       {error && (
-        <Card className="!bg-amber-100 ring-amber-300">
-          <p className="text-[12.5px] text-amber-100/80">The trail could not be read: {error}</p>
+        <Card className="!bg-status-warning ring-amber-300">
+          <p className="text-[12.5px] text-status-warning/80">The trail could not be read: {error}</p>
         </Card>
       )}
 
       {loading ? (
         <Card>
-          <p className="text-[12.5px] text-slate-600">Reading the trail…</p>
+          <p className="text-[12.5px] text-text-secondary">Reading the trail…</p>
         </Card>
       ) : (
         <RoutePlayback session={session} points={points} activities={timelineActivities} />
       )}
 
-      <p className="text-[10.5px] leading-relaxed text-slate-600">
+      <p className="text-[10.5px] leading-relaxed text-text-secondary">
         Doors are matched to this route by rep and time — the only link that exists, since a knock records
         who and when rather than which route it belonged to. Anything recorded after the route ended will
         not appear here. Last fix {ago(route.lastFixAt)}.

@@ -70,7 +70,7 @@ export default function CostBookPage() {
   const setMargin = (key: keyof MarginSettings) => (e: { target: { value: string } }) =>
     setMargins((m) => ({ ...m, [key]: Number(e.target.value) }))
 
-  if (loading) return <p className="text-[13px] text-slate-600">Loading…</p>
+  if (loading) return <p className="text-[13px] text-text-secondary">Loading…</p>
 
   const ready = isUsable(costs)
   const missingEssential = ESSENTIAL_COSTS.filter((k) => {
@@ -88,7 +88,7 @@ export default function CostBookPage() {
     <div className="space-y-4 pb-4">
       <div>
         <h1 className="font-display text-xl tracking-wide">Your costs</h1>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-600">
+        <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
           What Delta Ridge actually pays. Nothing is filled in for you on purpose — an invented
           cost prices a roof without anyone noticing. Read these off a recent supplier invoice
           and your crew or subcontract rate.
@@ -96,7 +96,7 @@ export default function CostBookPage() {
       </div>
 
       <Card>
-        <p className="text-[13px] leading-relaxed text-slate-600">
+        <p className="text-[13px] leading-relaxed text-text-secondary">
           {ready ? (
             <>Ready to estimate. {savedAt ? `Saved ${new Date(savedAt).toLocaleString()}.` : ''}</>
           ) : (
@@ -159,7 +159,7 @@ export default function CostBookPage() {
       </Card>
 
       {saveError && (
-        <p className="rounded-lg bg-amber-100 px-3 py-2 text-[13px] text-amber-700 ring-1 ring-amber-300">
+        <p className="rounded-lg bg-status-warning px-3 py-2 text-[13px] text-status-warning ring-1 ring-amber-300">
           {saveError}
         </p>
       )}

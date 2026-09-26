@@ -23,15 +23,15 @@ export default function InspectionsPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-semibold">{inspectionTitle(i)}</p>
-                    <p className="mt-0.5 truncate text-[12px] text-slate-600">
+                    <p className="mt-0.5 truncate text-[12px] text-text-secondary">
                       {[i.city, i.parish && `${i.parish} Parish`].filter(Boolean).join(' · ') || 'No address details'}
                     </p>
                   </div>
                   <span
                     className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ${
                       i.status === 'complete'
-                        ? 'bg-emerald-500/10 text-emerald-300 ring-emerald-500/25'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-600 ring-slate-200'
+                        ? 'bg-status-success/10 text-status-success ring-emerald-500/25'
+                        : 'bg-bg-page hover:bg-bg-elevated text-text-secondary ring-border-subtle'
                     }`}
                   >
                     {i.status === 'complete' ? 'Complete' : 'Open'}

@@ -40,7 +40,7 @@ export function OnlinePill() {
   }, [])
 
   const label = !online ? 'Offline — saved on device' : pending > 0 ? `${pending} waiting to sync` : 'Saved on device'
-  const tone = !online ? 'bg-amber-400/15 text-amber-200 ring-amber-300/30' : 'bg-emerald-400/15 text-emerald-200 ring-emerald-300/30'
+  const tone = !online ? 'bg-status-warning/15 text-status-warning ring-amber-300/30' : 'bg-status-success/15 text-status-success ring-emerald-300/30'
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ${tone}`}>
@@ -139,13 +139,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
        */
       style={{ '--bottom-nav-height': `${navHeight}px` } as CSSProperties}
     >
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-brand-900 text-white shadow-lg shadow-brand-950/10">
+      <header className="sticky top-0 z-20 border-b border-border-subtle bg-brand-pressed text-text-primary shadow-lg shadow-brand-950/10">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <div className="grid size-9 place-items-center rounded-lg bg-brand-500 font-display text-sm font-bold text-white shadow-md shadow-black/20 ring-1 ring-white/20">DR</div>
+            <div className="grid size-9 place-items-center rounded-lg bg-brand-primary font-display text-sm font-bold text-text-primary shadow-md shadow-black/20 ring-1 ring-white/20">DR</div>
             <div className="leading-none">
-              <div className="font-display text-[15px] tracking-wide text-white">Delta Ridge</div>
-              <div className="mt-0.5 text-[10px] uppercase tracking-widest text-slate-300">Field</div>
+              <div className="font-display text-[15px] tracking-wide text-text-primary">Delta Ridge</div>
+              <div className="mt-0.5 text-[10px] uppercase tracking-widest text-text-secondary">Field</div>
             </div>
           </div>
           <OnlinePill />
@@ -172,7 +172,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {!hideNav && (
         <nav
           ref={navRef}
-          className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-screen-sm border-t border-white/10 bg-brand-900 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(8,21,46,0.18)] md:max-w-3xl lg:max-w-5xl"
+          className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-screen-sm border-t border-border-subtle bg-brand-pressed px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(8,21,46,0.18)] md:max-w-3xl lg:max-w-5xl"
         >
           {/*
             The column count is DERIVED from NAV, not written down beside it.
@@ -196,7 +196,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 end={item.to === '/'}
                 className={({ isActive }) =>
                   `mx-1 my-1 flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-semibold transition-colors ${
-                    isActive ? 'bg-white/10 text-brand-300' : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    isActive ? 'bg-bg-card/10 text-brand-300' : 'text-text-secondary hover:bg-bg-card/5 hover:text-text-primary'
                   }`
                 }
               >
