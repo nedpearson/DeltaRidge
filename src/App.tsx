@@ -1,3 +1,4 @@
+import MemberPortal from '@/pages/MemberPortal'
 import { useEffect } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import AppShell from '@/components/AppShell'
@@ -45,28 +46,37 @@ export default function App() {
       <RouteAnalytics />
       <SyncRunner />
       <UpdateBanner />
-      <AppShell>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/leads" element={<LeadsPage />} />
-          <Route path="/lead/:id" element={<LeadPage />} />
-          <Route path="/evidence/:id" element={<EvidencePackagePage />} />
-          <Route path="/property/:addressKey" element={<PropertyPage />} />
-          <Route path="/estimate" element={<EstimatePage />} />
-          <Route path="/estimate/:id" element={<EstimatePage />} />
-          <Route path="/costs" element={<CostBookPage />} />
-          <Route path="/diagnostics" element={<DiagnosticsPage />} />
-          <Route path="/manager" element={<ManagerPage />} />
-          <Route path="/routes" element={<RouteHistoryPage />} />
-          <Route path="/inspections" element={<InspectionsPage />} />
-          <Route path="/new" element={<NewInspectionPage />} />
-          <Route path="/inspection/:id" element={<InspectionPage />} />
-          <Route path="/map" element={<MapPage />} />
-          <Route path="/more" element={<MorePage />} />
-          <Route path="/training" element={<TrainingSimulatorPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </AppShell>
+      <Routes>
+        <Route path="/portal/:id" element={<MemberPortal />} />
+        <Route path="*" element={
+          <AppShell>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/leads" element={<LeadsPage />} />
+              <Route path="/lead/:id" element={<LeadPage />} />
+              <Route path="/evidence/:id" element={<EvidencePackagePage />} />
+              <Route path="/property/:addressKey" element={<PropertyPage />} />
+              <Route path="/estimate" element={<EstimatePage />} />
+              <Route path="/estimate/:id" element={<EstimatePage />} />
+              <Route path="/costs" element={<CostBookPage />} />
+              <Route path="/diagnostics" element={<DiagnosticsPage />} />
+              <Route path="/manager" element={<ManagerPage />} />
+              <Route path="/routes" element={<RouteHistoryPage />} />
+              <Route path="/inspections" element={<InspectionsPage />} />
+              <Route path="/new" element={<NewInspectionPage />} />
+              <Route path="/inspection/:id" element={<InspectionPage />} />
+              <Route path="/map" element={<MapPage />} />
+              <Route path="/more" element={<MorePage />} />
+              <Route path="/training" element={<TrainingSimulatorPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </AppShell>
+        } />
+      </Routes>
     </SessionProvider>
   )
 }
+
+
+
+
