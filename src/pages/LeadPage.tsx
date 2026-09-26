@@ -9,6 +9,7 @@ import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/component
 import ContactActions from '@/components/ContactActions'
 import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
 import IntegrityPanel from '@/features/leads/IntegrityPanel'
+import AppointmentBrief from '@/features/leads/AppointmentBrief'
 import { readLink } from '@/features/integrations/roofr/store'
 import { pendingWork } from '@/lib/sync'
 import {
@@ -659,6 +660,12 @@ export default function LeadPage() {
           </ol>
         </Card>
       )}
+
+      <AppointmentBrief
+        lead={lead}
+        history={history}
+        onOpenProperty={() => navigate(`/property/${encodeURIComponent(lead.addressKey)}`)}
+      />
 
       <IntegrityPanel
         evidence={{
