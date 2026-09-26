@@ -432,7 +432,7 @@ export default function LeadPage() {
             {phoneSource && (
               <p
                 className={`mt-0.5 text-[11.5px] ${
-                  isFromHomeowner(phoneSource) ? 'text-text-secondary' : 'text-status-warning/70'
+                  isFromHomeowner(phoneSource) ? 'text-text-secondary' : 'text-warning-highlight/70'
                 }`}
               >
                 {CONTACT_SOURCE_LABEL[phoneSource]}
@@ -444,9 +444,9 @@ export default function LeadPage() {
         )}
 
         {!window.allowed && lead.contactPhone && (
-          <div className="mt-2 rounded-xl bg-status-warning px-3 py-2 ring-1 ring-amber-300">
+          <div className="mt-2 rounded-xl bg-warning-surface px-3 py-2 ring-1 ring-warning-border">
             {window.reasons.map((reason) => (
-              <p key={reason} className="text-[12px] leading-relaxed text-status-warning/80">
+              <p key={reason} className="text-[12px] leading-relaxed text-warning-highlight/80">
                 {reason}
               </p>
             ))}
@@ -479,7 +479,7 @@ export default function LeadPage() {
         </div>
 
         {blockReason && (
-          <p className="mt-2 text-[12px] leading-relaxed text-status-warning/80">{blockReason}</p>
+          <p className="mt-2 text-[12px] leading-relaxed text-warning-highlight/80">{blockReason}</p>
         )}
 
         <p className="mt-2 text-[10.5px] leading-relaxed text-text-secondary">
@@ -510,7 +510,7 @@ export default function LeadPage() {
                 >
                   <span className="text-[13px]">{CONTACT_SOURCE_LABEL[source]}</span>
                   {!isFromHomeowner(source) && (
-                    <span className="text-[10.5px] text-status-warning/70">not dialable here</span>
+                    <span className="text-[10.5px] text-warning-highlight/70">not dialable here</span>
                   )}
                 </button>
               ))}
@@ -549,7 +549,7 @@ export default function LeadPage() {
       <SectionTitle>PERMISSION</SectionTitle>
       <Card>
         {lead.optedOutAt ? (
-          <p className="text-[12.5px] leading-relaxed text-status-warning/90">
+          <p className="text-[12.5px] leading-relaxed text-warning-highlight/90">
             They asked not to be contacted, on {when(lead.optedOutAt)}. Every permission on this
             lead was cleared at the same time, and this cannot be undone from the field.
           </p>

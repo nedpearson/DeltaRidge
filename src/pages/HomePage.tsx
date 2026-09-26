@@ -98,7 +98,7 @@ export default function HomePage() {
       )}
 
       {!backend.configured && (
-        <Card className="mt-4 !bg-status-warning ring-amber-300">
+        <Card className="mt-4 bg-warning-surface ring-1 ring-warning-border border-l-4 border-l-warning-base">
           <p className="text-[12px] leading-relaxed text-status-warning/90">{backend.reason}</p>
         </Card>
       )}

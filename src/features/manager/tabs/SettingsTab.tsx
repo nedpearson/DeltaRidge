@@ -200,7 +200,7 @@ export default function SettingsTab({
       </Card>
 
       {error && (
-        <Card className="!bg-status-warning ring-amber-300">
+        <Card className="bg-warning-surface ring-1 ring-warning-border border-l-4 border-l-warning-base">
           <p className="text-[12.5px] text-status-warning/80">{error}</p>
         </Card>
       )}

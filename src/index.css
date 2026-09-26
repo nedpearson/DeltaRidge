@@ -5,51 +5,62 @@
   --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
 
   /* Backgrounds */
-  --color-bg-app: #07111F;
+  --color-bg-app: #070F1D;
   --color-bg-page: #0B1728;
-  --color-bg-card: #102238;
-  --color-bg-elevated: #162C46;
+  --color-bg-card: #122238;
+  --color-bg-elevated: #182C44;
   
   /* Borders */
-  --color-border-strong: #294563;
+  --color-border-strong: #29425D;
   --color-border-subtle: #1D344C;
   
   /* Primary brand/action */
-  --color-brand-primary: #287CFF;
-  --color-brand-hover: #4594FF;
-  --color-brand-pressed: #1764D9;
+  --color-brand-primary: #4776E6;
+  --color-brand-hover: #5A87F0;
+  --color-brand-pressed: #3A63C9;
   
-  /* Intelligence / live data */
-  --color-brand-intel: #20D4F5;
+  /* LIVE / FIELD / GPS */
+  --color-route-surface: #12364A;
+  --color-route-surface-elevated: #174258;
+  --color-route-border: #24566C;
+  --color-route-live: #27C6E8;
+  --color-route-text: #F7FAFC;
+  --color-route-text-secondary: #AFC0D1;
   
   /* Premium / high-value */
-  --color-brand-gold: #F2B84B;
-  --color-brand-gold-highlight: #FFCA65;
+  --color-brand-gold: #D9A441;
+  --color-brand-gold-highlight: #E8BD63;
   
+  /* WARNING / REVIEW */
+  --color-warning-base: #D58B32;
+  --color-warning-highlight: #E7B85C;
+  --color-warning-surface: rgba(213, 139, 50, 0.10);
+  --color-warning-border: rgba(213, 139, 50, 0.35);
+
   /* Semantic states */
-  --color-status-success: #27D39A;
-  --color-status-warning: #FFB020;
-  --color-status-critical: #F05252;
-  --color-status-ai: #9B7BFF;
+  --color-status-success: #34C990;
+  --color-status-warning: #D58B32;
+  --color-status-critical: #E75A64;
+  --color-status-ai: #9A83F5;
   
   /* Typography */
   --color-text-primary: #F7FAFC;
-  --color-text-secondary: #CAD5E2;
-  --color-text-muted: #91A4BA;
+  --color-text-secondary: #C5D1DE;
+  --color-text-muted: #8FA3B8;
   --color-text-disabled: #64768B;
 
   /* Retained Status Colors (adapted slightly for dark theme visibility or kept for logic) */
   --color-status-untouched: #64768B;
-  --color-status-target: #FFB020;
-  --color-status-attempted: #9B7BFF;
-  --color-status-noanswer: #91A4BA;
-  --color-status-spoke: #20D4F5;
-  --color-status-interested: #287CFF;
-  --color-status-appointment: #4594FF;
-  --color-status-inspected: #9B7BFF;
-  --color-status-proposal: #F2B84B;
-  --color-status-sold: #27D39A;
-  --color-status-lost: #F05252;
+  --color-status-target: #D58B32;
+  --color-status-attempted: #9A83F5;
+  --color-status-noanswer: #8FA3B8;
+  --color-status-spoke: #27C6E8;
+  --color-status-interested: #4776E6;
+  --color-status-appointment: #5A87F0;
+  --color-status-inspected: #9A83F5;
+  --color-status-proposal: #D9A441;
+  --color-status-sold: #34C990;
+  --color-status-lost: #E75A64;
   --color-status-dnc: #1D344C;
 }
 

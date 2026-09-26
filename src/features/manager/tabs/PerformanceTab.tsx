@@ -308,7 +308,7 @@ function RepDetail({
       )}
 
       {rep.completeness.notes.length > 0 && (
-        <Card className="!bg-status-warning/6 ring-amber-500/15">
+        <Card className="bg-warning-surface ring-1 ring-warning-border">
           <p className="text-[12px] font-semibold text-status-warning/90">What is missing from this window</p>
           {rep.completeness.notes.map((note) => (
             <p key={note} className="mt-1 text-[11.5px] leading-relaxed text-status-warning/60">

@@ -250,7 +250,7 @@ export default function ManagerPage() {
       <SectionTitle {...(loading ? { hint: 'loading…' } : {})}>MANAGER</SectionTitle>
 
       {snapshot.error && (
-        <Card className="!bg-status-warning ring-amber-300">
+        <Card className="bg-warning-surface ring-1 ring-warning-border border-l-4 border-l-warning-base">
           <p className="text-[13.5px] font-semibold text-status-warning">These numbers could not be loaded.</p>
           <p className="mt-1 text-[12px] leading-relaxed text-status-warning/70">{snapshot.error}</p>
           <p className="mt-1 text-[12px] leading-relaxed text-status-warning/50">

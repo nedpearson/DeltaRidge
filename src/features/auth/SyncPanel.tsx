@@ -57,7 +57,7 @@ export default function SyncPanel() {
       <SectionTitle {...(running ? { hint: 'syncing…' } : {})}>SYNC</SectionTitle>
 
       {stalled.length > 0 && (
-        <Card className="!bg-status-warning ring-amber-300">
+        <Card className="bg-warning-surface ring-1 ring-warning-border border-l-4 border-l-warning-base">
           <p className="text-[13.5px] font-semibold text-status-warning">
             {summarise(stalled)} could not be sent.
           </p>

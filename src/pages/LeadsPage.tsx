@@ -875,7 +875,7 @@ export default function LeadsPage() {
       </div>
 
       {error && (
-        <Card className="mt-3 !bg-status-warning ring-amber-300">
+        <Card className="mt-3 bg-warning-surface ring-1 ring-warning-border border-l-4 border-l-warning-base">
           <p className="text-[12.5px] leading-relaxed font-medium text-status-warning">{error}</p>
         </Card>
       )}
@@ -958,7 +958,7 @@ export default function LeadsPage() {
           {run && (
             <>
               {run.notes.length > 0 && (
-                <Card className="mt-3 !bg-status-warning ring-amber-300">
+                <Card className="mt-3 bg-warning-surface ring-1 ring-warning-border border-l-4 border-l-warning-base">
                   {run.notes.map((note) => (
                     <p key={note} className="text-[12.5px] leading-relaxed text-status-warning/90">
                       {note}

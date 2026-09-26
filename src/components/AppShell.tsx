@@ -40,7 +40,7 @@ export function OnlinePill() {
   }, [])
 
   const label = !online ? 'Offline — saved on device' : pending > 0 ? `${pending} waiting to sync` : 'Saved on device'
-  const tone = !online ? 'bg-status-warning/15 text-status-warning ring-amber-300/30' : 'bg-status-success/15 text-status-success ring-emerald-300/30'
+  const tone = !online ? 'bg-warning-surface/15 text-warning-highlight ring-warning-border' : 'bg-status-success/15 text-status-success ring-emerald-300/30'
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ${tone}`}>

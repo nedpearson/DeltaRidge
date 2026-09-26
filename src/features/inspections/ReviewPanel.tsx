@@ -5,9 +5,9 @@ import { evaluateCompleteness, type CompletenessIssue } from './completeness'
 import { CATEGORY_LABELS, type PhotoCategory } from './photo-categories'
 
 const TONE: Record<CompletenessIssue['severity'], { ring: string; dot: string; label: string }> = {
-  blocker: { ring: 'ring-red-500/30 bg-status-critical/8', dot: 'bg-status-critical', label: 'Office needs this' },
-  warning: { ring: 'ring-amber-500/25 bg-status-warning', dot: 'bg-status-warning', label: 'Office will call' },
-  advisory: { ring: 'ring-border-subtle bg-bg-elevated', dot: 'bg-bg-elevated', label: 'Worth adding' },
+  blocker: { ring: 'ring-status-critical/30 bg-status-critical/10', dot: 'bg-status-critical', label: 'Office needs this' },
+  warning: { ring: 'ring-warning-border bg-warning-surface', dot: 'bg-warning-highlight', label: 'Office will call' },
+  advisory: { ring: 'ring-border-subtle bg-bg-elevated', dot: 'bg-border-strong', label: 'Worth adding' },
 }
 
 export default function ReviewPanel({
@@ -84,7 +84,7 @@ export default function ReviewPanel({
       </Card>
 
       {report.issues.length === 0 ? (
-        <Card className="mt-3 !bg-status-success/8 ring-emerald-500/20">
+        <Card className="mt-3 bg-status-success/10 ring-1 ring-status-success/20">
           <p className="text-[14px] font-semibold text-status-success">Nothing missing.</p>
           <p className="mt-1 text-[12px] leading-relaxed text-status-success/70">
             Every required photo is captured, every observation has a supporting picture, and the office has what it
@@ -232,8 +232,8 @@ export default function ReviewPanel({
               </p>
             </div>
             {inspection.overriddenIssueCodes && inspection.overriddenIssueCodes.length > 0 && (
-              <div className="rounded-lg bg-status-warning px-3 py-2 ring-1 ring-amber-300">
-                <p className="font-display text-[10px] tracking-widest text-status-warning/70">FINISHED WITH GAPS</p>
+              <div className="rounded-lg bg-warning-surface px-3 py-2 ring-1 ring-warning-border">
+                <p className="font-display text-[10px] tracking-widest text-warning-highlight/80">FINISHED WITH GAPS</p>
                 <p className="mt-0.5 text-[12px] leading-relaxed text-text-secondary">
                   The rep closed this out with {inspection.overriddenIssueCodes.length} item
                   {inspection.overriddenIssueCodes.length === 1 ? '' : 's'} outstanding.
@@ -252,7 +252,7 @@ export default function ReviewPanel({
 
       <div className="mt-5">
         {inspection.sentToOfficeAt ? (
-          <Card className="!bg-status-success/8 ring-emerald-500/20">
+          <Card className="bg-status-success/10 ring-1 ring-status-success/20">
             <p className="text-[14px] font-semibold text-status-success">The office has this.</p>
             <p className="mt-1 text-[12px] leading-relaxed text-status-success/70">
               Sent {new Date(inspection.sentToOfficeAt).toLocaleString()}. If it is still listed as waiting to sync,

@@ -164,7 +164,7 @@ export default function GradesTab({
       </Card>
 
       {error && (
-        <Card className="!bg-status-warning ring-amber-300">
+        <Card className="bg-warning-surface ring-1 ring-warning-border border-l-4 border-l-warning-base">
           <p className="text-[12.5px] font-semibold text-status-warning">That did not save.</p>
           <p className="mt-1 text-[12px] leading-relaxed text-status-warning/70">{error}</p>
         </Card>

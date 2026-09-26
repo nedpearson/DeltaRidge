@@ -249,7 +249,7 @@ export default function EstimatePage() {
 
       {!ready && (
         <Card>
-          <p className="text-[13px] leading-relaxed text-status-warning">
+          <p className="text-[13px] leading-relaxed text-warning-highlight">
             Your costs are not entered yet, so nothing can be priced. This is not a setup step to
             skip — the estimator refuses to invent a price.
           </p>
@@ -266,7 +266,7 @@ export default function EstimatePage() {
             <span className="font-semibold text-text-primary">{money(saved.sellPriceCents as Cents)}</span>.
           </p>
           {drifted && (
-            <p className="mt-2 text-[12px] leading-relaxed text-status-warning">
+            <p className="mt-2 text-[12px] leading-relaxed text-warning-highlight">
               Your cost sheet has changed since this was priced. The figures below are recalculated
               at today&apos;s costs — the saved version keeps the price the homeowner was given.
               Save a new version to record the change.
@@ -363,7 +363,7 @@ export default function EstimatePage() {
 
           {built.gaps.length > 0 && (
             <Card>
-              <p className="text-[13px] font-semibold text-status-warning">
+              <p className="text-[13px] font-semibold text-warning-highlight">
                 {built.gaps.length} item{built.gaps.length === 1 ? '' : 's'} could not be priced
               </p>
               <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
@@ -373,7 +373,7 @@ export default function EstimatePage() {
               <div className="mt-2 space-y-1">
                 {built.gaps.map((gap) => (
                   <div key={gap.key} className="flex items-baseline gap-3 text-[13px]">
-                    <span className="flex-1 text-status-warning/80">{gap.description}</span>
+                    <span className="flex-1 text-warning-highlight/80">{gap.description}</span>
                     <span className="tabular-nums text-text-secondary">
                       {gap.quantity.toFixed(gap.unit === 'EA' ? 0 : 2)} {gap.unit}
                     </span>
@@ -402,7 +402,7 @@ export default function EstimatePage() {
                           flag.severity === 'blocker'
                             ? 'shrink-0 font-semibold text-status-critical'
                             : flag.severity === 'warning'
-                              ? 'shrink-0 font-semibold text-status-warning'
+                              ? 'shrink-0 font-semibold text-warning-highlight'
                               : 'shrink-0 font-semibold text-text-secondary'
                         }
                       >
@@ -474,7 +474,7 @@ export default function EstimatePage() {
       )}
 
       {saveError && (
-        <p className="rounded-lg bg-status-warning px-3 py-2 text-[13px] text-status-warning ring-1 ring-amber-300">
+        <p className="rounded-lg bg-warning-surface px-3 py-2 text-[13px] text-warning-highlight ring-1 ring-warning-border">
           {saveError}
         </p>
       )}

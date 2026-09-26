@@ -327,31 +327,32 @@ export default function RoutePanel() {
       <Card
         className={
           paused
-            ? '!bg-status-warning ring-amber-300'
-            : '!bg-status-success ring-emerald-300'
+            ? 'bg-bg-elevated ring-1 ring-border-strong'
+            : 'bg-route-surface ring-1 ring-route-border shadow-[0_0_28px_rgba(39,198,232,0.10)]'
         }
       >
-        <p className={`text-[13.5px] font-semibold ${paused ? 'text-status-warning' : 'text-status-success'}`}>
-          {paused ? '⏸ Paused — nothing is being recorded.' : '● Recording your route.'}
-        </p>
-        <p className="mt-0.5 text-[11.5px] text-text-secondary">
+        <div className={`flex items-center gap-2 text-[13.5px] font-semibold tracking-wide ${paused ? 'text-status-warning' : 'text-route-live'}`}>
+          {!paused && <span className="h-2 w-2 rounded-full bg-route-live animate-pulse"></span>}
+          {paused ? 'PAUSED - NOT RECORDING' : 'RECORDING'}
+        </div>
+        <p className={`mt-1.5 text-[11.5px] ${paused ? 'text-text-secondary' : 'text-route-text-secondary'}`}>
           Started {new Date(session.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} ·{' '}
           {duration(elapsed)} elapsed{onBreak > 0 ? ` · ${duration(onBreak)} paused` : ''}
         </p>
 
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <Stat value={String(counts.doors)} label="doors" />
-          <Stat value={String(counts.verified)} label="verified" />
-          <Stat value={String(counts.conversations)} label="spoke to" />
-          <Stat value={String(counts.appointments)} label="booked" />
-          <Stat value={miles(routeStats(session, points).distanceMeters)} label="recorded" />
-          <Stat value={counts.queued === 0 ? 'clear' : String(counts.queued)} label="waiting to send" />
+        <div className={`mt-3 grid grid-cols-3 gap-2 text-center ${paused ? 'text-text-primary' : 'text-route-text'}`}>
+          <Stat value={String(counts.doors)} label="doors" paused={paused} />
+          <Stat value={String(counts.verified)} label="verified" paused={paused} />
+          <Stat value={String(counts.conversations)} label="spoke to" paused={paused} />
+          <Stat value={String(counts.appointments)} label="booked" paused={paused} />
+          <Stat value={miles(routeStats(session, points).distanceMeters)} label="recorded" paused={paused} />
+          <Stat value={counts.queued === 0 ? 'clear' : String(counts.queued)} label="waiting to send" paused={paused} />
         </div>
 
         {problem && <p className="mt-2 text-[12px] leading-relaxed text-status-warning/80">{problem}</p>}
 
         {confirmStop ? (
-          <div className="mt-3">
+          <div className="mt-4 border-t border-border-subtle pt-3">
             {/*
               Shown to inform the decision, never to gate it. The End route
               button below is always enabled - a rep standing in the rain at
@@ -359,14 +360,14 @@ export default function RoutePanel() {
               teaches them to stop starting routes at all.
             */}
             {pendingOpen !== null && pendingOpen.length > 0 && (
-              <div className="mb-3 rounded-lg border border-amber-300/20 bg-status-warning/5 p-3">
-                <p className="text-[12.5px] font-semibold text-status-warning/90">
+              <div className="mb-3 rounded-lg border border-warning-border bg-warning-surface p-3">
+                <p className="text-[12.5px] font-semibold text-warning-highlight">
                   {pendingOpen.length} still open
                 </p>
                 <ul className="mt-2 space-y-1.5">
                   {groupOpenItems(pendingOpen).map((group) => (
                     <li key={group.kind}>
-                      <p className="text-[11px] uppercase tracking-wider text-status-warning/50">
+                      <p className="text-[11px] uppercase tracking-wider text-warning-highlight/60">
                         {group.label} · {group.items.length}
                       </p>
                       {group.items.slice(0, 3).map((item) => (
@@ -399,22 +400,25 @@ export default function RoutePanel() {
               Keep going
             </Button>
             <Button
-              variant="gold"
+              className="bg-bg-card ring-1 ring-status-critical/50 text-status-critical hover:bg-status-critical/10"
               onClick={() => {
                 setConfirmStop(false)
                 void end()
               }}
             >
-              End route
+              Confirm End
             </Button>
             </div>
           </div>
         ) : (
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-4 grid grid-cols-2 gap-2">
             <Button variant="secondary" onClick={() => void (paused ? resume() : pause())}>
               {paused ? 'Resume' : 'Pause'}
             </Button>
-            <Button variant="secondary" onClick={() => void askToStop()}>
+            <Button
+              className="bg-bg-card ring-1 ring-border-strong text-status-critical/90 hover:bg-status-critical/10 hover:ring-status-critical/50"
+              onClick={() => void askToStop()}
+            >
               End route
             </Button>
           </div>
@@ -424,11 +428,11 @@ export default function RoutePanel() {
   )
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+function Stat({ value, label, paused }: { value: string; label: string; paused?: boolean }) {
   return (
     <div>
       <p className="text-[16px] font-semibold tabular-nums">{value}</p>
-      <p className="text-[10px] uppercase tracking-wide text-text-secondary">{label}</p>
+      <p className={`text-[10px] uppercase tracking-wide ${paused ? 'text-text-secondary' : 'text-route-text-secondary'}`}>{label}</p>
     </div>
   )
 }
