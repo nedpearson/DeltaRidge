@@ -504,7 +504,7 @@ function CoveragePanel({ coverage, events }: { coverage: StormCoverage; events: 
         </p>
 
         <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-border-subtle pt-3">
-          <p className="text-[13px] text-text-secondary">Radar-estimated hail (NEXRAD)</p>
+          <p className="text-[13px] text-text-secondary">Radar-estimated hail</p>
           {coverage.radar.kind === 'live' ? (
             <p className="shrink-0 font-display text-[15px] text-status-success">
               {coverage.radar.count}
