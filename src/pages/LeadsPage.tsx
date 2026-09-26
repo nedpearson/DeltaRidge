@@ -44,6 +44,7 @@ import {
 import type { ScoredLead } from '@/features/leads/scoring'
 import { intelligenceFor, INTELLIGENCE_LEVEL_LABEL } from '@/features/leads/lead-intelligence'
 import LeadProofPanel from '@/features/leads/LeadProofPanel'
+import AppointmentBriefPanel from '@/features/leads/AppointmentBriefPanel'
 import { WINDOW_OPTIONS, type StormWindowKey } from '@/features/leads/window'
 import { bboxAround, type SearchCenter } from '@/features/leads/search-area'
 import type { StormEvent } from '@/integrations/storm'
@@ -426,7 +427,7 @@ function ScoreBreakdown({ lead }: { lead: ScoredLead }) {
 }
 
 /** A door that has become somebody. */
-function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
+function PipelineCard({ lead, now, scored }: { lead: ManagedLead; now: string; scored?: ScoredLead }) {
   const navigate = useNavigate()
   const due = dueLabel(lead, now)
   const overdue = isDue(lead, now)
@@ -504,6 +505,7 @@ function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
         <Button variant="gold" onClick={() => navigate(`/lead/${lead.id}`)}>
           Open lead
         </Button>
+      <AppointmentBriefPanel lead={lead} {...(scored ? { scored } : {})} />
       </div>
     </Card>
   )
@@ -998,7 +1000,18 @@ export default function LeadsPage() {
           ) : (
             <div className="space-y-2">
               {pipeline.map((lead) => (
-                <PipelineCard key={lead.id} lead={lead} now={now} />
+                <PipelineCard
+                  key={lead.id}
+                  lead={lead}
+                  now={now}
+                  {...(run?.leads.find((candidate) => candidate.addressKey === lead.addressKey)
+                    ? {
+                        scored: run.leads.find(
+                          (candidate) => candidate.addressKey === lead.addressKey,
+                        ) as ScoredLead,
+                      }
+                    : {})}
+                />
               ))}
             </div>
           )}
