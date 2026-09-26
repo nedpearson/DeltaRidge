@@ -1,4 +1,4 @@
-﻿import { Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import AppShell from '@/components/AppShell'
 import UpdateBanner from '@/components/UpdateBanner'
 import HomePage from '@/pages/HomePage'
@@ -14,6 +14,8 @@ import DiagnosticsPage from '@/pages/DiagnosticsPage'
 import ManagerPage from '@/pages/ManagerPage'
 import RouteHistoryPage from '@/pages/RouteHistoryPage'
 import NotFoundPage from '@/pages/NotFoundPage'
+import MapPage from '@/pages/MapPage'
+import MorePage from '@/pages/MorePage'
 import { SessionProvider } from '@/features/auth/session'
 import { useSync } from '@/features/auth/useSync'
 
@@ -43,6 +45,8 @@ export default function App() {
           <Route path="/inspections" element={<InspectionsPage />} />
           <Route path="/new" element={<NewInspectionPage />} />
           <Route path="/inspection/:id" element={<InspectionPage />} />
+          <Route path="/map" element={<MapPage />} />
+          <Route path="/more" element={<MorePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AppShell>

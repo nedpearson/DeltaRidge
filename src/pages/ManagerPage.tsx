@@ -70,34 +70,18 @@ import {
  */
 
 type Tab =
-  | 'team'
-  | 'field'
-  | 'routes'
-  | 'campaigns'
-  | 'performance'
-  | 'grades'
-  | 'leads'
-  | 'territory'
-  | 'log'
-  | 'settings'
-  | 'roofr'
-  | 'contacts'
-  | 'health'
+  | 'command_center'
+  | 'leads_territory'
+  | 'team_routes'
+  | 'sales_revenue'
+  | 'operations'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'team', label: 'Team' },
-  { id: 'field', label: 'Live field' },
-  { id: 'routes', label: 'Routes' },
-  { id: 'campaigns', label: 'Campaigns' },
-  { id: 'performance', label: 'Performance' },
-  { id: 'grades', label: 'Grades' },
-  { id: 'leads', label: 'Assign' },
-  { id: 'territory', label: 'Territory' },
-  { id: 'log', label: 'Log' },
-  { id: 'settings', label: 'Settings' },
-  { id: 'roofr', label: 'Roofr' },
-  { id: 'contacts', label: 'Contact data' },
-  { id: 'health', label: 'Health' },
+  { id: 'command_center', label: 'COMMAND CENTER' },
+  { id: 'leads_territory', label: 'LEADS & TERRITORY' },
+  { id: 'team_routes', label: 'TEAM & ROUTES' },
+  { id: 'sales_revenue', label: 'SALES & REVENUE' },
+  { id: 'operations', label: 'OPERATIONS' },
 ]
 
 function ago(iso: string | null): string {
@@ -131,7 +115,7 @@ function Nothing({ title, body }: { title: string; body: string }) {
 
 export default function ManagerPage() {
   const { session, membership } = useSession()
-  const [tab, setTab] = useState<Tab>('team')
+  const [tab, setTab] = useState<Tab>('command_center')
   const [snapshot, setSnapshot] = useState<ManagerSnapshot>(EMPTY_SNAPSHOT)
   const [doors, setDoors] = useState<ScoredLead[]>([])
   const [loading, setLoading] = useState(true)
@@ -286,131 +270,164 @@ export default function ManagerPage() {
         ))}
       </div>
 
-      {tab === 'team' && (
-        <TeamTab
-          repActivity={repActivity}
-          outcomes={outcomes}
-          baseline={baseline}
-          nameOf={nameOf}
-          openByRep={openByRep}
-          loading={loading}
-        />
+      {tab === 'command_center' && (
+        <div className="space-y-8">
+          <div>
+            <div className="mb-3"><SectionTitle>LIVE FIELD</SectionTitle></div>
+            <FieldTab
+              repIds={snapshot.team.map((m) => m.userId)}
+              routes={snapshot.routes}
+              activity={snapshot.activity}
+              nameOf={nameOf}
+              loading={loading}
+            />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>ACTIVITY LOG</SectionTitle></div>
+            <LogTab rows={snapshot.audit} nameOf={nameOf} loading={loading} />
+          </div>
+        </div>
       )}
 
-      {tab === 'field' && (
-        <FieldTab
-          repIds={snapshot.team.map((m) => m.userId)}
-          routes={snapshot.routes}
-          activity={snapshot.activity}
-          nameOf={nameOf}
-          loading={loading}
-        />
+      {tab === 'leads_territory' && (
+        <div className="space-y-8">
+          <div>
+            <div className="mb-3"><SectionTitle>ASSIGN DOORS</SectionTitle></div>
+            <AssignTab
+              doors={doors}
+              assignments={snapshot.assignments}
+              reps={repContexts}
+              nameOf={nameOf}
+              canManage={canManage}
+              busy={busy}
+              onUnassign={async (id) => {
+                setBusy(id)
+                await unassignLead(id)
+                setBusy(null)
+                await load()
+              }}
+              onAssign={async (door, repId, reason) => {
+                if (!orgId || !session) return 'Not signed in to an organization.'
+                setBusy(`${door.addressKey}:${repId}`)
+                const result = await assignDoorTo({
+                  door,
+                  orgId,
+                  assignTo: repId,
+                  assignedBy: session.user.id,
+                  reason,
+                })
+                setBusy(null)
+                if (result.ok) await load()
+                return result.error
+              }}
+            />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>TERRITORY COVERAGE</SectionTitle></div>
+            <TerritoryTab
+              coverage={coverage}
+              hasDoors={doors.length > 0}
+              routeCoverage={routeCoverage}
+              routeCoverageError={routeCoverageError}
+            />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>CAMPAIGNS</SectionTitle></div>
+            <CampaignsTab />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>CONTACT DATA</SectionTitle></div>
+            <ContactProviderTab
+              organizationId={orgId}
+              userId={session.user.id}
+              canManage={membership?.role === 'admin'}
+            />
+          </div>
+        </div>
       )}
 
-      {tab === 'routes' && (
-        <RoutesTab
-          routes={snapshot.routes}
-          activity={snapshot.activity}
-          orgId={orgId}
-          nameOf={nameOf}
-          loading={loading}
-        />
+      {tab === 'team_routes' && (
+        <div className="space-y-8">
+          <div>
+            <div className="mb-3"><SectionTitle>TEAM</SectionTitle></div>
+            <TeamTab
+              repActivity={repActivity}
+              outcomes={outcomes}
+              baseline={baseline}
+              nameOf={nameOf}
+              openByRep={openByRep}
+              loading={loading}
+            />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>ROUTES</SectionTitle></div>
+            <RoutesTab
+              routes={snapshot.routes}
+              activity={snapshot.activity}
+              orgId={orgId}
+              nameOf={nameOf}
+              loading={loading}
+            />
+          </div>
+        </div>
       )}
 
-      {tab === 'campaigns' && <CampaignsTab />}
-
-      {tab === 'performance' && (
-        <PerformanceTab
-          team={snapshot.team}
-          activity={snapshot.activity}
-          routes={snapshot.routes}
-          assignments={leadsWithFollowups}
-          baseline={baseline}
-          nameOf={nameOf}
-          windowFrom={windowFrom}
-          windowTo={windowTo}
-        />
+      {tab === 'sales_revenue' && (
+        <div className="space-y-8">
+          <div>
+            <div className="mb-3"><SectionTitle>PERFORMANCE</SectionTitle></div>
+            <PerformanceTab
+              team={snapshot.team}
+              activity={snapshot.activity}
+              routes={snapshot.routes}
+              assignments={leadsWithFollowups}
+              baseline={baseline}
+              nameOf={nameOf}
+              windowFrom={windowFrom}
+              windowTo={windowTo}
+            />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>GRADES</SectionTitle></div>
+            <GradesTab
+              team={snapshot.team}
+              activity={snapshot.activity}
+              routes={snapshot.routes}
+              assignments={leadsWithFollowups}
+              baseline={baseline}
+              config={config}
+              orgId={orgId}
+              userId={session.user.id}
+              canManage={canManage}
+              nameOf={nameOf}
+            />
+          </div>
+        </div>
       )}
 
-      {tab === 'grades' && (
-        <GradesTab
-          team={snapshot.team}
-          activity={snapshot.activity}
-          routes={snapshot.routes}
-          assignments={leadsWithFollowups}
-          baseline={baseline}
-          config={config}
-          orgId={orgId}
-          userId={session.user.id}
-          canManage={canManage}
-          nameOf={nameOf}
-        />
+      {tab === 'operations' && (
+        <div className="space-y-8">
+          <div>
+            <div className="mb-3"><SectionTitle>ROOFR INTEGRATION</SectionTitle></div>
+            <RoofrTab organizationId={orgId} canManage={canManage} />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>SYSTEM HEALTH</SectionTitle></div>
+            <HealthTab organizationId={orgId} />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>SETTINGS</SectionTitle></div>
+            <SettingsTab
+              config={config}
+              isDefault={configIsDefault}
+              orgId={orgId}
+              userId={session.user.id}
+              canManage={canManage}
+              onSaved={() => void load()}
+            />
+          </div>
+        </div>
       )}
-
-      {tab === 'settings' && (
-        <SettingsTab
-          config={config}
-          isDefault={configIsDefault}
-          orgId={orgId}
-          userId={session.user.id}
-          canManage={canManage}
-          onSaved={() => void load()}
-        />
-      )}
-
-      {tab === 'roofr' && <RoofrTab organizationId={orgId} canManage={canManage} />}
-
-      {tab === 'health' && <HealthTab organizationId={orgId} />}
-
-      {tab === 'contacts' && (
-        <ContactProviderTab
-          organizationId={orgId}
-          userId={session.user.id}
-          canManage={membership?.role === 'admin'}
-        />
-      )}
-
-      {tab === 'leads' && (
-        <AssignTab
-          doors={doors}
-          assignments={snapshot.assignments}
-          reps={repContexts}
-          nameOf={nameOf}
-          canManage={canManage}
-          busy={busy}
-          onUnassign={async (id) => {
-            setBusy(id)
-            await unassignLead(id)
-            setBusy(null)
-            await load()
-          }}
-          onAssign={async (door, repId, reason) => {
-            if (!orgId || !session) return 'Not signed in to an organization.'
-            setBusy(`${door.addressKey}:${repId}`)
-            const result = await assignDoorTo({
-              door,
-              orgId,
-              assignTo: repId,
-              assignedBy: session.user.id,
-              reason,
-            })
-            setBusy(null)
-            if (result.ok) await load()
-            return result.error
-          }}
-        />
-      )}
-
-      {tab === 'territory' && (
-        <TerritoryTab
-          coverage={coverage}
-          hasDoors={doors.length > 0}
-          routeCoverage={routeCoverage}
-          routeCoverageError={routeCoverageError}
-        />
-      )}
-
-      {tab === 'log' && <LogTab rows={snapshot.audit} nameOf={nameOf} loading={loading} />}
     </div>
   )
 }
