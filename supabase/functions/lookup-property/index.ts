@@ -3,6 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const BATCHDATA_API_KEY = Deno.env.get('BATCHDATA_API_KEY') ?? ''
 
 const corsHeaders = {
@@ -68,6 +69,31 @@ Deno.serve(async (req) => {
       })
     }
 
+    const organizationId = membership.organization_id as string
+    const db = SERVICE_ROLE_KEY
+      ? createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : null
+    let lookupEventId: string | null = null
+
+    const finish = async (
+      status: 'succeeded' | 'not_found' | 'failed' | 'not_configured',
+      matched: boolean,
+      errorSummary?: string,
+    ) => {
+      if (!db || !lookupEventId) return
+      await db
+        .from('property_lookup_events')
+        .update({
+          status,
+          matched,
+          completed_at: new Date().toISOString(),
+          error_summary: errorSummary?.slice(0, 240) ?? null,
+        })
+        .eq('id', lookupEventId)
+    }
+
     const { street, city, state } = await req.json()
 
     if (!street || !city || !state) {
@@ -79,10 +105,39 @@ Deno.serve(async (req) => {
 
     if (!BATCHDATA_API_KEY) {
       console.warn('No BATCHDATA_API_KEY provided')
-      return new Response(JSON.stringify({ success: false }), {
+      if (db) {
+        await db.from('property_lookup_events').insert({
+          organization_id: organizationId,
+          requested_by: auth.user.id,
+          provider: 'batchdata',
+          status: 'not_configured',
+          matched: false,
+          completed_at: new Date().toISOString(),
+        })
+      }
+      return new Response(JSON.stringify({
+        success: false,
+        configured: false,
+        error: 'Commercial property provider is not configured.',
+      }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+
+    if (db) {
+      const { data: eventRow } = await db
+        .from('property_lookup_events')
+        .insert({
+          organization_id: organizationId,
+          requested_by: auth.user.id,
+          provider: 'batchdata',
+          status: 'started',
+          matched: false,
+        })
+        .select('id')
+        .maybeSingle()
+      lookupEventId = (eventRow?.id as string | undefined) ?? null
     }
 
     const res = await fetch('https://api.batchdata.com/api/v1/property/search', {
@@ -104,7 +159,8 @@ Deno.serve(async (req) => {
     if (!res.ok) {
       const txt = await res.text()
       console.error('BatchData API Error', res.status, txt)
-      return new Response(JSON.stringify({ success: false, error: 'BatchData API failed' }), {
+      await finish('failed', false, `BatchData returned ${res.status}`)
+      return new Response(JSON.stringify({ success: false, error: 'Property provider request failed' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -114,6 +170,7 @@ Deno.serve(async (req) => {
     const prop = data?.results?.properties?.[0]
     
     if (!prop) {
+      await finish('not_found', false)
       return new Response(JSON.stringify({ success: false, error: 'No property found' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -132,8 +189,8 @@ Deno.serve(async (req) => {
       roofMaterial: attrs.roofMaterial ?? attrs.roofCover ?? attrs.roofType ?? null,
     }
 
-    // We also return the raw property to see the exact shape in logs if needed.
-    return new Response(JSON.stringify({ success: true, details, raw: prop }), {
+    await finish('succeeded', true)
+    return new Response(JSON.stringify({ success: true, details }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
