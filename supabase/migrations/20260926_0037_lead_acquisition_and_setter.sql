@@ -59,6 +59,10 @@ create unique index if not exists lead_acquisition_events_external_unique
 create index if not exists lead_acquisition_events_lead
   on lead_acquisition_events (organization_id, lead_id, occurred_at desc);
 
+create unique index if not exists lead_acquisition_events_one_created_source
+  on lead_acquisition_events (organization_id, lead_id, source_channel, event_type)
+  where lead_id is not null and event_type = 'lead_created';
+
 create index if not exists lead_acquisition_events_campaign
   on lead_acquisition_events (organization_id, campaign_id, occurred_at desc);
 
