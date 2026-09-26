@@ -63,7 +63,7 @@ export interface StormGeometry {
   attribution: string
 }
 
-export type StormProviderId = 'noaa' | 'hailtrace' | 'swdi'
+export type StormProviderId = 'noaa' | 'hailtrace' | 'swdi' | 'mrms'
 
 export interface StormQuery {
   /** Bounding box: [west, south, east, north] */
