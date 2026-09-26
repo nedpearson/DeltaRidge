@@ -170,6 +170,11 @@ def chunks(rows: list[dict[str, float | str]], size: int) -> Iterable[list[dict[
 
 
 def main() -> int:
+    enabled = os.getenv("MRMS_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+    if not enabled:
+        print(json.dumps({"state": "disabled", "reason": "MRMS_ENABLED is not true"}))
+        return 0
+
     supabase_url = env_required("SUPABASE_URL")
     service_key = env_required("SUPABASE_SERVICE_ROLE_KEY")
     bbox = parse_bbox(env_required("MRMS_BBOX"))
