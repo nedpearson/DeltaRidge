@@ -139,8 +139,13 @@ function DoorCard({
   const [roofOpen, setRoofOpen] = useState(false)
   const parcel = lead.parcel
 
+  const propOpp = lead.breakdown.filter(f => f.label !== 'Owner occupied').reduce((sum, f) => sum + f.points, 0)
+  const homeIntent = lead.breakdown.find(f => f.label === 'Owner occupied')?.points ?? 0
+  const contactability = managed?.contactPhone ? 'High' : (lead.parcel?.ownerName ? 'Medium' : 'Low')
+  const isUltimate = lead.score >= 50
+
   return (
-    <Card>
+    <Card className={isUltimate ? "ring-2 ring-gold-500" : ""}>
       {roofOpen && (
         <RoofViewSheet
           latitude={lead.latitude}
@@ -152,7 +157,10 @@ function DoorCard({
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-semibold">{lead.address}</p>
+          <p className="flex flex-wrap items-center gap-2 truncate text-[15px] font-semibold">
+            {isUltimate && <span className="rounded bg-gradient-to-r from-gold-400 to-gold-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-950 shadow-sm">Ultimate Lead</span>}
+            {lead.address}
+          </p>
           <p className="mt-0.5 truncate text-[12px] text-text-secondary">
             {[lead.subdivision, lead.city].filter(Boolean).join(' · ') || 'East Baton Rouge Parish'}
           </p>
@@ -163,20 +171,51 @@ function DoorCard({
         </div>
       </div>
 
-      <OwnerLine parcel={parcel} />
+      <div className="mt-3 flex gap-2">
+        <div className="flex-1 rounded-lg bg-bg-elevated p-2 text-center">
+          <p className="text-[10px] uppercase text-text-secondary">Property</p>
+          <p className="font-display text-lg text-gold-400">{propOpp}</p>
+        </div>
+        <div className="flex-1 rounded-lg bg-bg-elevated p-2 text-center">
+          <p className="text-[10px] uppercase text-text-secondary">Intent</p>
+          <p className="font-display text-lg text-gold-400">{homeIntent}</p>
+        </div>
+        <div className="flex-1 rounded-lg bg-bg-elevated p-2 text-center">
+          <p className="text-[10px] uppercase text-text-secondary">Contact</p>
+          <p className={`font-display text-[15px] leading-tight mt-1 ${contactability === 'High' ? 'text-status-success' : contactability === 'Medium' ? 'text-gold-400' : 'text-text-secondary'}`}>{contactability}</p>
+        </div>
+      </div>
 
-      <ResidentPhoneCard
-        address={lead.address}
-        city={lead.city || 'Baton Rouge'}
-        zip={lead.postalCode}
-        ownerName={parcel?.ownerName}
-        phone={managed?.contactPhone}
-        email={managed?.contactEmail}
-        onPhoneSaved={async (phone, email, name) => {
-          await saveResidentContact(lead, phone, email, name)
-          onPhoneSaved?.()
-        }}
-      />
+      <div className="mt-3">
+        <OwnerLine parcel={parcel} />
+      </div>
+
+      <div className="mt-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary mb-2">Why This House / Show Proof</p>
+        <ul className="space-y-1">
+          {lead.reasons.map((reason) => (
+            <li key={reason} className="flex gap-2 text-[12.5px] leading-snug text-text-primary">
+              <span className="mt-1.5 size-1 shrink-0 rounded-full bg-brand-400" />
+              {reason}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-3">
+        <ResidentPhoneCard
+          address={lead.address}
+          city={lead.city || 'Baton Rouge'}
+          zip={lead.postalCode}
+          ownerName={parcel?.ownerName}
+          phone={managed?.contactPhone}
+          email={managed?.contactEmail}
+          onPhoneSaved={async (phone, email, name) => {
+            await saveResidentContact(lead, phone, email, name)
+            onPhoneSaved?.()
+          }}
+        />
+      </div>
 
       {managed && (
         <p className="mt-2 inline-block rounded-full bg-bg-elevated px-2.5 py-1 text-[11px] text-text-secondary">
@@ -184,18 +223,6 @@ function DoorCard({
         </p>
       )}
 
-      <ul className="mt-2.5 space-y-1">
-        {lead.reasons.map((reason) => (
-          <li key={reason} className="flex gap-2 text-[12.5px] leading-snug text-text-secondary">
-            <span className="mt-1.5 size-1 shrink-0 rounded-full bg-brand-400" />
-            {reason}
-          </li>
-        ))}
-      </ul>
-
-      {/* Knocking is the only thing this app asks a rep to do at a door, and it
-          is the widest target on the card for that reason. Navigate and the
-          full profile sit under it rather than competing with it. */}
       <Button variant="gold" full className="mt-3" onClick={() => onKnock(lead)}>
         Knocked it
       </Button>
@@ -233,14 +260,6 @@ function DoorCard({
   )
 }
 
-/**
- * A neighbourhood worth driving to.
- *
- * Deliberately leads with the best door in the route rather than the count.
- * A rep does not drive across town for "forty doors"; he drives for the one
- * that is worth the trip, and the other thirty-nine are why he stays once he
- * is parked.
- */
 function RouteCard({ route, onPick }: { route: Route; onPick: () => void }) {
   return (
     <button

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import LeadNotePanel from '@/components/LeadNotePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
@@ -42,6 +42,16 @@ import {
   type ManagedLead,
 } from '@/features/leads/pipeline'
 import { newId, saveInspection, type LocalInspection } from '@/lib/db'
+
+
+import RoofImageryPanel from '@/features/imagery/RoofImageryPanel'
+import { buildPropertyProfile, type PropertyProfile } from '@/features/leads/property-profile'
+import { distanceMiles } from '@/features/leads/scoring'
+import { readCachedRun, type LeadRun } from '@/features/leads/engine'
+import { EbrPermitProvider } from '@/integrations/permits/ebr'
+import { streetLineOf } from '@/integrations/geocode/ebr'
+import type { PermitRecord } from '@/integrations/permits/types'
+
 
 /**
  * One lead, everything said to it, and what to do next.
@@ -147,7 +157,49 @@ export default function LeadPage() {
    */
   const [roofrJobId, setRoofrJobId] = useState<string | null>(null)
   const [roofrLastEventAt, setRoofrLastEventAt] = useState<string | null>(null)
+
+
+
+  // Property Page fields
   const [queued, setQueued] = useState<{ total: number; stalled: number }>({ total: 0, stalled: 0 })
+  const [run, setRun] = useState<LeadRun | null>(null)
+  const [permits, setPermits] = useState<PermitRecord[] | null>(null)
+  const [profile, setProfile] = useState<PropertyProfile | null>(null)
+
+  useEffect(() => {
+    void readCachedRun().then(setRun)
+  }, [])
+
+  useEffect(() => {
+    if (lead) {
+      new EbrPermitProvider().search({
+        kinds: ['reroof', 'new_build', 'other'],
+        addressLike: streetLineOf(lead.address),
+        limit: 100,
+      }).then(setPermits).catch(() => setPermits([]))
+    }
+  }, [lead])
+
+  const scoredLead = useMemo(() => {
+    return run?.leads.find((l) => l.addressKey === lead?.addressKey)
+  }, [run, lead])
+
+  useEffect(() => {
+    if (lead && permits && run && scoredLead) {
+      const nearby = (run.stormEvents ?? []).filter(
+        (s) => distanceMiles(lead.latitude, lead.longitude, s.latitude, s.longitude) <= 5,
+      )
+      setProfile(buildPropertyProfile({
+        address: lead.address,
+        addressKey: lead.addressKey,
+        ...(scoredLead.parcel ? { parcel: scoredLead.parcel } : {}),
+        permits,
+        storms: nearby,
+        now: new Date(),
+      }))
+    }
+  }, [lead, permits, run, scoredLead])
+
 
   const load = useCallback(async (leadId: string) => {
     const [found, events, files] = await Promise.all([
@@ -591,7 +643,41 @@ export default function LeadPage() {
         )}
       </Card>
 
+
+      {lead && (
+        <>
+          <SectionTitle>PROPERTY & IMAGERY</SectionTitle>
+          <RoofImageryPanel
+            latitude={lead.latitude}
+            longitude={lead.longitude}
+            storms={profile?.storms ?? []}
+            autoFetch
+          />
+          <Card className="mt-2">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <p className="font-semibold text-[13px] text-text-secondary uppercase">Permits ({permits?.length ?? 0})</p>
+                <div className="text-[12px] text-text-secondary mt-1">
+                  {permits?.slice(0, 3).map(p => (
+                    <div key={p.externalId}>{p.issuedAt.slice(0, 10)} - {p.kind}</div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-[13px] text-text-secondary uppercase">Storms ({profile?.storms.length ?? 0})</p>
+                <div className="text-[12px] text-text-secondary mt-1">
+                  {profile?.storms.slice(0, 3).map(s => (
+                    <div key={s.externalId}>{s.occurredAt.slice(0, 10)} - {s.hailSizeInches}"</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+        </>
+      )}
+
       <SectionTitle>WHAT HAPPENED</SectionTitle>
+
       <Card className="grid grid-cols-2 gap-2">
         {QUICK.map((outcome) => (
           <Button key={outcome} variant="secondary" onClick={() => void record(outcome)}>
@@ -629,7 +715,7 @@ export default function LeadPage() {
       <SectionTitle>NOTES</SectionTitle>
       <LeadNotePanel leadId={lead.id} onSaved={addNote} />
 
-      <SectionTitle hint={`${history.length} entries`}>HISTORY</SectionTitle>
+      <SectionTitle>UNIVERSAL TIMELINE</SectionTitle>
       {history.length === 0 ? (
         <Empty
           title="Nothing recorded yet"
@@ -638,7 +724,13 @@ export default function LeadPage() {
       ) : (
         <Card>
           <ol className="space-y-3">
+            
+            <li className="border-l-2 border-border-subtle pl-3">
+              <p className="text-[12.5px] font-semibold text-text-secondary">Lead generated</p>
+              <p className="text-[10.5px] text-text-secondary">{when(lead.createdAt)} · Initial Generation</p>
+            </li>
             {history.map((event) => (
+
               <li key={event.id} className="border-l-2 border-border-subtle pl-3">
                 <p className="text-[12.5px] font-semibold text-text-secondary">
                   {event.outcome ? OUTCOME_LABEL[event.outcome] : CONTACT_KIND_LABEL[event.kind]}
