@@ -131,7 +131,7 @@ export const DEFAULT_SETTINGS: LeadRunSettings = {
  *
  * 2 = radar-estimated hail is a source.
  */
-export const ENGINE_VERSION = 2
+export const ENGINE_VERSION = 3
 
 export interface LeadRun {
   ranAt: string
