@@ -6,6 +6,8 @@ import {
   type ManagedLead,
 } from './pipeline'
 
+export const LEAD_INTELLIGENCE_VERSION = '2026-09-v1'
+
 export interface LeadIntelligence {
   propertyOpportunity: number
   intent: number
@@ -62,6 +64,20 @@ export function contactabilityIndex(lead: ManagedLead | undefined): number {
   return clamp(score)
 }
 
+export function intelligenceLevelFor(
+  propertyOpportunity: number,
+  intent: number,
+  contactability: number,
+): LeadIntelligence['level'] {
+  return propertyOpportunity >= 60 && contactability >= 60 && intent >= 70
+    ? 'ultimate'
+    : propertyOpportunity >= 60 && intent >= 50
+      ? 'engaged'
+      : propertyOpportunity >= 60 && contactability >= 60
+        ? 'reachable'
+        : 'property_only'
+}
+
 export function intelligenceFor(
   scored: ScoredLead,
   managed: ManagedLead | undefined,
@@ -76,14 +92,7 @@ export function intelligenceFor(
   if (contactability < 60) gaps.push('homeowner contactability is not established')
   if (intent < 50) gaps.push('homeowner intent is not established')
 
-  const level =
-    propertyOpportunity >= 60 && contactability >= 60 && intent >= 70
-      ? 'ultimate'
-      : propertyOpportunity >= 60 && intent >= 50
-        ? 'engaged'
-        : propertyOpportunity >= 60 && contactability >= 60
-          ? 'reachable'
-          : 'property_only'
+  const level = intelligenceLevelFor(propertyOpportunity, intent, contactability)
 
   return { propertyOpportunity, intent, contactability, level, gaps }
 }
