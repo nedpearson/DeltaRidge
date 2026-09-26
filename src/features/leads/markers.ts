@@ -139,18 +139,3 @@ export function stormsToGeoJson(storms: readonly StormEvent[]): FeatureCollectio
       })),
   }
 }
-
-/**
- * A Mapbox `match` expression over the status property.
- *
- * Built from the same record the fallback map reads, so adding a status in one
- * place cannot leave the other drawing it in the default colour.
- */
-export function colourExpression(): unknown[] {
-  const pairs: string[] = []
-  for (const [status, colour] of Object.entries(COLOUR)) {
-    if (status === 'door') continue
-    pairs.push(status, colour)
-  }
-  return ['match', ['get', 'status'], ...pairs, COLOUR.door]
-}
