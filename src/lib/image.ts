@@ -188,27 +188,53 @@ export async function processPhoto(file: Blob, maxEdge = 2048): Promise<Processe
  * "Getting location…" with no way out. Reproduced in a browser whose geolocation
  * permission was left unanswered. So we keep our own clock and always settle.
  */
-export function currentPosition(timeoutMs = 6000): Promise<GeolocationPosition | null> {
+export type LocationFailure =
+  | 'unsupported'
+  | 'permission_denied'
+  | 'unavailable'
+  | 'timeout'
+  | 'unknown'
+
+export type LocationResult =
+  | { ok: true; position: GeolocationPosition }
+  | { ok: false; reason: LocationFailure }
+
+export function currentPositionResult(timeoutMs = 6000): Promise<LocationResult> {
   return new Promise((resolve) => {
-    if (!('geolocation' in navigator)) return resolve(null)
+    if (!('geolocation' in navigator)) return resolve({ ok: false, reason: 'unsupported' })
 
     let settled = false
-    const settle = (value: GeolocationPosition | null) => {
+    const settle = (value: LocationResult) => {
       if (settled) return
       settled = true
       window.clearTimeout(timer)
       resolve(value)
     }
-    const timer = window.setTimeout(() => settle(null), timeoutMs)
+    const timer = window.setTimeout(() => settle({ ok: false, reason: 'timeout' }), timeoutMs)
 
     try {
       navigator.geolocation.getCurrentPosition(
-        (pos) => settle(pos),
-        () => settle(null),
+        (position) => settle({ ok: true, position }),
+        (error) => {
+          const reason: LocationFailure =
+            error.code === error.PERMISSION_DENIED
+              ? 'permission_denied'
+              : error.code === error.POSITION_UNAVAILABLE
+                ? 'unavailable'
+                : error.code === error.TIMEOUT
+                  ? 'timeout'
+                  : 'unknown'
+          settle({ ok: false, reason })
+        },
         { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 30000 },
       )
     } catch {
-      settle(null)
+      settle({ ok: false, reason: 'unknown' })
     }
   })
+}
+
+export async function currentPosition(timeoutMs = 6000): Promise<GeolocationPosition | null> {
+  const result = await currentPositionResult(timeoutMs)
+  return result.ok ? result.position : null
 }
