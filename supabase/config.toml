@@ -31,3 +31,7 @@ verify_jwt = true
 
 [functions.roofr-push]
 verify_jwt = true
+
+
+[functions.optimize-route]
+verify_jwt = true
