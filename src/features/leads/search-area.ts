@@ -37,11 +37,20 @@ export function expandBbox(
 }
 
 
+export interface PolygonFeature {
+  type: 'Feature'
+  properties: Record<string, never>
+  geometry: {
+    type: 'Polygon'
+    coordinates: [Array<[number, number]>]
+  }
+}
+
 export function circlePolygon(
   center: Pick<SearchCenter, 'latitude' | 'longitude'>,
   radiusMiles: number,
   steps = 64,
-): GeoJSON.Feature<GeoJSON.Polygon> {
+): PolygonFeature {
   const radiusKm = Math.max(0.1, radiusMiles) * 1.609344
   const earthKm = 6371.0088
   const lat1 = (center.latitude * Math.PI) / 180
