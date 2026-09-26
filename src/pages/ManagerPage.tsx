@@ -1,3 +1,4 @@
+import { DemandGenerationPanel } from '@/features/dashboard/DemandGenerationPanel'
 import RoofcareManagerDashboard from '@/features/membership/RoofcareManagerDashboard'
 import RevenueLeakagePanel from '@/features/dashboard/RevenueLeakagePanel'
 import { useManagerCommandCenter } from '@/features/dashboard/useManagerCommandCenter';
@@ -444,6 +445,7 @@ export default function ManagerPage() {
             <div className="mb-3"><SectionTitle>INTEGRATION HEALTH</SectionTitle></div>
             <IntegrationHealthPanel organizationId={orgId} />
           </div>
+          <div><div className="mb-3"><SectionTitle>DEMAND GENERATION</SectionTitle></div><DemandGenerationPanel organizationId={orgId || 'unknown-org'} /></div>
           <div>
             <div className="mb-3"><SectionTitle>AUTOMATION ENGINE</SectionTitle></div>
             <AutomationRulesPanel />
@@ -1317,6 +1319,9 @@ function TerritoryIntelligencePanel() {
     </div>
   )
 }
+
+
+
 
 
 
