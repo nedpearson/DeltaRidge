@@ -729,6 +729,7 @@ export default function LeadsPage() {
   const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null)
   const [routeOptimization, setRouteOptimization] = useState<RouteOptimization | null>(null)
   const [routeOptimizing, setRouteOptimizing] = useState(false)
+  const autoLocationAttempted = useRef(false)
 
   const busyRef = useRef(false)
   const settingsRef = useRef(settings)
@@ -785,36 +786,13 @@ export default function LeadsPage() {
       // A current-location run must not silently fall back to the company/service-area
       // bbox. Keep cached results visible, but wait for an actual GPS fix before
       // rebuilding them as "near me".
-      if ((fromOlderEngine || age > MAX_CACHE_AGE_MS) && navigator.onLine && cached?.settings.searchCenter) {
-        void refresh(cached.settings, true)
-      }
+      // Never rebuild a "near me" list from yesterday's cached GPS point.
+      // The prior result remains viewable as previous/cached work, but a fresh
+      // run waits for a fresh geolocation fix below.
+      void fromOlderEngine
+      void age
     })
     void readLeads().then(setManaged)
-  }, [refresh])
-
-  /**
-   * Keep it current while the page stays open: on a timer, when the truck comes
-   * back into signal, and when the rep switches back to the app. All three are
-   * age-gated, so waking the phone twenty times an hour costs nothing.
-   */
-  useEffect(() => {
-    const rebuildIfStale = () => {
-      if (document.visibilityState !== 'visible' || !navigator.onLine) return
-      const ranAt = ranAtRef.current
-      if (ranAt && Date.now() - new Date(ranAt).getTime() < MAX_CACHE_AGE_MS) return
-      void refresh(settingsRef.current, true)
-    }
-
-    const timer = window.setInterval(rebuildIfStale, POLL_MS)
-    document.addEventListener('visibilitychange', rebuildIfStale)
-    window.addEventListener('online', rebuildIfStale)
-    window.addEventListener('focus', rebuildIfStale)
-    return () => {
-      window.clearInterval(timer)
-      document.removeEventListener('visibilitychange', rebuildIfStale)
-      window.removeEventListener('online', rebuildIfStale)
-      window.removeEventListener('focus', rebuildIfStale)
-    }
   }, [refresh])
 
   const now = new Date().toISOString()
@@ -992,6 +970,55 @@ export default function LeadsPage() {
     [refresh],
   )
 
+  /**
+   * If the user has already granted geolocation permission, Leads should open
+   * around where the rep is now without another tap. We intentionally do not
+   * auto-prompt when permission is "prompt": the explicit Enable / Use Location
+   * button owns that consent moment.
+   */
+  useEffect(() => {
+    if (autoLocationAttempted.current) return
+    autoLocationAttempted.current = true
+
+    const permissions = navigator.permissions
+    if (!permissions?.query) return
+
+    void permissions
+      .query({ name: 'geolocation' })
+      .then((status) => {
+        if (status.state === 'granted' && navigator.onLine) {
+          void acquireLocation(true)
+        }
+      })
+      .catch(() => undefined)
+  }, [acquireLocation])
+
+  /**
+   * A stale nearby search must reacquire GPS before refreshing data. Reusing
+   * the old searchCenter after the rep drove across town is exactly the bug a
+   * current-location lead generator cannot tolerate.
+   */
+  useEffect(() => {
+    const rebuildIfStale = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return
+      if (locationState !== 'ready') return
+      const ranAt = ranAtRef.current
+      if (ranAt && Date.now() - new Date(ranAt).getTime() < MAX_CACHE_AGE_MS) return
+      void acquireLocation(true)
+    }
+
+    const timer = window.setInterval(rebuildIfStale, POLL_MS)
+    document.addEventListener('visibilitychange', rebuildIfStale)
+    window.addEventListener('online', rebuildIfStale)
+    window.addEventListener('focus', rebuildIfStale)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', rebuildIfStale)
+      window.removeEventListener('online', rebuildIfStale)
+      window.removeEventListener('focus', rebuildIfStale)
+    }
+  }, [acquireLocation, locationState])
+
   const patch = (p: Partial<LeadRunSettings>) => {
     if (!settings.searchCenter && locationState !== 'ready') {
       void acquireLocation(true, p)
@@ -1011,6 +1038,11 @@ export default function LeadsPage() {
     setSettings(next)
     void refresh(next)
   }
+
+  const isCurrentLocationRun =
+    locationState === 'ready' &&
+    settings.searchCenter !== undefined &&
+    run?.settings.searchCenter?.capturedAt === settings.searchCenter.capturedAt
 
   return (
     <div>
@@ -1158,6 +1190,7 @@ export default function LeadsPage() {
           <Card className="grid grid-cols-2 gap-3">
             <Field label="Minimum hail">
               <Select
+                disabled={locationState !== 'ready' || busy}
                 value={String(settings.minHailInches)}
                 onChange={(e) => patch({ minHailInches: Number(e.target.value) })}
               >
@@ -1169,6 +1202,7 @@ export default function LeadsPage() {
             </Field>
             <Field label="Radius">
               <Select
+                disabled={locationState !== 'ready' || busy}
                 value={String(settings.searchRadiusMiles ?? 5)}
                 onChange={(e) => patch({ searchRadiusMiles: Number(e.target.value) })}
               >
@@ -1183,6 +1217,7 @@ export default function LeadsPage() {
             </Field>
             <Field label="Storm window">
               <Select
+                disabled={locationState !== 'ready' || busy}
                 value={settings.windowKey}
                 onChange={(e) => patch({ windowKey: e.target.value as StormWindowKey })}
               >
@@ -1195,6 +1230,7 @@ export default function LeadsPage() {
             </Field>
             <Field label="Roof at least">
               <Select
+                disabled={locationState !== 'ready' || busy}
                 value={String(settings.builtBefore)}
                 onChange={(e) => patch({ builtBefore: Number(e.target.value) })}
               >
@@ -1219,6 +1255,19 @@ export default function LeadsPage() {
               </p>
             )}
           </Card>
+
+          {run && !isCurrentLocationRun && (
+            <Card className="mt-3 bg-warning-surface ring-1 ring-warning-border border-l-4 border-l-warning-base">
+              <p className="text-[12.5px] font-semibold text-status-warning">
+                PREVIOUS SEARCH — NOT YOUR CURRENT LOCATION
+              </p>
+              <p className="mt-1 text-[11.5px] leading-relaxed text-text-secondary">
+                These cached results were built from an earlier GPS center. Enable/use Location
+                Services above to rebuild the list around where you are now. Delta Ridge will not
+                silently call these current nearby leads.
+              </p>
+            </Card>
+          )}
 
           {run && (
             <>
