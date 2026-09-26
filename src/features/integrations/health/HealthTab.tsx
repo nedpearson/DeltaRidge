@@ -124,7 +124,7 @@ export default function HealthTab({ organizationId }: { organizationId: string |
     })
 
     if (supabase !== null && organizationId !== null) {
-      const [settings, events, outbox, imagery, contactSettings, contactEvents] = await Promise.all([
+      const [settings, events, outbox, imagery, contactSettings, contactEvents, propertyEvents] = await Promise.all([
         supabase
           .from('roofr_settings')
           .select('webhook_secret_hash, push_enabled, last_inbound_at, last_outbound_at')
@@ -160,6 +160,12 @@ export default function HealthTab({ organizationId }: { organizationId: string |
           .eq('organization_id', organizationId)
           .order('requested_at', { ascending: false })
           .limit(200),
+        supabase
+          .from('property_lookup_events')
+          .select('status, requested_at, completed_at')
+          .eq('organization_id', organizationId)
+          .order('requested_at', { ascending: false })
+          .limit(200),
       ])
 
       const s = (settings.data ?? null) as Record<string, unknown> | null
@@ -168,6 +174,7 @@ export default function HealthTab({ organizationId }: { organizationId: string |
       const imageryRows = ((imagery.data ?? []) as unknown[]).map((r) => r as Record<string, unknown>)
       const contactConfig = (contactSettings.data ?? null) as Record<string, unknown> | null
       const contactRows = ((contactEvents.data ?? []) as unknown[]).map((r) => r as Record<string, unknown>)
+      const propertyRows = ((propertyEvents.data ?? []) as unknown[]).map((r) => r as Record<string, unknown>)
 
       built.push({
         key: 'roofr_in',
@@ -246,6 +253,29 @@ export default function HealthTab({ organizationId }: { organizationId: string |
             failures: contactFailure.length,
             lastSuccessAt: (contactSuccess[0]?.['completed_at'] as string | null) ?? null,
             lastFailureAt: (contactFailure[0]?.['completed_at'] as string | null) ?? null,
+            expectedWithinHours: null,
+          },
+          now,
+        ),
+      })
+
+      const propertySuccess = propertyRows.filter(
+        (r) => r['status'] === 'succeeded' || r['status'] === 'not_found',
+      )
+      const propertyFailure = propertyRows.filter((r) => r['status'] === 'failed')
+      const propertyConfigured = propertyRows.some((r) => r['status'] !== 'not_configured')
+
+      built.push({
+        key: 'property-data',
+        label: 'Property enrichment',
+        detail: 'Commercial property-data API; health log stores provider/status only',
+        health: assessHealth(
+          {
+            configured: propertyConfigured,
+            successes: propertySuccess.length,
+            failures: propertyFailure.length,
+            lastSuccessAt: (propertySuccess[0]?.['completed_at'] as string | null) ?? null,
+            lastFailureAt: (propertyFailure[0]?.['completed_at'] as string | null) ?? null,
             expectedWithinHours: null,
           },
           now,
