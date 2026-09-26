@@ -140,18 +140,27 @@ Deno.serve(async (req) => {
       lookupEventId = (eventRow?.id as string | undefined) ?? null
     }
 
-    const res = await fetch('https://api.batchdata.com/api/v1/property/search', {
+    // BatchData's current first-party enrichment examples use the synchronous
+    // property lookup endpoint with requests[].propertyAddress for one-record
+    // CRM enrichment. Property Search is for list building and has a different
+    // searchCriteria/options contract.
+    const res = await fetch('https://api.batchdata.com/api/v1/property/lookup', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${BATCHDATA_API_KEY}`,
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        searchCriteria: {
-          'address.street': { equals: street },
-          'address.city': { equals: city },
-          'address.state': { equals: state },
-        },
+        requests: [
+          {
+            propertyAddress: {
+              street,
+              city,
+              state,
+            },
+          },
+        ],
       }),
       signal: AbortSignal.timeout(10000),
     })
@@ -167,8 +176,14 @@ Deno.serve(async (req) => {
     }
 
     const data = await res.json()
-    const prop = data?.results?.properties?.[0]
-    
+    const result0 = Array.isArray(data?.results) ? data.results[0] : null
+    const prop =
+      result0?.property ||
+      result0?.properties?.[0] ||
+      data?.results?.properties?.[0] ||
+      result0 ||
+      null
+
     if (!prop) {
       await finish('not_found', false)
       return new Response(JSON.stringify({ success: false, error: 'No property found' }), {
@@ -177,7 +192,12 @@ Deno.serve(async (req) => {
       })
     }
 
-    const attrs = prop.characteristics || prop.property || prop.attributes || prop
+    const attrs =
+      prop.characteristics ||
+      prop.property?.characteristics ||
+      prop.property ||
+      prop.attributes ||
+      prop
 
     const details: PropertyDetails = {
       beds: attrs.beds ?? attrs.bedrooms ?? null,
