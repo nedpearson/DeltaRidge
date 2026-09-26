@@ -177,12 +177,12 @@ export default function PropertyPage() {
             address={lead.address}
             city={lead.city || 'Baton Rouge'}
             ownerName={lead.parcel?.ownerName}
-            phone={managed?.contactPhone || lead.contactPhone}
+            phone={managed?.contactPhone}
             onPhoneSaved={async (phone, name) => {
               // Ensure we save the phone number to the lead record.
               // If it's managed, update it. If not, saveResidentPhone will promote it.
               await saveResidentPhone(managed || lead, phone, name)
-              void loadManaged()
+              void findByAddress(addressKey).then(setManaged)
             }}
           />
         </div>
