@@ -1,5 +1,6 @@
 import { readAttachment, readEvent, readLead } from '@/features/leads/lead-store'
 import { contactSourceOf } from '@/features/leads/pipeline'
+import { snapshotLeadIntelligence } from '@/features/leads/intelligence-store'
 import type { ContactKind, LeadStatus, ManagedLead } from '@/features/leads/pipeline'
 import { getSupabase } from '../supabase'
 import { getRemoteId, setRemoteId } from '../sync-store'
@@ -186,6 +187,25 @@ export async function pushLead(localId: string, orgId: string, userId: string): 
 
   const remoteId = data.id as string
   await setRemoteId('lead', localId, remoteId)
+
+  // Intelligence is an analytical snapshot, not the raw lead. A snapshot
+  // failure must not strand field work in the outbox, so preserve the lead and
+  // make the analytical gap visible in logs until the next state change.
+  try {
+    const snapshot = await snapshotLeadIntelligence({
+      organizationId: orgId,
+      remoteLeadId: remoteId,
+      userId,
+      lead,
+      propertyId,
+    })
+    if (snapshot.error) console.warn('[lead-intelligence]', snapshot.error)
+  } catch (error) {
+    console.warn(
+      '[lead-intelligence]',
+      error instanceof Error ? error.message : String(error),
+    )
+  }
 
   if (lead.appointmentAt) await pushAppointment(lead, propertyId, customerId, orgId, userId)
   return remoteId
