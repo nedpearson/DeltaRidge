@@ -32,6 +32,7 @@ jobs:
       ZAPIER_ROOFR_HOOK_URL: ${{ secrets.ZAPIER_ROOFR_HOOK_URL }}
       BATCHDATA_API_KEY: ${{ secrets.BATCHDATA_API_KEY }}
       REALESTATE_API_KEY: ${{ secrets.REALESTATE_API_KEY }}
+      MAPBOX_SECRET_TOKEN: ${{ secrets.MAPBOX_SECRET_TOKEN }}
 
     steps:
       - name: Checkout
@@ -63,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF EAGLEVIEW_CLIENT_ID EAGLEVIEW_CLIENT_SECRET; do
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF EAGLEVIEW_CLIENT_ID EAGLEVIEW_CLIENT_SECRET MAPBOX_SECRET_TOKEN; do
             if [ -z "${!name:-}" ]; then
               echo "::error::Missing required production secret: $name"
               missing=1
@@ -97,13 +98,14 @@ jobs:
           if [ -n "${REALESTATE_API_KEY:-}" ]; then
             supabase secrets set REALESTATE_API_KEY="$REALESTATE_API_KEY"
           fi
+          supabase secrets set MAPBOX_SECRET_TOKEN="$MAPBOX_SECRET_TOKEN"
 
       - name: Deploy Edge Functions
         if: ${{ inputs.deploy_functions }}
         shell: bash
         run: |
           set -euo pipefail
-          for fn in eagleview-imagery lookup-contact lookup-property roofr-events roofr-push; do
+          for fn in eagleview-imagery lookup-contact lookup-property roofr-events roofr-push optimize-route; do
             echo "Deploying $fn"
             supabase functions deploy "$fn" --project-ref "$SUPABASE_PROJECT_REF"
           done
@@ -114,7 +116,7 @@ jobs:
         run: |
           set -euo pipefail
           base="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1"
-          for fn in eagleview-imagery lookup-contact roofr-push; do
+          for fn in eagleview-imagery lookup-contact roofr-push optimize-route; do
             code=$(curl -sS -o /tmp/"$fn".out -w "%{http_code}" -X POST               -H "content-type: application/json"               -d '{}'               "$base/$fn")
             if [ "$code" != "401" ]; then
               echo "::error::$fn anonymous security smoke returned HTTP $code, expected 401"
