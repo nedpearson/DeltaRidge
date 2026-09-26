@@ -641,6 +641,12 @@ export default function LeadsPage() {
    * background refresh hit a dead spot. A tap always runs and always reports.
    */
   const refresh = useCallback(async (next: LeadRunSettings, auto = false) => {
+    if (!next.searchCenter) {
+      if (!auto) {
+        setError('Turn on Location Services first. Nearby lead generation must be centered on your current GPS location.')
+      }
+      return
+    }
     if (auto && busyRef.current) return
     busyRef.current = true
     setBusy(true)
@@ -662,37 +668,110 @@ export default function LeadsPage() {
     }
   }, [])
 
+  const acquireLocation = useCallback(
+    async (rerun = true) => {
+      setLocationState('locating')
+      const result = await currentPositionResult()
+      if (!result.ok) {
+        setHere(null)
+        setLocationState(result.reason)
+        return null
+      }
+
+      const center = {
+        latitude: result.position.coords.latitude,
+        longitude: result.position.coords.longitude,
+        accuracyMeters: result.position.coords.accuracy,
+      }
+      setHere(center)
+      setLocationState('ready')
+
+      const base = settingsRef.current
+      const next: LeadRunSettings = {
+        ...base,
+        // The old UI labelled radius as though it were "around me". Migrate a
+        // cached choice into the new location radius once, while restoring the
+        // property-to-storm evidence radius to its calibrated default.
+        searchRadiusMiles: base.searchRadiusMiles ?? base.radiusMiles ?? 3,
+        radiusMiles: DEFAULT_SETTINGS.radiusMiles,
+        searchCenter: center,
+      }
+      setSettings(next)
+      settingsRef.current = next
+
+      if (rerun && navigator.onLine) await refresh(next)
+      return center
+    },
+    [refresh],
+  )
+
   useEffect(() => {
-    void readCachedRun().then((cached) => {
+    let cancelled = false
+    void (async () => {
+      const [cached, localLeads] = await Promise.all([readCachedRun(), readLeads()])
+      if (cancelled) return
+
+      setManaged(localLeads)
       if (cached) {
         setRun(cached)
-        setSettings(cached.settings)
+        const migrated: LeadRunSettings = {
+          ...cached.settings,
+          searchRadiusMiles:
+            cached.settings.searchRadiusMiles ?? cached.settings.radiusMiles ?? 3,
+          radiusMiles: DEFAULT_SETTINGS.radiusMiles,
+        }
+        setSettings(migrated)
+        settingsRef.current = migrated
       }
-      // Open the app, get today's list. The cache is there so the page paints
-      // instantly and still works in a dead spot, not so it can be the answer.
+
+      setLocationState('locating')
+      const location = await currentPositionResult()
+      if (cancelled) return
+
+      if (!location.ok) {
+        setHere(null)
+        setLocationState(location.reason)
+        return
+      }
+
+      const center = {
+        latitude: location.position.coords.latitude,
+        longitude: location.position.coords.longitude,
+        accuracyMeters: location.position.coords.accuracy,
+      }
+      setHere(center)
+      setLocationState('ready')
+
+      const base = cached?.settings ?? DEFAULT_SETTINGS
+      const next: LeadRunSettings = {
+        ...base,
+        searchRadiusMiles: base.searchRadiusMiles ?? base.radiusMiles ?? 3,
+        radiusMiles: DEFAULT_SETTINGS.radiusMiles,
+        searchCenter: center,
+      }
+      setSettings(next)
+      settingsRef.current = next
+
       const age = cached ? Date.now() - new Date(cached.ranAt).getTime() : Infinity
-
-      // Age is not the only way a cached run goes wrong. A run written by an
-      // older engine can be minutes old and still describe a world that no
-      // longer exists — radar hail shipped, the new bundle deployed, and the
-      // panel kept saying NOT CONFIGURED because the cached run predated the
-      // source. The rep has no way to tell that apart from the truth, so a run
-      // from a different engine is stale however fresh it is.
       const fromOlderEngine = !cached || cached.engineVersion !== ENGINE_VERSION
+      const cachedCenter = cached?.settings.searchCenter
+      const moved =
+        !cachedCenter ||
+        distanceMiles(
+          cachedCenter.latitude,
+          cachedCenter.longitude,
+          center.latitude,
+          center.longitude,
+        ) > Math.max(0.25, (next.searchRadiusMiles ?? 3) * 0.2)
 
-      if ((fromOlderEngine || age > MAX_CACHE_AGE_MS) && navigator.onLine) {
-        void refresh(cached?.settings ?? DEFAULT_SETTINGS, true)
+      if ((fromOlderEngine || moved || age > MAX_CACHE_AGE_MS) && navigator.onLine) {
+        void refresh(next, true)
       }
-    })
-    void readLeads().then(setManaged)
+    })()
 
-    // Asked for once, never waited on. The list is complete without it; a
-    // position only changes where the walk starts and how far the routes are
-    // reported to be. `currentPosition` always settles, including when the
-    // permission prompt is never answered — see src/lib/image.ts.
-    void currentPosition().then((pos) => {
-      if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
-    })
+    return () => {
+      cancelled = true
+    }
   }, [refresh])
 
   /**
@@ -705,7 +784,24 @@ export default function LeadsPage() {
       if (document.visibilityState !== 'visible' || !navigator.onLine) return
       const ranAt = ranAtRef.current
       if (ranAt && Date.now() - new Date(ranAt).getTime() < MAX_CACHE_AGE_MS) return
-      void refresh(settingsRef.current, true)
+
+      void currentPositionResult(4000).then((location) => {
+        if (!location.ok) {
+          setLocationState(location.reason)
+          return
+        }
+        const center = {
+          latitude: location.position.coords.latitude,
+          longitude: location.position.coords.longitude,
+          accuracyMeters: location.position.coords.accuracy,
+        }
+        setHere(center)
+        setLocationState('ready')
+        const next: LeadRunSettings = { ...settingsRef.current, searchCenter: center }
+        setSettings(next)
+        settingsRef.current = next
+        void refresh(next, true)
+      })
     }
 
     const timer = window.setInterval(rebuildIfStale, POLL_MS)
@@ -832,9 +928,14 @@ export default function LeadsPage() {
   )
 
   const patch = (p: Partial<LeadRunSettings>) => {
-    const next = { ...settings, ...p }
+    const next: LeadRunSettings = {
+      ...settings,
+      ...p,
+      ...(here ? { searchCenter: here } : {}),
+    }
     setSettings(next)
-    void refresh(next)
+    settingsRef.current = next
+    if (here) void refresh(next)
   }
 
   return (
