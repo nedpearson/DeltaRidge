@@ -33,5 +33,3 @@ verify_jwt = true
 verify_jwt = true
 
 
-[functions.optimize-route]
-verify_jwt = true
