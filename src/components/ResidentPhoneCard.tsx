@@ -13,6 +13,7 @@ export default function ResidentPhoneCard({
   zip = '70810',
   ownerName,
   phone: initialPhone,
+  email: initialEmail,
   autoEnrich = true,
   onPhoneSaved,
 }: {
@@ -22,10 +23,12 @@ export default function ResidentPhoneCard({
   zip?: string | undefined
   ownerName?: string | null | undefined
   phone?: string | null | undefined
+  email?: string | null | undefined
   autoEnrich?: boolean | undefined
-  onPhoneSaved?: ((phone: string, name?: string | undefined) => void) | undefined
+  onPhoneSaved?: ((phone?: string | null, email?: string | null, name?: string | undefined) => void) | undefined
 }) {
   const [phone, setPhone] = useState<string | null | undefined>(initialPhone)
+  const [email, setEmail] = useState<string | null | undefined>(initialEmail)
   const [resident, setResident] = useState<string | null | undefined>(ownerName)
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -33,11 +36,12 @@ export default function ResidentPhoneCard({
 
   useEffect(() => {
     setPhone(initialPhone)
-  }, [initialPhone])
+    setEmail(initialEmail)
+  }, [initialPhone, initialEmail])
 
   useEffect(() => {
     let active = true
-    if (!phone && autoEnrich && address && !loading) {
+    if (!phone && !email && autoEnrich && address && !loading) {
       setLoading(true)
       void lookupResidentContact({
         street: address,
@@ -48,10 +52,11 @@ export default function ResidentPhoneCard({
       }).then((result) => {
         if (!active) return
         setLoading(false)
-        if (result.success && result.phone) {
-          setPhone(result.phone)
+        if (result.success && (result.phone || result.email)) {
+          if (result.phone) setPhone(result.phone)
+          if (result.email) setEmail(result.email)
           if (result.residentName) setResident(result.residentName)
-          onPhoneSaved?.(result.phone, result.residentName || ownerName || undefined)
+          onPhoneSaved?.(result.phone, result.email, result.residentName || ownerName || undefined)
         }
       }).catch(() => {
         if (active) setLoading(false)
@@ -60,7 +65,7 @@ export default function ResidentPhoneCard({
     return () => {
       active = false
     }
-  }, [address, autoEnrich, city, ownerName, phone, state, zip, onPhoneSaved])
+  }, [address, autoEnrich, city, ownerName, phone, email, state, zip])
 
   const freeSearchUrl = buildFreeSearchUrl(address, city, state, zip)
   const tpsUrl = buildTruePeopleSearchUrl(address, city, state, zip)
@@ -69,37 +74,57 @@ export default function ResidentPhoneCard({
     if (!inputPhone.trim()) return
     const num = inputPhone.trim()
     setPhone(num)
-    onPhoneSaved?.(num, resident || ownerName || undefined)
+    onPhoneSaved?.(num, email, resident || ownerName || undefined)
     setEditing(false)
   }
 
-  if (phone) {
+  if (phone || email) {
     return (
-      <div className="mt-2.5 flex items-center justify-between rounded-xl bg-bg-page p-2.5 ring-1 ring-border-subtle">
-        <div className="min-w-0 pr-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
-              Resident Phone
-            </span>
-            {(resident || ownerName) && (
-              <span className="truncate text-[11px] text-text-muted">· {resident || ownerName}</span>
+      <div className="mt-2.5 flex flex-col gap-2 rounded-xl bg-bg-page p-2.5 ring-1 ring-border-subtle">
+        <div className="flex items-center justify-between min-w-0 pr-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                Resident Contact
+              </span>
+              {(resident || ownerName) && (
+                <span className="truncate text-[11px] text-text-muted">· {resident || ownerName}</span>
+              )}
+            </div>
+            {phone && (
+              <p className="mt-0.5 font-mono text-[14px] font-semibold text-text-primary">
+                {phone}
+              </p>
+            )}
+            {email && (
+              <p className="mt-0.5 text-[12px] text-text-secondary truncate max-w-[200px]">
+                {email}
+              </p>
             )}
           </div>
-          <p className="mt-0.5 font-mono text-[14px] font-semibold text-text-primary">
-            {phone}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <a href={`tel:${phone.replace(/\D/g, '')}`} className="contents">
-            <Button variant="gold" className="!px-3 !py-1 text-[12px]">
-              Call
-            </Button>
-          </a>
-          <a href={`sms:${phone.replace(/\D/g, '')}`} className="contents">
-            <Button variant="secondary" className="!px-3 !py-1 text-[12px]">
-              Text
-            </Button>
-          </a>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {phone && (
+              <>
+                <a href={`tel:${phone.replace(/\D/g, '')}`} className="contents">
+                  <Button variant="gold" className="!px-3 !py-1 text-[12px]">
+                    Call
+                  </Button>
+                </a>
+                <a href={`sms:${phone.replace(/\D/g, '')}`} className="contents">
+                  <Button variant="secondary" className="!px-3 !py-1 text-[12px]">
+                    Text
+                  </Button>
+                </a>
+              </>
+            )}
+            {email && (
+              <a href={`mailto:${email}`} className="contents">
+                <Button variant="secondary" className="!px-3 !py-1 text-[12px]">
+                  Email
+                </Button>
+              </a>
+            )}
+          </div>
         </div>
       </div>
     )

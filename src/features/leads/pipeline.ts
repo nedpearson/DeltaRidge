@@ -147,6 +147,7 @@ export interface ManagedLead {
   updatedAt: string
   contactName?: string
   contactPhone?: string
+  contactEmail?: string
   /**
    * Where the phone number came from. See `ContactSource`.
    *

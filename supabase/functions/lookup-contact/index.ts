@@ -8,7 +8,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-
+const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const BATCHDATA_API_KEY = Deno.env.get('BATCHDATA_API_KEY') || Deno.env.get('SKIPTRACE_API_KEY') || ''
 const REALESTATE_API_KEY = Deno.env.get('REALESTATE_API_KEY') || ''
@@ -42,6 +42,7 @@ interface ContactResult {
   phoneType: 'Wireless' | 'Landline' | 'Unknown'
   carrier: string | null
   secondaryPhones: Array<{ phone: string; type: string; carrier?: string }>
+  email?: string | null
   source: 'public_record' | 'third_party_lookup'
 }
 
@@ -97,14 +98,18 @@ async function lookupBatchData(
       carrier: String(p.carrier ?? ''),
     })).filter((p: { phone: string }) => p.phone.length >= 10)
 
-    if (phones.length === 0) return null
+    const emails = match.emails || []
+    const email = emails.length > 0 ? String(emails[0].email || emails[0]) : null
+
+    if (phones.length === 0 && !email) return null
 
     return {
       residentName,
-      phone: phones[0].phone,
-      phoneType: phones[0].type,
-      carrier: phones[0].carrier || null,
+      phone: phones.length > 0 ? phones[0].phone : null,
+      phoneType: phones.length > 0 ? phones[0].type : 'Unknown',
+      carrier: phones.length > 0 ? phones[0].carrier || null : null,
       secondaryPhones: phones.slice(1),
+      email,
       source: 'third_party_lookup',
     }
   } catch {
@@ -186,14 +191,18 @@ async function lookupRealEstateApi(
       return { phone: cleanPhone(num), type }
     }).filter(p => p.phone.length >= 10)
 
-    if (phones.length === 0) return null
+    const emails = match.emails || []
+    const email = emails.length > 0 ? String(emails[0]) : null
+
+    if (phones.length === 0 && !email) return null
 
     return {
       residentName,
-      phone: phones[0].phone,
-      phoneType: phones[0].type,
+      phone: phones.length > 0 ? phones[0].phone : null,
+      phoneType: phones.length > 0 ? phones[0].type : 'Unknown',
       carrier: null,
       secondaryPhones: phones.slice(1),
+      email,
       source: 'third_party_lookup',
     }
   } catch {

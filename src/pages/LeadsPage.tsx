@@ -6,7 +6,7 @@ import MessagingReadiness from '@/components/MessagingReadiness'
 import { OwnerLine } from '@/components/OwnerLine'
 import RoofViewSheet from '@/components/RoofViewSheet'
 import ResidentPhoneCard from '@/components/ResidentPhoneCard'
-import { saveResidentPhone } from '@/features/leads/contact-enrichment'
+import { saveResidentContact } from '@/features/leads/contact-enrichment'
 import { Button, Card, Empty, Field, SectionTitle, Select } from '@/components/ui'
 import RoutePanel from '@/components/RoutePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
@@ -170,8 +170,9 @@ function DoorCard({
         city={lead.city || 'Baton Rouge'}
         ownerName={parcel?.ownerName}
         phone={managed?.contactPhone}
-        onPhoneSaved={async (phone, name) => {
-          await saveResidentPhone(lead, phone, name)
+        email={managed?.contactEmail}
+        onPhoneSaved={async (phone, email, name) => {
+          await saveResidentContact(lead, phone, email, name)
           onPhoneSaved?.()
         }}
       />

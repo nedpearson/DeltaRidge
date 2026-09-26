@@ -4,7 +4,7 @@ import { OwnerLine, occupancyEvidence } from '@/components/OwnerLine'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import { type ManagedLead } from '@/features/leads/pipeline'
 import ResidentPhoneCard from '@/components/ResidentPhoneCard'
-import { saveResidentPhone } from '@/features/leads/contact-enrichment'
+import { saveResidentContact } from '@/features/leads/contact-enrichment'
 import { findByAddress } from '@/features/leads/lead-store'
 
 import { readCachedRun, type LeadRun } from '@/features/leads/engine'
@@ -178,10 +178,11 @@ export default function PropertyPage() {
             city={lead.city || 'Baton Rouge'}
             ownerName={lead.parcel?.ownerName}
             phone={managed?.contactPhone}
-            onPhoneSaved={async (phone, name) => {
+            email={managed?.contactEmail}
+            onPhoneSaved={async (phone, email, name) => {
               // Ensure we save the phone number to the lead record.
-              // If it's managed, update it. If not, saveResidentPhone will promote it.
-              await saveResidentPhone(managed || lead, phone, name)
+              // If it's managed, update it. If not, saveResidentContact will promote it.
+              await saveResidentContact(managed || lead, phone, email, name)
               void findByAddress(addressKey).then(setManaged)
             }}
           />
@@ -359,11 +360,12 @@ function OwnerTab({
         address={address}
         ownerName={typeof profile.owner.name.value === 'string' ? profile.owner.name.value : parcel?.ownerName}
         phone={managed?.contactPhone}
-        onPhoneSaved={async (phone, name) => {
+        email={managed?.contactEmail}
+        onPhoneSaved={async (phone, email, name) => {
           if (lead) {
-            await saveResidentPhone(lead, phone, name)
+            await saveResidentContact(lead, phone, email, name)
           } else if (managed) {
-            await saveResidentPhone(managed, phone, name)
+            await saveResidentContact(managed, phone, email, name)
           }
           onPhoneSaved?.()
         }}

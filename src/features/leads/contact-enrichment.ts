@@ -7,6 +7,7 @@ export interface EnrichedContact {
   readonly success: boolean
   readonly residentName?: string | null | undefined
   readonly phone?: string | null | undefined
+  readonly email?: string | null | undefined
   readonly phoneType?: 'Wireless' | 'Landline' | 'Unknown' | undefined
   readonly carrier?: string | null | undefined
   readonly secondaryPhones?: Array<{ phone: string; type: string; carrier?: string }> | undefined
@@ -60,11 +61,12 @@ export async function lookupResidentContact(params: {
         },
       })
 
-      if (!error && data?.success && data?.phone) {
+      if (!error && data?.success && (data?.phone || data?.email)) {
         return {
           success: true,
           residentName: data.residentName ?? null,
           phone: data.phone,
+          email: data.email,
           phoneType: data.phoneType ?? 'Wireless',
           carrier: data.carrier ?? null,
           secondaryPhones: data.secondaryPhones ?? [],
@@ -86,9 +88,10 @@ export async function lookupResidentContact(params: {
 /**
  * Save an enriched or rep-entered phone number onto a managed lead.
  */
-export async function saveResidentPhone(
+export async function saveResidentContact(
   lead: ScoredLead | ManagedLead,
-  phone: string,
+  phone?: string | null | undefined,
+  email?: string | null | undefined,
   name?: string | null | undefined
 ): Promise<ManagedLead> {
   const addressKey = lead.addressKey
@@ -105,7 +108,8 @@ export async function saveResidentPhone(
 
   const updated: ManagedLead = {
     ...record,
-    contactPhone: phone.trim(),
+    ...(phone?.trim() ? { contactPhone: phone.trim() } : {}),
+    ...(email?.trim() ? { contactEmail: email.trim() } : {}),
     ...(name?.trim() ? { contactName: name.trim() } : {}),
     contactSource: 'third_party_lookup',
     updatedAt: now,
