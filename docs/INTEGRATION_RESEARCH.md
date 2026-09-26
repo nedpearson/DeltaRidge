@@ -192,19 +192,35 @@ storing and caching returned geometry.
 
 ---
 
-## Mapbox
+## EagleView imagery + in-app mapping
 
-Standard and well documented; no blockers. Used for GL JS rendering, Search Box
-/ geocoding, Directions, and the Matrix API for travel-time ordering of route
-stops (straight-line distance is misleading in a parish with rivers and limited
-crossings — Baton Rouge especially).
+Delta Ridge uses EagleView for in-app aerial imagery and map tiles.
 
-Public `pk.*` tokens are client-safe and should be **URL-restricted** in the
-Mapbox dashboard. Any secret `sk.*` token stays server-side.
+Official EagleView developer documentation now advertises both:
 
-**Source:** https://docs.mapbox.com/api/search/search-box/
+- an Imagery API for high-resolution ortho and oblique captures; and
+- a WMTS web map tile service for high-resolution top-down imagery.
 
----
+The production architecture therefore keeps EagleView credentials server-side
+and proxies approved imagery/tile requests through authenticated Supabase Edge
+Functions. The browser never receives the EagleView client secret or reusable
+provider token.
+
+The exact production WMTS tile URL/template is entitlement/account specific and
+must come from EagleView's approved developer configuration. Delta Ridge does
+not guess that URL in source code. If the production entitlement is not
+configured or a real tile request has not succeeded, the map must say
+"unavailable/unproven" rather than silently switching to another imagery
+provider.
+
+Road navigation is a separate concern. EagleView is an imagery/property
+intelligence platform, not the routing engine for turn-by-turn street
+directions. Delta Ridge hands a selected property coordinate to the device's
+navigation app when the rep taps Navigate; there is no Mapbox routing API in the
+application.
+
+**Source:** https://developer.eagleview.com/
+
 
 ## Supabase
 
@@ -249,7 +265,7 @@ simply absent.
 | Dependency | Needed for | Blocking? | Status |
 | --- | --- | --- | --- |
 | Supabase project access | Everything persistent | **Yes** | Access gap — see above |
-| Mapbox public token | Map, search, routing | For map features only | Needed |
+| EagleView production imagery + WMTS entitlement | In-app aerial imagery and map tiles | Map/imagery features only | Must be proven with a real production request |
 | CompanyCam Pro+ | API handoff into Roofr | No — falls back to PDF/email | Plan unconfirmed |
 | Roofr Zapier | Inbound status events | No | Tier unconfirmed |
 | HailTrace API | Premium storm data | No — NOAA is the default | Sales conversation |
