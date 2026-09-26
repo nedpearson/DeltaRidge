@@ -8,6 +8,7 @@ import { asDoorOutcome } from '@/features/leads/pipeline'
 import type {
   ContactEvent,
   ContactKind,
+  ContactSource,
   KnockVerificationRecord,
   LeadStatus,
   ManagedLead,
@@ -159,6 +160,8 @@ interface LeadRow {
   longitude: number | null
   contact_name: string | null
   contact_phone: string | null
+  contact_email: string | null
+  contact_source: string | null
 }
 
 interface ActivityRow {
@@ -225,7 +228,22 @@ function toManagedLead(row: LeadRow, existing: ManagedLead | null): ManagedLead 
   if (row.subdivision) lead.subdivision = row.subdivision
   else if (existing?.subdivision) lead.subdivision = existing.subdivision
   if (row.contact_name) lead.contactName = row.contact_name
-  if (row.contact_phone) lead.contactPhone = row.contact_phone
+  if (row.contact_phone) {
+    lead.contactPhone = row.contact_phone
+    const knownSources = new Set<ContactSource>([
+      'homeowner_at_door',
+      'homeowner_by_phone',
+      'homeowner_in_writing',
+      'public_record',
+      'third_party_lookup',
+      'unknown',
+    ])
+    lead.contactSource =
+      row.contact_source && knownSources.has(row.contact_source as ContactSource)
+        ? (row.contact_source as ContactSource)
+        : 'unknown'
+  }
+  if (row.contact_email) lead.contactEmail = row.contact_email
   if (row.next_action_at) lead.nextActionAt = row.next_action_at
   // Consent and opt-out live only on the device today. Dropping them on a pull
   // would quietly re-open a channel someone asked to be left off, so whatever
