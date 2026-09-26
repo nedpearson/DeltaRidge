@@ -2,18 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { OwnerLine, occupancyEvidence } from '@/components/OwnerLine'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
-import ContactActions from '@/components/ContactActions'
+import { type ManagedLead } from '@/features/leads/pipeline'
 import ResidentPhoneCard from '@/components/ResidentPhoneCard'
 import { saveResidentPhone } from '@/features/leads/contact-enrichment'
 import { findByAddress } from '@/features/leads/lead-store'
-import {
-  CONTACT_SOURCE_LABEL,
-  contactSourceOf,
-  mayContact,
-  type ManagedLead,
-} from '@/features/leads/pipeline'
-import { mayCallAt } from '@/features/compliance/engine'
-import { ALL_SOLICITATION_RULES } from '@/features/compliance/solicitation'
+
 import { readCachedRun, type LeadRun } from '@/features/leads/engine'
 import { buildPropertyProfile, type PropertyProfile } from '@/features/leads/property-profile'
 import type { ScoredLead } from '@/features/leads/scoring'
@@ -170,25 +163,30 @@ export default function PropertyPage() {
         scrolling through ownership metadata to find a phone number is the
         friction that stops an app being used on a driveway.
       */}
-      {managed !== null ? (
-        <PropertyContactBar lead={managed} />
-      ) : (
-        <div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-200 px-3 py-2.5">
-          <a
-            href={`https://www.google.com/maps/dir/?api=1&destination=${lead.latitude},${lead.longitude}`}
-            target="_blank"
-            rel="noreferrer"
-            className="contents"
-          >
-            <Button variant="secondary">Navigate</Button>
-          </a>
-          {/* Honest about why there is nothing to dial: no number has been
-              collected here, rather than a broken or empty control. */}
-          <p className="min-w-0 flex-1 text-[11.5px] leading-tight text-slate-600">
-            Nobody has knocked here yet, so there is no phone number to call.
-          </p>
+      <div className="mt-3 flex items-start gap-2">
+        <a
+          href={`https://www.google.com/maps/dir/?api=1&destination=${lead.latitude},${lead.longitude}`}
+          target="_blank"
+          rel="noreferrer"
+          className="contents"
+        >
+          <Button variant="secondary" className="mt-2.5 shrink-0">Navigate</Button>
+        </a>
+        <div className="min-w-0 flex-1">
+          <ResidentPhoneCard
+            address={lead.address}
+            city={lead.city || 'Baton Rouge'}
+            ownerName={lead.parcel?.ownerName}
+            phone={managed?.contactPhone || lead.contactPhone}
+            onPhoneSaved={async (phone, name) => {
+              // Ensure we save the phone number to the lead record.
+              // If it's managed, update it. If not, saveResidentPhone will promote it.
+              await saveResidentPhone(managed || lead, phone, name)
+              void loadManaged()
+            }}
+          />
         </div>
-      )}
+      </div>
 
       <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1">
         {TABS.map((t) => (
@@ -481,39 +479,3 @@ function PermitsTab({
  * Imported wholesale rather than reimplemented. Two copies of "may this number
  * be dialled" is how one of them quietly stops matching the law.
  */
-function PropertyContactBar({ lead }: { lead: ManagedLead }) {
-  const callBlock = mayContact(lead, 'call')
-  const smsBlock = mayContact(lead, 'sms')
-  const window = mayCallAt(
-    ALL_SOLICITATION_RULES,
-    { state: 'LA', parish: 'East Baton Rouge', municipality: null },
-    new Date(),
-  )
-  const source = contactSourceOf(lead)
-
-  return (
-    <ContactActions
-      phone={lead.contactPhone ?? null}
-      phoneNote={source === null ? null : CONTACT_SOURCE_LABEL[source]}
-      email={null}
-      latitude={lead.latitude}
-      longitude={lead.longitude}
-      call={{
-        allowed: callBlock.allowed && window.allowed,
-        reason: !callBlock.allowed
-          ? callBlock.reason
-          : !window.allowed
-            ? (window.reasons[0] ?? 'Outside the calling window')
-            : null,
-      }}
-      text={{
-        allowed: smsBlock.allowed && window.allowed,
-        reason: !smsBlock.allowed
-          ? smsBlock.reason
-          : !window.allowed
-            ? (window.reasons[0] ?? 'Outside the calling window')
-            : null,
-      }}
-    />
-  )
-}

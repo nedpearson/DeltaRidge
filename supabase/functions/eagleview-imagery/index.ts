@@ -134,7 +134,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (SUPABASE_URL === '' || ANON_KEY === '' || SERVICE_ROLE_KEY === '') return json({ error: 'server not configured' }, 500)
 
   const authorization = req.headers.get('authorization')
-  const apikey = req.headers.get('apikey')
+
   
   let userId: string | null = null
   let orgId: string | null = null
