@@ -5,7 +5,7 @@ set -euo pipefail
 # gateway because each function has a different authentication contract:
 # - eagleview-imagery / lookup-contact / lookup-property validate Supabase JWTs
 #   inside the function so they can also resolve the caller's organisation.
-# - roofr-events is an external webhook authenticated by the per-org hashed token.
+# - roofr-events and lead-acquisition are external webhooks authenticated by per-org hashed tokens.
 # - roofr-push validates the signed-in caller and RLS inside the function.
 #
 # A deployment succeeding is NOT proof an integration works. Run the production
@@ -15,6 +15,7 @@ functions=(
   eagleview-imagery
   lookup-contact
   lookup-property
+  lead-acquisition
   roofr-events
   roofr-push
 )
