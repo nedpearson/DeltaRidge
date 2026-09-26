@@ -130,5 +130,5 @@ jobs:
       - name: Deployment summary
         run: |
           echo "Backend migrations and configured Edge Functions deployed."
-          echo "This workflow does not certify browser geolocation, Mapbox rendering, provider entitlements, or two-device sync."
+          echo "This workflow does not certify browser geolocation, EagleView WMTS rendering, provider entitlements, or two-device sync."
           echo "Run docs/PRODUCTION_RELEASE_CERTIFICATION.md before declaring the release live."
