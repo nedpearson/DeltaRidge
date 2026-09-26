@@ -803,6 +803,15 @@ export default function LeadPage() {
       </Card>
 
       <Button variant="ghost" full className="mt-6" onClick={() => navigate(`/evidence/${lead.id}`)}>Generate Evidence Package</Button>
+      <Button variant="ghost" full className="mt-2 text-brand-500" onClick={async () => {
+        const supabase = (await import('@/lib/supabase')).getSupabase();
+        if (supabase) {
+          await supabase.rpc('promote_neighbors_of_sale', { sold_lead_id: lead.id });
+          alert('Generated neighboring leads!');
+        }
+      }}>
+        Generate Neighbor Referral Campaign
+      </Button>
       <Button variant="ghost" full className="mt-6" onClick={() => navigate('/leads')}>
         Back to the list
       </Button>
