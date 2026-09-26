@@ -17,6 +17,7 @@ import RouteHistoryPage from '@/pages/RouteHistoryPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import MapPage from '@/pages/MapPage'
 import MorePage from '@/pages/MorePage'
+import TrainingSimulatorPage from '@/pages/TrainingSimulatorPage'
 import { SessionProvider } from '@/features/auth/session'
 import { useSync } from '@/features/auth/useSync'
 
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/inspection/:id" element={<InspectionPage />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/more" element={<MorePage />} />
+          <Route path="/training" element={<TrainingSimulatorPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AppShell>
