@@ -23,6 +23,7 @@ import {
   type ContractorActivity,
   type ScoredLead,
 } from './scoring'
+import { bboxAround, withinRadiusMiles, type SearchCenter } from './location-search'
 import {
   resolveWindow,
   type CustomRange,
@@ -68,7 +69,19 @@ export interface LeadRunSettings {
    * "under hail" and the ranking stops discriminating.
    */
   radarMinHailInches?: number
+  /**
+   * How far from the rep's CURRENT GPS position to search for properties.
+   * A run without a searchCenter is legacy/cached and must not be presented as
+   * a current nearby search.
+   */
   radiusMiles: number
+  searchCenter?: SearchCenter
+  /**
+   * Maximum property-to-storm evidence distance used by the scoring engine.
+   * Kept separate from search radius: "find roofs within 10 miles of me" and
+   * "accept hail reports within 3 miles of a roof" are different questions.
+   */
+  stormRadiusMiles?: number
   /** Only consider roofs first permitted before this year. */
   builtBefore: number
   maxLeads: number
@@ -100,7 +113,8 @@ export const DEFAULT_SETTINGS: LeadRunSettings = {
   minHailInches: 1,
   useRadar: true,
   radarMinHailInches: 1.25,
-  radiusMiles: 3,
+  radiusMiles: 5,
+  stormRadiusMiles: 3,
   builtBefore: new Date().getFullYear() - 12,
   maxLeads: 150,
   maxGeocodesPerRun: 600,
@@ -118,8 +132,9 @@ export const DEFAULT_SETTINGS: LeadRunSettings = {
  * cannot catch that: the run was fresh, it was just from a different engine.
  *
  * 2 = radar-estimated hail is a source.
+ * 3 = searches are explicitly centred on the rep's GPS position.
  */
-export const ENGINE_VERSION = 2
+export const ENGINE_VERSION = 3
 
 export interface LeadRun {
   ranAt: string
@@ -217,7 +232,11 @@ function upgradeRun(run: LeadRun): LeadRun {
 
   return {
     ...run,
-    settings: { ...run.settings, windowKey: run.settings?.windowKey ?? 'last_24_months' },
+    settings: {
+      ...run.settings,
+      windowKey: run.settings?.windowKey ?? 'last_24_months',
+      stormRadiusMiles: run.settings?.stormRadiusMiles ?? 3,
+    },
     window,
     stormEvents: run.stormEvents ?? [],
     coverage: {
@@ -429,12 +448,16 @@ export async function runLeadEngine(
 
   const window = resolveWindow(settings.windowKey, now, settings.customRange)
   const { from, to } = window
+  const searchBbox = settings.searchCenter
+    ? bboxAround(settings.searchCenter, settings.radiusMiles)
+    : settings.bbox
+  const stormRadiusMiles = settings.stormRadiusMiles ?? 3
 
   // Fired together: they are independent, and a rep waiting in a driveway
   // should not pay for two round trips in series.
   const [stormResult, radarResult, buildResult, reroofResult] = await Promise.allSettled([
     storms.searchEvents({
-      bbox: settings.bbox,
+      bbox: searchBbox,
       from,
       to,
       eventTypes: ['hail'],
@@ -442,7 +465,7 @@ export async function runLeadEngine(
     }),
     radarEnabled
       ? createStormProvider('swdi', fetchImpl).searchEvents({
-          bbox: settings.bbox,
+          bbox: searchBbox,
           from,
           to,
           eventTypes: ['hail'],
@@ -460,7 +483,7 @@ export async function runLeadEngine(
       limit: 5000,
     }),
     permits.search({
-      bbox: settings.bbox,
+      bbox: searchBbox,
       kinds: ['reroof'],
       issuedFrom: from.slice(0, 10),
       limit: 5000,
@@ -598,16 +621,26 @@ export async function runLeadEngine(
     return hit ? { ...p, latitude: hit.latitude, longitude: hit.longitude } : p
   })
 
-  const [west, south, east, north] = settings.bbox
-  const inArea = located.filter(
-    (p) =>
-      p.latitude !== undefined &&
-      p.longitude !== undefined &&
-      p.latitude >= south &&
-      p.latitude <= north &&
-      p.longitude >= west &&
-      p.longitude <= east,
-  )
+  const [west, south, east, north] = searchBbox
+  const inArea = located.filter((p) => {
+    if (
+      p.latitude === undefined ||
+      p.longitude === undefined ||
+      p.latitude < south ||
+      p.latitude > north ||
+      p.longitude < west ||
+      p.longitude > east
+    ) {
+      return false
+    }
+    return settings.searchCenter
+      ? withinRadiusMiles(
+          { latitude: p.latitude, longitude: p.longitude },
+          settings.searchCenter,
+          settings.radiusMiles,
+        )
+      : true
+  })
 
   const awaitingGeocode = uncached.length - toGeocode.length
   if (awaitingGeocode > 0) {
@@ -621,10 +654,16 @@ export async function runLeadEngine(
     candidates,
     storms: stormEvents,
     reroofPermits,
-    radiusMiles: settings.radiusMiles,
+    radiusMiles: stormRadiusMiles,
     minHailInches: settings.minHailInches,
     now,
   })
+
+  if (!settings.searchCenter) {
+    notes.unshift(
+      'This list was not centred on a current GPS fix. Enable Location Services and refresh before treating it as a nearby search.',
+    )
+  }
 
   const run: LeadRun = {
     ranAt: now.toISOString(),
