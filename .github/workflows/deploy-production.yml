@@ -29,6 +29,10 @@ jobs:
       EAGLEVIEW_CLIENT_ID: ${{ secrets.EAGLEVIEW_CLIENT_ID }}
       EAGLEVIEW_CLIENT_SECRET: ${{ secrets.EAGLEVIEW_CLIENT_SECRET }}
       EAGLEVIEW_ENV: production
+      EAGLEVIEW_WMTS_TILE_URL_TEMPLATE: ${{ secrets.EAGLEVIEW_WMTS_TILE_URL_TEMPLATE }}
+      EAGLEVIEW_WMTS_TILE_SIZE: ${{ secrets.EAGLEVIEW_WMTS_TILE_SIZE }}
+      EAGLEVIEW_WMTS_MIN_ZOOM: ${{ secrets.EAGLEVIEW_WMTS_MIN_ZOOM }}
+      EAGLEVIEW_WMTS_MAX_ZOOM: ${{ secrets.EAGLEVIEW_WMTS_MAX_ZOOM }}
       ZAPIER_ROOFR_HOOK_URL: ${{ secrets.ZAPIER_ROOFR_HOOK_URL }}
       BATCHDATA_API_KEY: ${{ secrets.BATCHDATA_API_KEY }}
       REALESTATE_API_KEY: ${{ secrets.REALESTATE_API_KEY }}
@@ -63,7 +67,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF EAGLEVIEW_CLIENT_ID EAGLEVIEW_CLIENT_SECRET; do
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF EAGLEVIEW_CLIENT_ID EAGLEVIEW_CLIENT_SECRET EAGLEVIEW_WMTS_TILE_URL_TEMPLATE; do
             if [ -z "${!name:-}" ]; then
               echo "::error::Missing required production secret: $name"
               missing=1
@@ -87,7 +91,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          supabase secrets set             EAGLEVIEW_CLIENT_ID="$EAGLEVIEW_CLIENT_ID"             EAGLEVIEW_CLIENT_SECRET="$EAGLEVIEW_CLIENT_SECRET"             EAGLEVIEW_ENV=production
+          supabase secrets set             EAGLEVIEW_CLIENT_ID="$EAGLEVIEW_CLIENT_ID"             EAGLEVIEW_CLIENT_SECRET="$EAGLEVIEW_CLIENT_SECRET"             EAGLEVIEW_ENV=production             EAGLEVIEW_WMTS_TILE_URL_TEMPLATE="$EAGLEVIEW_WMTS_TILE_URL_TEMPLATE"             EAGLEVIEW_WMTS_TILE_SIZE="${EAGLEVIEW_WMTS_TILE_SIZE:-256}"             EAGLEVIEW_WMTS_MIN_ZOOM="${EAGLEVIEW_WMTS_MIN_ZOOM:-1}"             EAGLEVIEW_WMTS_MAX_ZOOM="${EAGLEVIEW_WMTS_MAX_ZOOM:-22}"
           if [ -n "${ZAPIER_ROOFR_HOOK_URL:-}" ]; then
             supabase secrets set ZAPIER_ROOFR_HOOK_URL="$ZAPIER_ROOFR_HOOK_URL"
           fi
@@ -103,7 +107,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for fn in eagleview-imagery lookup-contact lookup-property roofr-events roofr-push; do
+          for fn in eagleview-imagery eagleview-map-tile lookup-contact lookup-property roofr-events roofr-push; do
             echo "Deploying $fn"
             supabase functions deploy "$fn" --project-ref "$SUPABASE_PROJECT_REF"
           done
@@ -114,7 +118,7 @@ jobs:
         run: |
           set -euo pipefail
           base="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1"
-          for fn in eagleview-imagery lookup-contact roofr-push; do
+          for fn in eagleview-imagery eagleview-map-tile lookup-contact roofr-push; do
             code=$(curl -sS -o /tmp/"$fn".out -w "%{http_code}" -X POST               -H "content-type: application/json"               -d '{}'               "$base/$fn")
             if [ "$code" != "401" ]; then
               echo "::error::$fn anonymous security smoke returned HTTP $code, expected 401"
