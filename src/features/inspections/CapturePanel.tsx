@@ -13,10 +13,10 @@ import {
 
 const GROUP_ORDER: PhotoGroup[] = ['property', 'roof', 'penetrations', 'damage', 'accessories', 'other']
 const GROUP_LABELS: Record<PhotoGroup, string> = {
-  property: 'PROPERTY',
-  roof: 'ROOF',
+  property: 'ELEVATION SECTIONS',
+  roof: 'ROOF SLOPES',
   penetrations: 'PENETRATIONS',
-  damage: 'DAMAGE',
+  damage: 'DAMAGE CLOSE-UPS',
   accessories: 'ACCESSORIES',
   other: 'OTHER',
 }
@@ -116,6 +116,16 @@ export default function CapturePanel({
           <p className="text-[13px] text-status-critical">{error}</p>
         </Card>
       )}
+
+      <SectionTitle>GUIDED REQUIRED PHOTOS</SectionTitle>
+      <div className="mb-4 flex gap-3 overflow-x-auto pb-2 px-1">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex-none w-28 h-28 rounded-xl border-2 border-dashed border-border-strong bg-bg-elevated flex flex-col items-center justify-center opacity-50">
+            <span className="text-[18px] text-text-secondary">📷</span>
+            <span className="text-[10px] font-semibold text-text-secondary mt-1">Pending</span>
+          </div>
+        ))}
+      </div>
 
       {grouped.map(({ group, items }) => (
         <div key={group}>

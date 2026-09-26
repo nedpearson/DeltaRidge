@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button, Card, Field, SectionTitle, TextArea, TextInput } from '@/components/ui'
 import type { LocalInspection, LocalObservation, LocalPhoto } from '@/lib/db'
 import { evaluateCompleteness, type CompletenessIssue } from './completeness'
-import { CATEGORY_LABELS, type PhotoCategory } from './photo-categories'
+import { type PhotoCategory } from './photo-categories'
 
 const TONE: Record<CompletenessIssue['severity'], { ring: string; dot: string; label: string }> = {
   blocker: { ring: 'ring-status-critical/30 bg-status-critical/10', dot: 'bg-status-critical', label: 'Office needs this' },
@@ -94,31 +94,35 @@ export default function ReviewPanel({
       ) : (
         <>
           <SectionTitle hint={`${report.issues.length} to review`}>BEFORE YOU LEAVE</SectionTitle>
-          <div className="space-y-2">
-            {report.issues.map((issue) => {
-              const tone = TONE[issue.severity]
-              return (
-                <div key={issue.code} className={`rounded-2xl p-3.5 ring-1 ${tone.ring}`}>
-                  <div className="flex items-start gap-2.5">
-                    <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${tone.dot}`} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{tone.label}</p>
-                      <p className="mt-0.5 text-[13.5px] leading-snug">{issue.message}</p>
-                      {issue.fix?.kind === 'camera' && (
-                        <Button
-                          variant="secondary"
-                          className="mt-2.5 !px-3 !py-2 text-[12px]"
-                          onClick={() => issue.fix?.kind === 'camera' && onFix(issue.fix.category)}
-                        >
-                          Fix now — {CATEGORY_LABELS[issue.fix.category]}
-                        </Button>
-                      )}
+          <Card className="ring-1 ring-status-warning/30 bg-status-warning/5">
+            <p className="text-[14px] font-semibold text-text-primary">
+              Inspection incomplete — {report.issues.length} required items missing
+            </p>
+            <div className="mt-3 divide-y divide-border-subtle border-t border-border-subtle">
+              {report.issues.map((issue) => {
+                const tone = TONE[issue.severity]
+                return (
+                  <div key={issue.code} className="flex items-center justify-between py-2.5">
+                    <div className="flex items-start gap-2.5 min-w-0 pr-3">
+                      <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${tone.dot}`} />
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-medium leading-snug">{issue.message}</p>
+                      </div>
                     </div>
+                    {issue.fix?.kind === 'camera' && (
+                      <Button
+                        variant="ghost"
+                        className="shrink-0 !px-2 !py-1 text-[11px] h-auto text-brand-primary bg-brand-primary/10"
+                        onClick={() => issue.fix?.kind === 'camera' && onFix(issue.fix.category)}
+                      >
+                        Fix Now
+                      </Button>
+                    )}
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          </Card>
         </>
       )}
 

@@ -35,11 +35,11 @@ This checklist tracks the implementation of the complete product architecture, U
   - [ ] Exception Center (Overdue follow-ups, incomplete inspections, stalled syncs)
 
 ## 5. Lead Intelligence & Universal Lead 360
-- [ ] Search Around My Location (Device GPS, Opportunity/Intent/Contactability)
-- [ ] Best Opportunities Near Me (Ranked by selling priority)
-- [ ] Why This House / Show Proof (Evidence-backed claims)
-- [ ] Universal Lead 360 (Canonical record: Overview, Contact, Property, Roof, Storms, Field, etc.)
-- [ ] Universal Timeline (Chronological events, offline vs server-backed)
+- [x] Search Around My Location (Device GPS, Opportunity/Intent/Contactability)
+- [x] Best Opportunities Near Me (Ranked by selling priority)
+- [x] Why This House / Show Proof (Evidence-backed claims)
+- [x] Universal Lead 360 (Canonical record: Overview, Contact, Property, Roof, Storms, Field, etc.)
+- [x] Universal Timeline (Chronological events, offline vs server-backed)
 
 ## 6. Territory, Campaigns & Routing
 - [ ] Manager Lead Assignment (Decision-support system)
