@@ -6,6 +6,7 @@ $functions = @(
   "eagleview-imagery",
   "lookup-contact",
   "lookup-property",
+  "lead-acquisition",
   "roofr-events",
   "roofr-push"
 )
