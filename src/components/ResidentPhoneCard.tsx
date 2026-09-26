@@ -1,6 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui'
-import { buildFreeSearchUrl, buildTruePeopleSearchUrl } from '@/features/leads/contact-enrichment'
+import {
+  buildFreeSearchUrl,
+  buildTruePeopleSearchUrl,
+  lookupResidentContact,
+} from '@/features/leads/contact-enrichment'
 
 export default function ResidentPhoneCard({
   address,
@@ -8,7 +12,8 @@ export default function ResidentPhoneCard({
   state = 'LA',
   zip = '70810',
   ownerName,
-  phone,
+  phone: initialPhone,
+  autoEnrich = true,
   onPhoneSaved,
 }: {
   address: string
@@ -17,17 +22,54 @@ export default function ResidentPhoneCard({
   zip?: string | undefined
   ownerName?: string | null | undefined
   phone?: string | null | undefined
+  autoEnrich?: boolean | undefined
   onPhoneSaved?: ((phone: string, name?: string | undefined) => void) | undefined
 }) {
+  const [phone, setPhone] = useState<string | null | undefined>(initialPhone)
+  const [resident, setResident] = useState<string | null | undefined>(ownerName)
+  const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState(false)
   const [inputPhone, setInputPhone] = useState('')
+
+  useEffect(() => {
+    setPhone(initialPhone)
+  }, [initialPhone])
+
+  useEffect(() => {
+    let active = true
+    if (!phone && autoEnrich && address && !loading) {
+      setLoading(true)
+      void lookupResidentContact({
+        street: address,
+        city,
+        state,
+        zip,
+        ownerName: ownerName || undefined,
+      }).then((result) => {
+        if (!active) return
+        setLoading(false)
+        if (result.success && result.phone) {
+          setPhone(result.phone)
+          if (result.residentName) setResident(result.residentName)
+          onPhoneSaved?.(result.phone, result.residentName || ownerName || undefined)
+        }
+      }).catch(() => {
+        if (active) setLoading(false)
+      })
+    }
+    return () => {
+      active = false
+    }
+  }, [address, autoEnrich, city, ownerName, phone, state, zip, onPhoneSaved, loading])
 
   const freeSearchUrl = buildFreeSearchUrl(address, city, state, zip)
   const tpsUrl = buildTruePeopleSearchUrl(address, city, state, zip)
 
   const handleSave = () => {
     if (!inputPhone.trim()) return
-    onPhoneSaved?.(inputPhone.trim(), ownerName || undefined)
+    const num = inputPhone.trim()
+    setPhone(num)
+    onPhoneSaved?.(num, resident || ownerName || undefined)
     setEditing(false)
   }
 
@@ -39,8 +81,8 @@ export default function ResidentPhoneCard({
             <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
               Resident Phone
             </span>
-            {ownerName && (
-              <span className="truncate text-[11px] text-slate-400">· {ownerName}</span>
+            {(resident || ownerName) && (
+              <span className="truncate text-[11px] text-slate-400">· {resident || ownerName}</span>
             )}
           </div>
           <p className="mt-0.5 font-mono text-[14px] font-semibold text-slate-800">
@@ -69,9 +111,15 @@ export default function ResidentPhoneCard({
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="text-[11.5px] font-medium text-slate-600">
-              {ownerName ? `Find Phone for ${ownerName}` : 'Homeowner Phone Number'}
+              {loading
+                ? '⚡ Auto-enriching phone number…'
+                : (resident || ownerName)
+                  ? `Phone for ${resident || ownerName}`
+                  : 'Homeowner Phone Number'}
             </p>
-            <p className="text-[10.5px] text-slate-400">Free instant reverse address lookup</p>
+            <p className="text-[10.5px] text-slate-400">
+              {loading ? 'Querying skip-trace records…' : 'Automated skip-trace & reverse directory'}
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <a
