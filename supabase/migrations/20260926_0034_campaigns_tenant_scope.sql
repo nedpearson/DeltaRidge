@@ -58,3 +58,66 @@ create trigger campaigns_touch_updated_at
 
 comment on column campaigns.organization_id is
   'Tenant boundary. Legacy rows with NULL are intentionally invisible until an admin explicitly attributes them.';
+
+
+-- PostgREST does not need to guess how to cast a browser GeoJSON object into
+-- PostGIS geography. The RPC makes that conversion explicit and keeps the
+-- tenant/role check at the database boundary.
+create or replace function public.create_campaign(
+  p_organization_id uuid,
+  p_name text,
+  p_geometry jsonb
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public, pg_catalog
+as $$
+declare
+  new_id uuid;
+  geom geometry;
+begin
+  if not app.has_org_role(
+    p_organization_id,
+    array['admin','manager']::app_role[]
+  ) then
+    raise exception 'manager or admin role required' using errcode = '42501';
+  end if;
+
+  if p_name is null or length(btrim(p_name)) = 0 then
+    raise exception 'campaign name is required' using errcode = '22023';
+  end if;
+
+  geom := st_setsrid(st_geomfromgeojson(p_geometry::text), 4326);
+  if geom is null or st_isempty(geom) or geometrytype(geom) not in ('POLYGON', 'MULTIPOLYGON') then
+    raise exception 'campaign geometry must be a non-empty polygon' using errcode = '22023';
+  end if;
+  if not st_isvalid(geom) then
+    raise exception 'campaign geometry is invalid' using errcode = '22023';
+  end if;
+
+  insert into campaigns (
+    organization_id,
+    created_by,
+    name,
+    is_active,
+    area
+  )
+  values (
+    p_organization_id,
+    auth.uid(),
+    btrim(p_name),
+    true,
+    geom::geography
+  )
+  returning id into new_id;
+
+  return new_id;
+end;
+$$;
+
+revoke execute on function public.create_campaign(uuid, text, jsonb) from public;
+grant execute on function public.create_campaign(uuid, text, jsonb) to authenticated;
+
+comment on function public.create_campaign(uuid, text, jsonb) is
+  'Creates one organization-scoped campaign from GeoJSON polygon data after role and geometry validation.';
