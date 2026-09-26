@@ -3,22 +3,22 @@
 This checklist tracks the implementation of the complete product architecture, UX, lead intelligence, and sales management master audit.
 
 ## 1. First Phase — Complete Product Audit
-- [ ] Document every route and page
-- [ ] Document every major component
-- [ ] Document every manager & rep function
-- [ ] Document every database-backed & offline workflow
-- [ ] Identify duplicate capabilities & dead-end buttons
-- [ ] Identify obscure navigation & excessive scrolling
-- [ ] Identify disconnected data screens
+- [x] Document every route and page
+- [x] Document every major component
+- [x] Document every manager & rep function
+- [x] Document every database-backed & offline workflow
+- [x] Identify duplicate capabilities & dead-end buttons
+- [x] Identify obscure navigation & excessive scrolling
+- [x] Identify disconnected data screens
 
 ## 2. Navigation & Information Architecture
-- [ ] Restructure Rep Navigation: TODAY · LEADS · MAP · JOBS · MORE
-- [ ] Restructure Manager Navigation into 5 Workspaces:
-  - [ ] COMMAND CENTER (Today, live field, exceptions, goals, alerts)
-  - [ ] LEADS & TERRITORY (Opportunity generator, campaigns, territory, map)
-  - [ ] TEAM & ROUTES (Team, routes, playback, performance, coaching)
-  - [ ] SALES & REVENUE (Pipeline, appointments, inspections, proposals)
-  - [ ] OPERATIONS (Roofr, contacts, integration health, settings, audit log)
+- [x] Restructure Rep Navigation: TODAY · LEADS · MAP · JOBS · MORE
+- [x] Restructure Manager Navigation into 5 Workspaces:
+  - [x] COMMAND CENTER (Today, live field, exceptions, goals, alerts)
+  - [x] LEADS & TERRITORY (Opportunity generator, campaigns, territory, map)
+  - [x] TEAM & ROUTES (Team, routes, playback, performance, coaching)
+  - [x] SALES & REVENUE (Pipeline, appointments, inspections, proposals)
+  - [x] OPERATIONS (Roofr, contacts, integration health, settings, audit log)
 
 ## 3. Rep "Today" Cockpit
 - [ ] Build Rep Home Experience

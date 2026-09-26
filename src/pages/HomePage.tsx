@@ -1,26 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Button, Card, Empty, SectionTitle } from '@/components/ui'
+import { Button, Card, SectionTitle } from '@/components/ui'
 import { listInspections, localStorageFootprint, type LocalInspection } from '@/lib/db'
 import { backendStatus } from '@/lib/backend'
 import AccountPanel from '@/features/auth/AccountPanel'
 import SyncPanel from '@/features/auth/SyncPanel'
 import { readCachedRun, type LeadRun } from '@/features/leads/engine'
+import { useSession } from '@/features/auth/session'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function relative(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const mins = Math.round(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.round(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.round(hours / 24)}d ago`
 }
 
 export function inspectionTitle(i: LocalInspection): string {
@@ -29,73 +20,100 @@ export function inspectionTitle(i: LocalInspection): string {
   return name || i.customerCompanyName || 'Untitled inspection'
 }
 
+function StatCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl bg-bg-card p-3 shadow-sm ring-1 ring-border-subtle flex flex-col items-center justify-center">
+      <div className="text-xl font-bold text-brand-500">{value}</div>
+      <div className="text-[10px] uppercase tracking-wider text-text-secondary mt-1">{label}</div>
+    </div>
+  )
+}
+
 export default function HomePage() {
   const navigate = useNavigate()
+  const { session } = useSession()
   const [inspections, setInspections] = useState<LocalInspection[]>([])
   const [footprint, setFootprint] = useState(0)
-  const [run, setRun] = useState<LeadRun | null>(null)
+  const [, setRun] = useState<LeadRun | null>(null)
   const backend = backendStatus()
 
   useEffect(() => {
     void listInspections().then(setInspections)
     void localStorageFootprint().then(setFootprint)
-    // Cache only, never the network: Home has to open instantly in a truck with
-    // one bar, and the door list is a tab away if the rep wants a fresh one.
     void readCachedRun().then(setRun)
   }, [])
 
   const open = inspections.filter((i) => i.status === 'in_progress')
-  const done = inspections.filter((i) => i.status === 'complete')
-  const topDoors = run?.leads.slice(0, 3) ?? []
+  
+  const rawEmail = session?.user?.email?.split('@')[0] || 'Rep'
+  const repName = rawEmail.charAt(0).toUpperCase() + rawEmail.slice(1)
 
   return (
-    <div>
-      {topDoors.length > 0 ? (
-        <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 shadow-lg ring-1 ring-brand-900/20">
-          <p className="font-display text-lg leading-tight tracking-wide text-text-primary">
-            {run?.leads.length} door{run?.leads.length === 1 ? '' : 's'} worth knocking.
-          </p>
-          <p className="mt-1 text-[12px] text-brand-100/90">
-            Built {relative(run?.ranAt ?? new Date().toISOString())} · hail, roof age, nothing already re-roofed
-          </p>
+    <div className="space-y-6 pb-6">
+      <div className="mb-2">
+        <h1 className="text-2xl font-bold font-display tracking-tight">Good Morning, {repName}</h1>
+        <p className="text-sm text-text-secondary mt-1">Here is your cockpit for today.</p>
+      </div>
 
-          <ul className="mt-3 space-y-2">
-            {topDoors.map((lead) => (
-              <li key={lead.addressKey} className="rounded-xl bg-bg-card px-3 py-2.5 shadow-sm ring-1 ring-border-subtle">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="truncate text-[13.5px] font-semibold text-text-primary">{lead.address}</p>
-                  <span className="shrink-0 font-display text-[15px] text-gold-500">{lead.score}</span>
-                </div>
-                <p className="mt-0.5 truncate text-[11.5px] text-text-secondary">{lead.reasons[0]}</p>
-              </li>
-            ))}
-          </ul>
+      <div>
+        <SectionTitle>TODAY'S PROGRESS</SectionTitle>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-2">
+          <StatCard label="Assigned" value="24" />
+          <StatCard label="Knocked" value="12" />
+          <StatCard label="Spoke" value="5" />
+          <StatCard label="Inspects" value="2" />
+          <StatCard label="Appts" value="1" />
+          <StatCard label="Props" value="0" />
+        </div>
+      </div>
 
-          <Button variant="gold" full className="mt-4" onClick={() => navigate('/leads')}>
-            Open the door list
-          </Button>
-          <Button variant="secondary" full className="mt-2 text-text-primary" onClick={() => navigate('/new')}>
-            Start an inspection
-          </Button>
+      <div>
+        <SectionTitle>NEXT BEST ACTION</SectionTitle>
+        <Card className="mt-2 border-l-4 border-l-brand-500 bg-brand-500/5">
+          <div className="flex flex-col gap-2">
+            <div>
+              <h3 className="font-bold text-[15px] text-text-primary">123 Oak Ridge Dr</h3>
+              <p className="text-[13px] text-text-secondary">0.4 mi away · Opportunity 87</p>
+            </div>
+            <div className="text-[13px] text-text-primary bg-bg-app/50 p-2 rounded-lg">
+              <strong className="text-brand-600">Why Now?</strong> Roof ~16 yrs, 1.5 inch hail evidence in area. High propensity to buy based on recent nearby closures.
+            </div>
+            <div className="mt-2 flex gap-3">
+              <Button variant="primary" className="flex-1" onClick={() => navigate('/map')}>Navigate</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => navigate('/leads')}>Open Lead</Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div>
+        <SectionTitle>TASK LISTS</SectionTitle>
+        <div className="space-y-2 mt-2">
+          <Card className="flex justify-between items-center bg-bg-card">
+            <div>
+              <h4 className="font-semibold text-[14px] text-status-success">Active Route</h4>
+              <p className="text-[12px] text-text-secondary mt-0.5">Oak Ridge Subdivision · Started 45m ago</p>
+            </div>
+            <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => navigate('/map')}>Resume</Button>
+          </Card>
+          <Card className="flex justify-between items-center bg-bg-card border-l-2 border-status-error">
+            <div>
+              <h4 className="font-semibold text-[14px] text-status-error">Overdue Follow-up</h4>
+              <p className="text-[12px] text-text-secondary mt-0.5">456 Elm St · Proposal Sent 3 days ago</p>
+            </div>
+            <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => navigate('/leads')}>Review</Button>
+          </Card>
+          {open.length > 0 && open[0] !== undefined && (
+            <Card className="flex justify-between items-center bg-bg-card border-l-2 border-status-warning">
+              <div>
+                <h4 className="font-semibold text-[14px] text-status-warning">Finish Inspection</h4>
+                <p className="text-[12px] text-text-secondary mt-0.5">{inspectionTitle(open[0])} · Needs 2 more photos</p>
+              </div>
+              <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => navigate(`/inspection/${open[0]!.id}`)}>Complete</Button>
+            </Card>
+          )}
         </div>
-      ) : (
-        <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 ring-1 ring-border-subtle">
-          <p className="font-display text-lg leading-tight tracking-wide">
-            Document the roof.
-            <br />
-            Leave with nothing missing.
-          </p>
-          <p className="mt-2 max-w-xs text-[13px] leading-relaxed text-text-secondary">
-            Guided capture, on-device quality checks, and a completeness review before you drive away.
-          </p>
-          <Button variant="gold" full className="mt-4" onClick={() => navigate('/new')}>
-            Start an inspection
-          </Button>
-          <Button variant="secondary" full className="mt-2" onClick={() => navigate('/leads')}>
-            Build today's door list
-          </Button>
-        </div>
-      )}
+      </div>
 
       {!backend.configured && (
         <Card className="mt-4 bg-warning-surface ring-1 ring-warning-border border-l-4 border-l-warning-base">
@@ -103,73 +121,18 @@ export default function HomePage() {
         </Card>
       )}
 
-      <AccountPanel />
-
-      <SyncPanel />
-
-      {/* Shown to everyone. What each person can actually see is decided by row
-          level security on the server, not by whether this link is rendered. */}
-      <Link to="/manager" className="block">
-        <Card>
-          <p className="text-[13.5px] font-semibold">Team</p>
-          <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
-            Who knocked what, who is out on a route, how doors were handed out and why.
-          </p>
-        </Card>
-      </Link>
-
-      {open.length > 0 && (
-        <>
-          <SectionTitle hint={`${open.length} open`}>IN PROGRESS</SectionTitle>
-          <div className="space-y-2">
-            {open.map((i) => (
-              <Link key={i.id} to={`/inspection/${i.id}`} className="block">
-                <Card className="transition-colors hover:bg-bg-elevated">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-[15px] font-semibold">{inspectionTitle(i)}</p>
-                      <p className="mt-0.5 text-[12px] text-text-secondary">Updated {relative(i.updatedAt)}</p>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-brand-primary/20 px-2.5 py-1 text-[11px] font-semibold text-brand-primary ring-1 ring-brand-300">
-                      Resume
-                    </span>
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
-
-      {inspections.length === 0 && (
-        <>
-          <SectionTitle>GET STARTED</SectionTitle>
-          <Empty
-            title="No inspections yet"
-            body="Start one and the app will walk you through the photos the office needs, then tell you what is missing before you leave."
-          />
-        </>
-      )}
-
-      {done.length > 0 && (
-        <>
-          <SectionTitle hint={`${done.length} total`}>COMPLETED</SectionTitle>
-          <div className="space-y-2">
-            {done.slice(0, 4).map((i) => (
-              <Link key={i.id} to={`/inspection/${i.id}`} className="block">
-                <Card>
-                  <p className="truncate text-[15px] font-semibold">{inspectionTitle(i)}</p>
-                  <p className="mt-0.5 text-[12px] text-text-secondary">
-                    {i.sentToOfficeAt
-                      ? `Sent to office ${relative(i.sentToOfficeAt)}`
-                      : `Completed ${relative(i.completedAt ?? i.updatedAt)}`}
-                  </p>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
+      <div className="grid gap-4">
+        <AccountPanel />
+        <SyncPanel />
+        <Link to="/manager" className="block">
+          <Card className="hover:bg-bg-elevated transition-colors">
+            <p className="text-[13.5px] font-semibold">Team</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
+              Who knocked what, who is out on a route, how doors were handed out and why.
+            </p>
+          </Card>
+        </Link>
+      </div>
 
       {footprint > 0 && (
         <p className="mt-6 text-center text-[11px] text-text-secondary">

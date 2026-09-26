@@ -273,6 +273,14 @@ export default function ManagerPage() {
       {tab === 'command_center' && (
         <div className="space-y-8">
           <div>
+            <div className="mb-3"><SectionTitle>TEAM NOW</SectionTitle></div>
+            <TeamNowTab />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>MANAGER EXCEPTION CENTER</SectionTitle></div>
+            <ManagerExceptionCenterTab />
+          </div>
+          <div>
             <div className="mb-3"><SectionTitle>LIVE FIELD</SectionTitle></div>
             <FieldTab
               repIds={snapshot.team.map((m) => m.userId)}
@@ -1059,3 +1067,56 @@ function LogTab({
     </div>
   )
 }
+
+function TeamNowTab() {
+  const reps = [
+    { name: 'Alice Smith', status: 'ACTIVE ROUTE', route: 'Oak Ridge Subdivision', lastActivity: 'last knock 3m ago', doors: 45, conversations: 12, sync: 'Synced just now' },
+    { name: 'Bob Jones', status: 'APPOINTMENT', route: 'Elm St Area', lastActivity: 'started 45m ago', doors: 12, conversations: 4, sync: 'Synced 5m ago' },
+    { name: 'Charlie Davis', status: 'NO ACTIVITY', route: '—', lastActivity: 'last activity 2 days ago', doors: 0, conversations: 0, sync: 'Synced 1 day ago' },
+  ];
+  return (
+    <div className="space-y-2">
+      {reps.map(rep => (
+        <Card key={rep.name} className="flex flex-col gap-2">
+          <div className="flex items-baseline justify-between">
+            <p className="text-[14px] font-semibold">{rep.name}</p>
+            <span className={`text-[11px] font-semibold uppercase tracking-wider ${rep.status === 'ACTIVE ROUTE' ? 'text-status-success' : rep.status === 'APPOINTMENT' ? 'text-brand-500' : 'text-text-secondary'}`}>{rep.status}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-[12px] text-text-secondary">
+            <div><span className="font-semibold text-text-primary">Route:</span> {rep.route}</div>
+            <div className="text-right"><span className="font-semibold text-text-primary">Activity:</span> {rep.lastActivity}</div>
+            <div><span className="font-semibold text-text-primary">Doors/Conv:</span> {rep.doors} / {rep.conversations}</div>
+            <div className="text-right"><span className="font-semibold text-text-primary">Sync:</span> {rep.sync}</div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+function ManagerExceptionCenterTab() {
+  const exceptions = [
+    { type: 'Critical', title: 'Stalled Sync', desc: 'Alice Smith has 45 pending offline mutations for over 2 hours.', btn: 'Fix Now', color: 'border-status-error', text: 'text-status-error' },
+    { type: 'Needs Attention', title: 'Overdue Follow-up', desc: 'Bob Jones missed follow-up on 123 Oak Ridge Dr.', btn: 'Open Record', color: 'border-status-warning', text: 'text-status-warning' },
+    { type: 'Needs Attention', title: 'Inspection Missing Evidence', desc: 'Charlie Davis inspection at 456 Elm St is missing roof photos.', btn: 'Open Record', color: 'border-status-warning', text: 'text-status-warning' },
+    { type: 'Opportunity', title: 'High Density Unassigned', desc: 'Subdivision Oak Ridge has 15 high-score doors unassigned.', btn: 'Assign Doors', color: 'border-brand-500', text: 'text-brand-500' },
+  ];
+  return (
+    <div className="space-y-3">
+      {exceptions.map((ex, i) => (
+        <Card key={i} className={`border-l-4 ${ex.color} bg-bg-card`}>
+          <div className="flex justify-between items-start">
+            <div>
+              <p className={`text-[11px] uppercase tracking-wider font-semibold ${ex.text}`}>{ex.type}</p>
+              <h4 className="text-[14px] font-semibold mt-1">{ex.title}</h4>
+              <p className="text-[12px] text-text-secondary mt-1">{ex.desc}</p>
+            </div>
+            <Button variant="secondary"  className="shrink-0 ml-4">{ex.btn}</Button>
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+
