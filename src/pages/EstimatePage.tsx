@@ -1,3 +1,8 @@
+import { RoofcareOfferPanel } from '@/features/membership/RoofcarePanel'
+
+
+          <div className="my-8"><RoofcareOfferPanel onEnroll={(tier) => alert(`Added ${tier} RoofCare to Proposal!`)} /></div>
+
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button, Card, Field, SectionTitle, TextInput } from '@/components/ui'
@@ -586,6 +591,9 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
     </div>
   )
 }
+
+
+
 
 
 
