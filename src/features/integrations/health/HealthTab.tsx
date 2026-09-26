@@ -93,7 +93,7 @@ export default function HealthTab({ organizationId }: { organizationId: string |
         detail: 'Radar-estimated hail used alongside ground reports',
         health: assessHealth(
           {
-            configured: radar.kind !== 'not_configured' && radar.kind !== 'off',
+            configured: radar.kind !== 'not_configured',
             successes: radar.kind === 'live' ? 1 : 0,
             failures: radar.kind === 'failed' ? 1 : 0,
             lastSuccessAt: radar.kind === 'live' ? lastRun.ranAt : null,
