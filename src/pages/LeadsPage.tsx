@@ -7,6 +7,7 @@ import { OwnerLine } from '@/components/OwnerLine'
 import RoofViewSheet from '@/components/RoofViewSheet'
 import ResidentPhoneCard from '@/components/ResidentPhoneCard'
 import { saveResidentContact } from '@/features/leads/contact-enrichment'
+import LeadIntelligenceSummary from '@/features/leads/LeadIntelligenceSummary'
 import { Button, Card, Empty, Field, SectionTitle, Select } from '@/components/ui'
 import RoutePanel from '@/components/RoutePanel'
 import { evidenceFor } from '@/features/routes/knock-evidence'
@@ -183,6 +184,8 @@ function DoorCard({
           {STATUS_LABEL[managed.status]} · knocked {managed.knockCount}x
         </p>
       )}
+
+      <LeadIntelligenceSummary lead={lead} {...(managed ? { managed } : {})} />
 
       <ul className="mt-2.5 space-y-1">
         {lead.reasons.map((reason) => (
