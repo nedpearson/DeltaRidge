@@ -41,17 +41,11 @@ export async function lookupResidentContact(params: {
   const zip = params.zip || '70810'
 
   // If the street parameter contains the full address, strip the city/state/zip
-  // Regex matches: "STREET ADDRESS CITY ST 12345"
-  const addressMatch = street.match(/^(.*?)\s+(?:[A-Za-z\s]+)\s+(?:[A-Za-z]{2})\s+(?:\d{5})$/i)
-  if (addressMatch) {
-    street = (addressMatch[1] || '').trim()
-  } else {
-    const cityStateZip = `${city} ${state} ${zip}`.toLowerCase()
-    if (street.toLowerCase().endsWith(cityStateZip)) {
-      street = street.slice(0, -(cityStateZip.length)).trim()
-    } else if (street.toLowerCase().endsWith(`${state} ${zip}`.toLowerCase())) {
-      street = street.slice(0, -(`${state} ${zip}`.length)).trim()
-    }
+  const cityStateZip = `${city} ${state} ${zip}`.toLowerCase()
+  if (street.toLowerCase().endsWith(cityStateZip)) {
+    street = street.slice(0, -(cityStateZip.length)).trim()
+  } else if (street.toLowerCase().endsWith(`${state} ${zip}`.toLowerCase())) {
+    street = street.slice(0, -(`${state} ${zip}`.length)).trim()
   }
 
   try {
