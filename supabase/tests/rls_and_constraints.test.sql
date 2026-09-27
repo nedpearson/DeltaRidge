@@ -1,3 +1,4 @@
+begin;
 \set ON_ERROR_STOP on
 set client_min_messages to notice;
 
@@ -271,3 +272,4 @@ begin
   raise notice 'PASS 13-15: retried pushes update one row, and rep edits reach the server';
 end;
 $$;
+rollback;

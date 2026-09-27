@@ -21,7 +21,7 @@ begin
   end if;
 
   -- 2. Verify PostGIS coverage function exists and PUBLIC execution is revoked (Migration 0035)
-  select has_function_privilege('public', 'route_coverage(uuid, uuid)', 'EXECUTE') 
+  select has_function_privilege('public', 'route_coverage(uuid, timestamptz, timestamptz, double precision)', 'EXECUTE') 
   into coverage_public_exec;
 
   if coverage_public_exec then

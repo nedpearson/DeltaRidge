@@ -229,3 +229,5 @@ end;
 $$;
 
 \echo 'estimating.test.sql: all assertions passed'
+
+rollback;
