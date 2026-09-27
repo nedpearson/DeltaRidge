@@ -1,8 +1,9 @@
 -- =============================================================================
 -- Automated Direct Mail Trigger (Lob.com)
 -- =============================================================================
--- This sets up the asynchronous webhook triggers that fire the direct-mail 
--- Edge Function whenever specific business conditions are met.
+-- Fires the direct-mail Edge Function when a lead transitions to 'won'.
+-- The Edge Function is responsible for validating provider configuration
+-- before dispatching. If keys are missing, it returns DRY_RUN / BLOCKED.
 -- =============================================================================
 
 create extension if not exists pg_net;
@@ -11,16 +12,26 @@ create or replace function queue_neighborhood_blast()
 returns trigger
 language plpgsql
 security definer
-as $func
+as $func$
 declare
   edge_function_url text;
   nearby_addresses jsonb;
   won_property record;
   target_property record;
   addresses_array jsonb[] := array[]::jsonb[];
+  auth_secret text;
 begin
   if NEW.status = 'won' and OLD.status is distinct from 'won' then
-    
+
+    -- Read the automation auth secret from Supabase Vault or config.
+    -- This must be set in production via: ALTER DATABASE ... SET app.automation_secret = '...';
+    -- If not set, the trigger silently skips rather than sending an unauthenticated request.
+    auth_secret := coalesce(current_setting('app.automation_secret', true), '');
+    if auth_secret = '' then
+      raise warning 'app.automation_secret is not configured. Skipping direct mail trigger.';
+      return NEW;
+    end if;
+
     -- Find the location of the won property
     select p.location, p.address_line1, p.city, p.state, p.zip
     into won_property
@@ -51,21 +62,17 @@ begin
       );
     end loop;
 
-    -- Only send if we found neighbors
+    -- Only queue if we found neighbors
     if array_length(addresses_array, 1) > 0 then
       nearby_addresses := to_jsonb(addresses_array);
 
-      -- Supabase edge function URL
       edge_function_url := 'https://' || current_setting('request.headers', true)::json->>'host' || '/functions/v1/trigger-direct-mail';
-      
-      -- Send async POST via pg_net
-      -- NOTE: In production, the authorization token must be stored securely (e.g. Supabase Vault)
-      -- Using a placeholder token for safety. The edge function will reject this unless configured.
+
       perform net.http_post(
         url := edge_function_url,
         headers := jsonb_build_object(
           'Content-Type', 'application/json',
-          'Authorization', 'Bearer PENDING_CONFIGURATION_SECRET'
+          'Authorization', 'Bearer ' || auth_secret
         ),
         body := jsonb_build_object(
           'campaign_type', 'neighborhood_blast',
@@ -77,7 +84,7 @@ begin
 
   return NEW;
 end;
-$func;
+$func$;
 
 drop trigger if exists lead_won_neighborhood_blast on leads;
 create trigger lead_won_neighborhood_blast

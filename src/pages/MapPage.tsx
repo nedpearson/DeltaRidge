@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { readLeads } from '@/features/leads/lead-store'
 
@@ -14,7 +14,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png'
 })
 
-// Custom pins
 const LeadPin = new L.Icon({
   iconUrl: 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234776E6"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>'),
   iconSize: [30, 30],
@@ -27,25 +26,67 @@ const JobPin = new L.Icon({
   iconAnchor: [15, 30]
 })
 
+interface MappableLead {
+  id: string
+  address: string
+  status: string
+  score: number
+  latitude: number
+  longitude: number
+}
 
+/** Fits the map to the current marker bounds */
+function FitToMarkers({ leads }: { leads: MappableLead[] }) {
+  const map = useMap()
+  useEffect(() => {
+    if (leads.length === 0) return
+    const bounds = L.latLngBounds(leads.map(l => [l.latitude, l.longitude]))
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 })
+  }, [leads, map])
+  return null
+}
+
+/** Centers map on the user's actual GPS position */
+function CenterOnDevice() {
+  const map = useMap()
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        map.setView([pos.coords.latitude, pos.coords.longitude], 14)
+      },
+      () => { /* GPS denied or unavailable — keep default view */ }
+    )
+  }, [map])
+  return null
+}
 
 export default function MapPage() {
-  const [leads, setLeads] = useState<Array<{id: string, address: string, status: string, score: number, lat: number, lng: number}>>([])
+  const navigate = useNavigate()
+  const [leads, setLeads] = useState<MappableLead[]>([])
   const [filter, setFilter] = useState<'all' | 'opportunities' | 'jobs'>('all')
+  const [noCoordinateCount, setNoCoordinateCount] = useState(0)
 
   useEffect(() => {
     readLeads().then(data => {
-      // Create mock coordinates slightly offset from a center point for demo
-      // In production, properties must store valid coordinates.
-      const baseLat = 30.2672
-      const baseLng = -97.7431
-      
-      const mapped = data.map((lead) => ({
-        ...lead,
-        lat: baseLat + (Math.random() - 0.5) * 0.02,
-        lng: baseLng + (Math.random() - 0.5) * 0.02
-      }))
+      let skipped = 0
+      const mapped: MappableLead[] = []
+
+      for (const lead of data) {
+        // Only plot leads that have real, canonical coordinates from the property record.
+        // Never generate fake coordinates.
+        const lat = typeof lead.latitude === 'number' ? lead.latitude : null
+        const lng = typeof lead.longitude === 'number' ? lead.longitude : null
+
+        if (lat !== null && lng !== null && lat !== 0 && lng !== 0) {
+          mapped.push({ id: lead.id, address: lead.address, status: lead.status, score: lead.score, latitude: lat, longitude: lng })
+        } else {
+          skipped++
+        }
+      }
+
       setLeads(mapped)
+      setNoCoordinateCount(skipped)
     })
   }, [])
 
@@ -57,54 +98,65 @@ export default function MapPage() {
 
   return (
     <div className="relative h-[calc(100vh-4rem)] flex flex-col bg-bg-page">
-      <div className="absolute top-4 left-4 right-4 z-[400] flex gap-2">
-        <Button variant={filter === 'all' ? 'primary' : 'secondary'} className="shadow-lg" onClick={() => setFilter('all')}>All Activity</Button>
+      {/* Filter controls */}
+      <div className="absolute top-4 left-4 right-4 z-[400] flex gap-2 flex-wrap">
+        <Button variant={filter === 'all' ? 'primary' : 'secondary'} className="shadow-lg" onClick={() => setFilter('all')}>All ({leads.length})</Button>
         <Button variant={filter === 'opportunities' ? 'primary' : 'secondary'} className="shadow-lg" onClick={() => setFilter('opportunities')}>Opportunities</Button>
-        <Button variant={filter === 'jobs' ? 'primary' : 'secondary'} className="shadow-lg bg-status-success/20 text-status-success hover:bg-status-success/30" onClick={() => setFilter('jobs')}>Completed Jobs</Button>
+        <Button variant={filter === 'jobs' ? 'primary' : 'secondary'} className="shadow-lg" onClick={() => setFilter('jobs')}>Completed Jobs</Button>
       </div>
 
-      <MapContainer 
-        center={[30.2672, -97.7431]} 
-        zoom={14} 
+      {/* Warning banner for leads missing coordinates */}
+      {noCoordinateCount > 0 && (
+        <div className="absolute top-16 left-4 right-4 z-[400] bg-surface-1 border border-status-warning/40 rounded-md px-3 py-2 text-[11px] text-text-secondary">
+          <span className="text-status-warning font-bold">{noCoordinateCount} leads</span> not shown — missing property coordinates.
+        </div>
+      )}
+
+      <MapContainer
+        center={[33.0, -97.0]}
+        zoom={10}
         className="w-full flex-1 z-0"
         zoomControl={false}
       >
+        {/* Standard street tiles — no EagleView attribution unless EagleView tiles are configured */}
         <TileLayer
-          attribution='&copy; OpenStreetMap & EagleView'
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          className="map-tiles"
         />
-        
+
+        <CenterOnDevice />
+        {filteredLeads.length > 0 && <FitToMarkers leads={filteredLeads} />}
+
         {filteredLeads.map(lead => (
-          <Marker 
-            key={lead.id} 
-            position={[lead.lat, lead.lng]}
+          <Marker
+            key={lead.id}
+            position={[lead.latitude, lead.longitude]}
             icon={lead.status === 'won' ? JobPin : LeadPin}
           >
-            <Popup className="custom-popup">
+            <Popup>
               <div className="p-2 min-w-[200px]">
-                <span className={lead.status === 'won' ? 'bg-status-success/20 text-status-success text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm mb-2 inline-block' : 'bg-brand-primary/20 text-brand-primary text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm mb-2 inline-block'}>
-                  {lead.status === 'won' ? 'Delta Ridge Roof' : 'Opportunity'}
+                <span className={lead.status === 'won'
+                  ? 'bg-green-100 text-green-800 text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm mb-2 inline-block'
+                  : 'bg-blue-100 text-blue-800 text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm mb-2 inline-block'
+                }>
+                  {lead.status === 'won' ? 'Completed Job' : 'Opportunity'}
                 </span>
                 <h3 className="font-bold text-[14px] mt-1">{lead.address}</h3>
-                <p className="text-[12px] text-text-secondary mt-1">Score: {lead.score}</p>
+                <p className="text-[12px] text-gray-600 mt-1">Score: {lead.score}</p>
                 <div className="mt-3">
-                  <Button variant="secondary" className="w-full text-[11px]">Open File</Button>
+                  <Button
+                    variant="secondary"
+                    className="w-full text-[11px]"
+                    onClick={() => navigate('/lead/' + lead.id)}
+                  >
+                    Open Lead 360
+                  </Button>
                 </div>
               </div>
             </Popup>
           </Marker>
         ))}
       </MapContainer>
-      
-      {/* Target/Crosshair styling in index.css */}
     </div>
   )
 }
-
-
-
-
-
-
-

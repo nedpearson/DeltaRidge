@@ -807,7 +807,7 @@ export default function LeadPage() {
         const supabase = (await import('@/lib/supabase')).getSupabase();
         if (supabase) {
           await supabase.rpc('promote_neighbors_of_sale', { sold_lead_id: lead.id });
-          alert('Generated neighboring leads!');
+          // TODO: show actual result count from RPC response instead of fake feedback
         }
       }}>
         Generate Neighbor Referral Campaign

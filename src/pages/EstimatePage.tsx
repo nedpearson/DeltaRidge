@@ -1,7 +1,4 @@
-import { RoofcareOfferPanel } from '@/features/membership/RoofcarePanel'
 
-
-          <div className="my-8"><RoofcareOfferPanel onEnroll={(tier) => alert(`Added ${tier} RoofCare to Proposal!`)} /></div>
 
 import { useEffect, useMemo, useState } from 'react'
 import { SoldJobHandoffGate } from '@/components/SoldJobHandoffGate'
@@ -557,7 +554,7 @@ export default function EstimatePage() {
           onCancel={() => setShowHandoffGate(false)}
           onConfirm={() => {
             setShowHandoffGate(false);
-            alert("Job marked as sold and moved to production!");
+            // TODO: wire to real backend — update lead status to 'production_ready'
           }}
         />
       )}
