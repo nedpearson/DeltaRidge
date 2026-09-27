@@ -1,4 +1,6 @@
 import MemberPortal from '@/pages/MemberPortal'
+import MissionPage from '@/pages/MissionPage'
+import FreeRoofCheckPage from '@/pages/FreeRoofCheckPage'
 import { useEffect } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import AppShell from '@/components/AppShell'
@@ -48,10 +50,12 @@ export default function App() {
       <UpdateBanner />
       <Routes>
         <Route path="/portal/:id" element={<MemberPortal />} />
+        <Route path="/free-roof-check" element={<FreeRoofCheckPage />} />
         <Route path="*" element={
           <AppShell>
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/mission" element={<MissionPage />} />
               <Route path="/leads" element={<LeadsPage />} />
               <Route path="/lead/:id" element={<LeadPage />} />
               <Route path="/evidence/:id" element={<EvidencePackagePage />} />
