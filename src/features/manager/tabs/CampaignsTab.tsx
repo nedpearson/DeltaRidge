@@ -118,8 +118,26 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
         />
       </div>
       
-      <div className="bg-bg-app border border-border-subtle p-8 rounded-lg flex items-center justify-center text-text-secondary text-[13px]">
-        [ EagleView Map Placeholder for Drawing Territory ]
+      <div className="bg-bg-app border border-border-subtle rounded-lg overflow-hidden">
+        <div className="h-48 bg-bg-page relative flex items-center justify-center">
+          <div className="absolute inset-0 opacity-20 bg-[url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png')] bg-repeat"></div>
+          <div className="z-10 flex gap-2">
+            <Button variant="secondary" className="text-[11px] bg-bg-app shadow-md">Draw Polygon</Button>
+            <Button variant="secondary" className="text-[11px] bg-bg-app shadow-md">Select ZIP</Button>
+            <Button variant="secondary" className="text-[11px] bg-bg-app shadow-md border-brand-primary">Radius 2mi</Button>
+          </div>
+        </div>
+        <div className="p-4 bg-brand-primary/5 border-t border-border-subtle">
+          <h4 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">Territory Intelligence</h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-2">
+            <div><div className="text-[18px] font-bold text-text-primary">423</div><div className="text-[10px] text-text-muted uppercase font-bold tracking-wider">Properties</div></div>
+            <div><div className="text-[18px] font-bold text-brand-primary">117</div><div className="text-[10px] text-text-muted uppercase font-bold tracking-wider">Opportunity {'>='} 80</div></div>
+            <div><div className="text-[18px] font-bold text-text-primary">336</div><div className="text-[10px] text-text-muted uppercase font-bold tracking-wider">Owner Occupied</div></div>
+            <div><div className="text-[18px] font-bold text-status-success">214</div><div className="text-[10px] text-text-muted uppercase font-bold tracking-wider">Contact Available</div></div>
+            <div><div className="text-[18px] font-bold text-status-warning">89</div><div className="text-[10px] text-text-muted uppercase font-bold tracking-wider">Already Worked</div></div>
+            <div><div className="text-[18px] font-bold text-brand-primary">334</div><div className="text-[10px] text-text-muted uppercase font-bold tracking-wider">Untouched</div></div>
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-3 justify-end pt-2">
@@ -129,3 +147,5 @@ function CreateCampaignForm({ onCancel }: { onCancel: () => void }) {
     </Card>
   )
 }
+
+

@@ -76,9 +76,7 @@ import {
  * rep who did no work while the other is a bug. They are separate states here.
  */
 
-type Tab =
-  | 'command_center'
-  | 'leads_territory'
+type Tab = 'command_center' | 'demand' | 'leads_territory'
   | 'team_routes'
   | 'sales_revenue'
   | 'roofcare'
@@ -86,6 +84,7 @@ type Tab =
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'command_center', label: 'COMMAND CENTER' },
+  { id: 'demand', label: 'DEMAND' },
   { id: 'leads_territory', label: 'LEADS & TERRITORY' },
   { id: 'team_routes', label: 'TEAM & ROUTES' },
   { id: 'sales_revenue', label: 'SALES & REVENUE' },
@@ -295,6 +294,23 @@ export default function ManagerPage() {
           <div>
             <div className="mb-3"><SectionTitle>ACTIVITY LOG</SectionTitle></div>
             <LogTab rows={snapshot.audit} nameOf={nameOf} loading={loading} />
+          </div>
+        </div>
+      )}
+
+      {tab === 'demand' && (
+        <div className="space-y-8">
+          <div>
+            <div className="mb-3"><SectionTitle>PROPERTY INTELLIGENCE</SectionTitle></div>
+            <TerritoryIntelligencePanel />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>INBOUND WEBHOOKS & DIRECT MAIL</SectionTitle></div>
+            <DemandGenerationPanel organizationId={orgId || 'unknown-org'} />
+          </div>
+          <div>
+            <div className="mb-3"><SectionTitle>SOURCE ATTRIBUTION</SectionTitle></div>
+            <SourceAttributionPanel />
           </div>
         </div>
       )}
@@ -1319,6 +1335,10 @@ function TerritoryIntelligencePanel() {
     </div>
   )
 }
+
+
+
+
 
 
 
