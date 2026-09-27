@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { outboxCount } from '@/lib/db'
 import { UniversalSearch } from './UniversalSearch'
 import NotificationCenter from './NotificationCenter'
+import { AIAssistant } from './AIAssistant'
+import { Bot } from 'lucide-react'
 
 export const NAV = [
   { to: '/', label: 'Today', icon: 'home' },
@@ -54,19 +56,6 @@ export function OnlinePill() {
   )
 }
 
-/**
- * Keeps the page's bottom padding equal to the nav's real height.
- *
- * Measured rather than declared, because every constant anybody would write
- * here is wrong on some phone: the label font scales with the OS accessibility
- * setting, the home indicator inset differs between devices and between
- * portrait and landscape, and installing the app as a PWA removes the browser
- * chrome that was absorbing the difference. A ResizeObserver on the element
- * itself is the only version that cannot drift out of date.
- *
- * This replaced a hard-coded `pb-24`, which under-reserved by about 58px in the
- * common case and cut the bottom off every long page in the app.
- */
 function useNavHeight(active: boolean) {
   const ref = useRef<HTMLElement | null>(null)
   const [height, setHeight] = useState(0)
@@ -82,25 +71,11 @@ function useNavHeight(active: boolean) {
     const measure = () => setHeight(element.getBoundingClientRect().height)
     measure()
 
-    // ResizeObserver catches the nav growing; the orientation listener catches
-    // the safe-area inset changing without the element's box changing, which a
-    // ResizeObserver alone does not report.
     const observer = new ResizeObserver(measure)
     observer.observe(element)
     window.addEventListener('orientationchange', measure)
     window.addEventListener('resize', measure)
 
-    /*
-     * Re-measure once the webfonts land.
-     *
-     * Caught by running the layout check against the deployed site rather than
-     * a local build: the first viewport measured the nav at 26px because
-     * Oswald and Poppins had not arrived yet and the labels were still in the
-     * fallback face. The ResizeObserver does fire when the nav grows, so the
-     * padding self-corrects — but for those few hundred milliseconds the page
-     * reserves too little space. On a slow connection in a truck that window is
-     * long enough to notice.
-     */
     let cancelled = false
     void document.fonts?.ready.then(() => {
       if (!cancelled) measure()
@@ -121,26 +96,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const hideNav = pathname.startsWith('/inspection/') || pathname.startsWith('/evidence/')
   const { ref: navRef, height: navHeight } = useNavHeight(!hideNav)
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false)
 
   return (
-    /*
-     * `min-h-dvh`, not `min-h-screen`. On mobile Safari `100vh` is the height
-     * with the URL bar hidden, so a `100vh` layout is always taller than the
-     * visible viewport and the last row of anything sits under the browser
-     * chrome. `dvh` tracks the viewport as it actually is.
-     *
-     * The column widens past phone size rather than pinning every screen to
-     * 640px: a manager on a laptop was reading a phone-width strip down the
-     * middle of a 27-inch display.
-     */
     <div
       className="mx-auto flex min-h-dvh w-full max-w-screen-sm flex-col md:max-w-3xl lg:max-w-5xl"
-      /*
-       * Published as a CSS variable, not kept private to this component, because
-       * the nav is not the only thing pinned to the bottom of the screen. The
-       * update banner used to sit at a hard-coded `bottom-20` and landed on top
-       * of the nav the moment the nav grew. One measurement, one source.
-       */
       style={{ '--bottom-nav-height': `${navHeight}px` } as CSSProperties}
     >
       {!pathname.startsWith('/evidence/') && (<header className="sticky top-0 z-20 border-b border-border-subtle bg-brand-pressed text-text-primary shadow-lg shadow-brand-950/10">
@@ -153,19 +113,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button onClick={() => setIsAIAssistantOpen(true)} className="flex items-center gap-1.5 rounded-full bg-brand-primary/10 px-3 py-1.5 text-sm font-medium text-brand-400 hover:bg-brand-primary/20">
+              <Bot size={16} />
+              <span className="hidden sm:inline">AI Assistant</span>
+            </button>
             <UniversalSearch />
-              <NotificationCenter />
+            <NotificationCenter />
             <OnlinePill />
           </div>
         </div>
       </header>)}
 
-      {/*
-        The bottom padding is the nav's measured height plus the safe-area inset
-        plus a thumb's worth of breathing room, so the last card on any page can
-        always be scrolled clear of the nav. `paddingBottom` is set as a style
-        rather than a class because the value is a runtime measurement.
-      */}
       <main
         className="flex-1 px-4 pt-4"
         style={{
@@ -182,17 +140,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
           ref={navRef}
           className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-screen-sm border-t border-border-subtle bg-brand-pressed px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(8,21,46,0.18)] md:max-w-3xl lg:max-w-5xl"
         >
-          {/*
-            The column count is DERIVED from NAV, not written down beside it.
-            It said `grid-cols-4` while NAV held five entries, so "Inspect"
-            wrapped onto a second row and the nav stood 126px tall where the
-            page reserved 96px — measured at -29px of clearance on an iPhone SE,
-            which is precisely the content that was disappearing under the nav.
-            A hand-maintained number next to a list is a bug waiting for the
-            next person to add a tab, so there is no longer a number to maintain.
-            Inline style rather than a Tailwind class because the JIT compiler
-            cannot generate a class name built at runtime.
-          */}
           <div
             className="grid"
             style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}
@@ -215,7 +162,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         </nav>
       )}
+
+      <AIAssistant isOpen={isAIAssistantOpen} onClose={() => setIsAIAssistantOpen(false)} />
     </div>
   )
 }
-
