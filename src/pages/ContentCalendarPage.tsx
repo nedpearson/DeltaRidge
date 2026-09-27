@@ -3,3 +3,4 @@ import ContentCalendarView from '../features/social/components/ContentCalendarVi
 export default function ContentCalendarPage() {
   return <ContentCalendarView />;
 }
+

@@ -3,3 +3,4 @@ import SocialDashboardView from '../features/social/components/SocialDashboardVi
 export default function SocialDashboardPage() {
   return <SocialDashboardView />;
 }
+

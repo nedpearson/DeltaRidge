@@ -80,12 +80,12 @@ export default function InboxView() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-white overflow-hidden">
+    <div className="flex h-[calc(100vh-64px)] bg-bg-card overflow-hidden">
       {/* Left List */}
-      <div className="w-1/3 border-r border-border flex flex-col bg-surface-50">
-        <div className="p-4 border-b border-border bg-white flex justify-between items-center">
-          <h2 className="text-lg font-medium text-text">Unified Inbox</h2>
-          <span className="bg-brand-50 text-brand-600 text-xs font-medium px-2 py-1 rounded-full">
+      <div className="w-1/3 border-r border-border-subtle flex flex-col bg-bg-app">
+        <div className="p-4 border-b border-border-subtle bg-bg-card flex justify-between items-center">
+          <h2 className="text-lg font-medium text-text-primary">Unified Inbox</h2>
+          <span className="bg-brand-primary/10 text-brand-primary text-xs font-medium px-2 py-1 rounded-full">
             {conversations.length} Active
           </span>
         </div>
@@ -104,12 +104,12 @@ export default function InboxView() {
                 <button
                   key={conv.id}
                   onClick={() => setSelectedConvId(conv.id)}
-                  className={`w-full text-left p-4 hover:bg-white transition-colors ${
-                    selectedConvId === conv.id ? 'bg-white border-l-2 border-brand-500' : 'border-l-2 border-transparent'
+                  className={`w-full text-left p-4 hover:bg-bg-elevated transition-colors ${
+                    selectedConvId === conv.id ? 'bg-bg-card border-l-2 border-brand-500' : 'border-l-2 border-transparent'
                   }`}
                 >
                   <div className="flex justify-between items-start mb-1">
-                    <span className="font-medium text-text truncate">
+                    <span className="font-medium text-text-primary truncate">
                       {conv.profile?.display_name || 'Unknown User'}
                     </span>
                     <span className="text-xs text-text-secondary whitespace-nowrap ml-2">
@@ -117,13 +117,13 @@ export default function InboxView() {
                     </span>
                   </div>
                   <div className="flex items-center text-xs text-text-secondary gap-2">
-                    <span className="capitalize px-1.5 py-0.5 bg-surface-100 rounded">
+                    <span className="capitalize px-1.5 py-0.5 bg-bg-elevated rounded">
                       {conv.account?.platform || 'Social'}
                     </span>
                     {conv.intent_category && (
                       <span className={`capitalize px-1.5 py-0.5 rounded ${
                         conv.intent_category === 'hot' || conv.intent_category === 'emergency' 
-                          ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+                          ? 'bg-status-critical/10 text-status-critical' : 'bg-brand-primary/10 text-brand-primary'
                       }`}>
                         {conv.intent_category}
                       </span>
@@ -137,22 +137,22 @@ export default function InboxView() {
       </div>
 
       {/* Right Detail Pane */}
-      <div className="flex-1 flex flex-col bg-surface-50">
+      <div className="flex-1 flex flex-col bg-bg-app">
         {selectedConv ? (
           <>
             {/* Header */}
-            <div className="p-4 border-b border-border bg-white flex justify-between items-center shadow-sm z-10">
+            <div className="p-4 border-b border-border-subtle bg-bg-card flex justify-between items-center shadow-sm z-10">
               <div>
-                <h3 className="font-medium text-text">{selectedConv.profile?.display_name}</h3>
+                <h3 className="font-medium text-text-primary">{selectedConv.profile?.display_name}</h3>
                 <p className="text-xs text-text-secondary">
                   Via {selectedConv.account?.platform} • {selectedConv.account?.account_name}
                 </p>
               </div>
               <div className="flex gap-2">
-                <button className="px-3 py-1.5 text-sm font-medium border border-border rounded shadow-sm bg-white hover:bg-surface-50">
+                <button className="px-3 py-1.5 text-sm font-medium border border-border-subtle rounded shadow-sm bg-bg-card hover:bg-bg-app">
                   Assign to Rep
                 </button>
-                <button className="px-3 py-1.5 text-sm font-medium bg-brand-600 text-white rounded shadow-sm hover:bg-brand-700">
+                <button className="px-3 py-1.5 text-sm font-medium bg-brand-primary text-white rounded shadow-sm hover:bg-brand-primary">
                   Book Appointment
                 </button>
               </div>
@@ -181,8 +181,8 @@ export default function InboxView() {
                     </div>
                     <div className={`max-w-[75%] p-3 rounded-lg text-sm ${
                       isOutbound 
-                        ? 'bg-brand-600 text-white rounded-tr-none' 
-                        : 'bg-white border border-border text-text rounded-tl-none'
+                        ? 'bg-brand-primary text-white rounded-tr-none' 
+                        : 'bg-bg-card border border-border-subtle text-text-primary rounded-tl-none'
                     }`}>
                       {msg.content}
                     </div>
@@ -192,7 +192,7 @@ export default function InboxView() {
             </div>
 
             {/* Reply Box */}
-            <div className="p-4 bg-white border-t border-border">
+            <div className="p-4 bg-bg-card border-t border-border-subtle">
               <div className="flex gap-2">
                 <input 
                   type="text" 
@@ -200,12 +200,12 @@ export default function InboxView() {
                   onChange={(e) => setReplyText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendReply()}
                   placeholder="Type a manual reply to take over from AI..." 
-                  className="flex-1 px-3 py-2 border border-border rounded focus:outline-none focus:border-brand-500 text-sm"
+                  className="flex-1 px-3 py-2 border border-border-subtle rounded focus:outline-none focus:border-brand-500 text-sm"
                 />
                 <button 
                   onClick={handleSendReply}
                   disabled={!replyText.trim()}
-                  className="px-4 py-2 bg-brand-600 text-white rounded font-medium text-sm hover:bg-brand-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-brand-primary text-white rounded font-medium text-sm hover:bg-brand-primary disabled:opacity-50"
                 >
                   Send
                 </button>
@@ -222,3 +222,4 @@ export default function InboxView() {
     </div>
   );
 }
+

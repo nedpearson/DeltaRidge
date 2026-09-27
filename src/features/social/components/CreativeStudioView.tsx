@@ -56,18 +56,18 @@ export default function CreativeStudioView() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-surface-50 overflow-hidden">
+    <div className="flex h-[calc(100vh-64px)] bg-bg-app overflow-hidden">
       {/* Sidebar */}
-      <div className="w-64 border-r border-border bg-white flex flex-col shrink-0">
-        <div className="p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-text">Creative Studio</h2>
+      <div className="w-64 border-r border-border-subtle bg-bg-card flex flex-col shrink-0">
+        <div className="p-4 border-b border-border-subtle">
+          <h2 className="text-lg font-semibold text-text-primary">Creative Studio</h2>
           <p className="text-xs text-text-secondary mt-1">AI-powered asset generation</p>
         </div>
         <div className="p-2 space-y-1">
           <button 
             onClick={() => setActiveTab('copy')}
             className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'copy' ? 'bg-brand-50 text-brand-700' : 'text-text-secondary hover:bg-surface-100 hover:text-text'
+              activeTab === 'copy' ? 'bg-brand-primary/10 text-brand-primary' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
             }`}
           >
             <PenTool className="w-4 h-4" /> Copy & Scripts
@@ -75,7 +75,7 @@ export default function CreativeStudioView() {
           <button 
             onClick={() => setActiveTab('image')}
             className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'image' ? 'bg-brand-50 text-brand-700' : 'text-text-secondary hover:bg-surface-100 hover:text-text'
+              activeTab === 'image' ? 'bg-brand-primary/10 text-brand-primary' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
             }`}
           >
             <ImageIcon className="w-4 h-4" /> Image Generator
@@ -83,7 +83,7 @@ export default function CreativeStudioView() {
           <button 
             onClick={() => setActiveTab('video')}
             className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'video' ? 'bg-brand-50 text-brand-700' : 'text-text-secondary hover:bg-surface-100 hover:text-text'
+              activeTab === 'video' ? 'bg-brand-primary/10 text-brand-primary' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
             }`}
           >
             <Video className="w-4 h-4" /> Dustin Engine
@@ -91,21 +91,21 @@ export default function CreativeStudioView() {
           <button 
             onClick={() => setActiveTab('competitor')}
             className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'competitor' ? 'bg-brand-50 text-brand-700' : 'text-text-secondary hover:bg-surface-100 hover:text-text'
+              activeTab === 'competitor' ? 'bg-brand-primary/10 text-brand-primary' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
             }`}
           >
             <ShieldAlert className="w-4 h-4 text-orange-500" /> Competitor Watch
           </button>
         </div>
 
-        <div className="mt-auto p-4 border-t border-border bg-brand-900 text-white m-2 rounded-lg relative overflow-hidden">
+        <div className="mt-auto p-4 border-t border-border-subtle bg-brand-primary text-white m-2 rounded-lg relative overflow-hidden">
           <div className="relative z-10">
-            <Sparkles className="w-5 h-5 text-brand-300 mb-2" />
+            <Sparkles className="w-5 h-5 text-brand-primary mb-2" />
             <h3 className="text-sm font-semibold mb-1">Brand Brain Active</h3>
-            <p className="text-[10px] text-brand-200">All generations are automatically aligned to Delta Ridge's tone, policies, and service area.</p>
+            <p className="text-[10px] text-brand-primary">All generations are automatically aligned to Delta Ridge's tone, policies, and service area.</p>
           </div>
           {/* Decorative background element */}
-          <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-brand-800 rounded-full blur-2xl opacity-50 z-0" />
+          <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-brand-primary rounded-full blur-2xl opacity-50 z-0" />
         </div>
       </div>
 
@@ -113,23 +113,23 @@ export default function CreativeStudioView() {
       <div className="flex-1 overflow-y-auto p-6">
         {activeTab === 'copy' && (
           <div className="max-w-4xl mx-auto space-y-6">
-            <div className="bg-white p-5 rounded-lg border border-border shadow-sm">
-              <h3 className="font-semibold text-text mb-4">Generate Social Post</h3>
+            <div className="bg-bg-card p-5 rounded-lg border border-border-subtle shadow-sm">
+              <h3 className="font-semibold text-text-primary mb-4">Generate Social Post</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-text mb-1">Topic / Objective</label>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Topic / Objective</label>
                   <input 
                     type="text" 
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     placeholder="e.g. Educational post about spotting hail damage after yesterday's storm in Ascension Parish" 
-                    className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:border-brand-500" 
+                    className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm focus:outline-none focus:border-brand-500" 
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-text mb-1">Content Pillar</label>
-                    <select value={pillar} onChange={(e) => setPillar(e.target.value)} className="w-full px-3 py-2 border border-border rounded-md text-sm bg-white">
+                    <label className="block text-sm font-medium text-text-primary mb-1">Content Pillar</label>
+                    <select value={pillar} onChange={(e) => setPillar(e.target.value)} className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm bg-bg-card">
                       <option>Education</option>
                       <option>Founder Story</option>
                       <option>Completed Project</option>
@@ -137,8 +137,8 @@ export default function CreativeStudioView() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text mb-1">Platform</label>
-                    <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="w-full px-3 py-2 border border-border rounded-md text-sm bg-white">
+                    <label className="block text-sm font-medium text-text-primary mb-1">Platform</label>
+                    <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm bg-bg-card">
                       <option>Facebook / Meta</option>
                       <option>Instagram</option>
                       <option>Google Business</option>
@@ -149,23 +149,23 @@ export default function CreativeStudioView() {
                 <button 
                   onClick={handleGenerate}
                   disabled={isGenerating || !topic}
-                  className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded font-medium text-sm hover:bg-brand-700 disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded font-medium text-sm hover:bg-brand-primary disabled:opacity-50"
                 >
                   <Wand2 className="w-4 h-4" /> {isGenerating ? 'Generating...' : 'Generate Copy'}
                 </button>
               </div>
             </div>
 
-            <div className="border-t border-border pt-6">
+            <div className="border-t border-border-subtle pt-6">
               <h3 className="font-medium text-text-secondary text-sm mb-4">RECENT GENERATIONS</h3>
               <div className="grid gap-4">
                 {generatedResult && (
-                  <div className="bg-brand-50 p-4 rounded-lg border border-brand-200 shadow-sm">
+                  <div className="bg-brand-primary/10 p-4 rounded-lg border border-brand-200 shadow-sm">
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-xs font-semibold px-2 py-1 bg-brand-100 rounded text-brand-700">Just Generated • {platform} • {pillar}</span>
+                      <span className="text-xs font-semibold px-2 py-1 bg-brand-primary rounded text-brand-primary">Just Generated • {platform} • {pillar}</span>
                       <span className="text-xs text-text-secondary">Now</span>
                     </div>
-                    <p className="text-sm text-text whitespace-pre-wrap">{generatedResult}</p>
+                    <p className="text-sm text-text-primary whitespace-pre-wrap">{generatedResult}</p>
                     <div className="mt-4 flex gap-2">
                       <button 
                         onClick={async () => {
@@ -182,21 +182,21 @@ export default function CreativeStudioView() {
                            });
                            setGeneratedResult(null); // Clear on schedule
                         }}
-                        className="px-3 py-1.5 bg-brand-600 text-white rounded text-xs font-medium hover:bg-brand-700"
+                        className="px-3 py-1.5 bg-brand-primary text-white rounded text-xs font-medium hover:bg-brand-primary"
                       >
                         Schedule to Calendar
                       </button>
-                      <button className="px-3 py-1.5 border border-brand-200 bg-white rounded text-xs font-medium text-text hover:bg-surface-50">Edit</button>
+                      <button className="px-3 py-1.5 border border-brand-200 bg-bg-card rounded text-xs font-medium text-text-primary hover:bg-bg-app">Edit</button>
                     </div>
                   </div>
                 )}
                 
-                <div className="bg-white p-4 rounded-lg border border-border shadow-sm">
+                <div className="bg-bg-card p-4 rounded-lg border border-border-subtle shadow-sm">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-xs font-semibold px-2 py-1 bg-surface-100 rounded text-text-secondary">Google Business   Education</span>
+                    <span className="text-xs font-semibold px-2 py-1 bg-bg-elevated rounded text-text-secondary">Google Business   Education</span>
                     <span className="text-xs text-text-secondary">2 hours ago</span>
                   </div>
-                  <p className="text-sm text-text whitespace-pre-wrap">
+                  <p className="text-sm text-text-primary whitespace-pre-wrap">
                     Wondering if that quick burst of hail last night was enough to damage your roof? 
                     {"\n\n"}
                     Most homeowners in Ascension Parish don't realize that even 1-inch hail can compromise asphalt shingles, leading to hidden leaks weeks later. 
@@ -211,23 +211,23 @@ export default function CreativeStudioView() {
 
         {activeTab === 'image' && (
           <div className="max-w-4xl mx-auto space-y-6">
-            <div className="bg-white p-6 rounded-lg border border-border shadow-sm">
-              <h3 className="font-semibold text-text mb-4">AI Image Generation</h3>
+            <div className="bg-bg-card p-6 rounded-lg border border-border-subtle shadow-sm">
+              <h3 className="font-semibold text-text-primary mb-4">AI Image Generation</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-text mb-1">Visual Concept</label>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Visual Concept</label>
                   <input 
                     type="text" 
                     value={imagePrompt}
                     onChange={(e) => setImagePrompt(e.target.value)}
                     placeholder="e.g. A realistic photo of hail damage on an asphalt shingle roof, extreme close-up" 
-                    className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:border-brand-500" 
+                    className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm focus:outline-none focus:border-brand-500" 
                   />
                 </div>
                 <button 
                   onClick={handleGenerateImage}
                   disabled={isGeneratingImage || !imagePrompt}
-                  className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded font-medium text-sm hover:bg-brand-700 disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded font-medium text-sm hover:bg-brand-primary disabled:opacity-50"
                 >
                   <Wand2 className="w-4 h-4" /> {isGeneratingImage ? 'Generating...' : 'Generate Image'}
                 </button>
@@ -235,25 +235,25 @@ export default function CreativeStudioView() {
             </div>
             
             {generatedImage && (
-              <div className="bg-white p-6 rounded-lg border border-border shadow-sm">
-                <h3 className="font-semibold text-text mb-4">Generated Asset</h3>
-                <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden border border-border">
+              <div className="bg-bg-card p-6 rounded-lg border border-border-subtle shadow-sm">
+                <h3 className="font-semibold text-text-primary mb-4">Generated Asset</h3>
+                <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden border border-border-subtle">
                   <img src={generatedImage.url} alt="Generated asset" className="w-full h-full object-cover" />
                 </div>
                 <div className="mt-4 flex justify-center gap-4">
-                   <button className="px-4 py-2 bg-brand-600 text-white rounded font-medium text-sm hover:bg-brand-700">Save to Library</button>
-                   <button className="px-4 py-2 border border-border bg-white rounded font-medium text-sm hover:bg-surface-50">Create Post with Image</button>
+                   <button className="px-4 py-2 bg-brand-primary text-white rounded font-medium text-sm hover:bg-brand-primary">Save to Library</button>
+                   <button className="px-4 py-2 border border-border-subtle bg-bg-card rounded font-medium text-sm hover:bg-bg-app">Create Post with Image</button>
                 </div>
               </div>
             )}
             
-            <div className="bg-white p-12 text-center rounded-lg border border-border shadow-sm">
-              <ImageIcon className="w-12 h-12 text-brand-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-text">AI Image Enhancement (Coming Soon)</h3>
+            <div className="bg-bg-card p-12 text-center rounded-lg border border-border-subtle shadow-sm">
+              <ImageIcon className="w-12 h-12 text-brand-primary mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-text-primary">AI Image Enhancement (Coming Soon)</h3>
               <p className="text-sm text-text-secondary max-w-md mx-auto mt-2">
                 Upload raw project photos to automatically generate Before/After graphics, branded testimonial cards, or educational storm damage overlays.
               </p>
-              <button className="mt-6 px-4 py-2 bg-brand-600 text-white rounded font-medium text-sm hover:bg-brand-700 opacity-50 cursor-not-allowed">
+              <button className="mt-6 px-4 py-2 bg-brand-primary text-white rounded font-medium text-sm hover:bg-brand-primary opacity-50 cursor-not-allowed">
                 Upload Project Photos
               </button>
             </div>
@@ -262,20 +262,20 @@ export default function CreativeStudioView() {
 
         {activeTab === 'video' && (
           <div className="max-w-4xl mx-auto space-y-6">
-            <div className="bg-white p-8 rounded-lg border border-border shadow-sm">
+            <div className="bg-bg-card p-8 rounded-lg border border-border-subtle shadow-sm">
               <div className="flex items-start gap-4">
-                <div className="bg-brand-100 p-3 rounded-xl shrink-0">
-                  <Video className="w-8 h-8 text-brand-600" />
+                <div className="bg-brand-primary p-3 rounded-xl shrink-0">
+                  <Video className="w-8 h-8 text-brand-primary" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-text">The Dustin Content Engine</h3>
+                  <h3 className="text-lg font-semibold text-text-primary">The Dustin Content Engine</h3>
                   <p className="text-sm text-text-secondary mt-1">
                     Upload a single long-form video of Dustin answering a homeowner question. The AI will automatically slice it into YouTube Shorts, Reels, generate blog articles, and draft email newsletters.
                   </p>
                 </div>
               </div>
-              <div className="mt-8 border-2 border-dashed border-border rounded-lg p-12 text-center hover:bg-surface-50 transition-colors cursor-pointer">
-                <p className="text-sm font-medium text-text">Drag & drop raw video file here</p>
+              <div className="mt-8 border-2 border-dashed border-border-subtle rounded-lg p-12 text-center hover:bg-bg-app transition-colors cursor-pointer">
+                <p className="text-sm font-medium text-text-primary">Drag & drop raw video file here</p>
                 <p className="text-xs text-text-secondary mt-1">MP4, MOV up to 2GB</p>
               </div>
             </div>
@@ -284,13 +284,13 @@ export default function CreativeStudioView() {
         
         {activeTab === 'competitor' && (
           <div className="max-w-4xl mx-auto space-y-6">
-            <div className="bg-white p-8 rounded-lg border border-border shadow-sm">
+            <div className="bg-bg-card p-8 rounded-lg border border-border-subtle shadow-sm">
               <div className="flex items-start gap-4 mb-6">
-                <div className="bg-orange-100 p-3 rounded-xl shrink-0">
-                  <ShieldAlert className="w-8 h-8 text-orange-600" />
+                <div className="bg-warning-surface p-3 rounded-xl shrink-0">
+                  <ShieldAlert className="w-8 h-8 text-status-warning" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-text">Competitor Intelligence Engine</h3>
+                  <h3 className="text-lg font-semibold text-text-primary">Competitor Intelligence Engine</h3>
                   <p className="text-sm text-text-secondary mt-1">
                     The AI autonomously scrapes Meta Ad Library and local social channels to detect aggressive or illegal competitor offers (e.g. "Waiving Deductibles"). When threats are found, counter-messaging is instantly drafted to your Content Calendar.
                   </p>
@@ -299,30 +299,30 @@ export default function CreativeStudioView() {
               
               <h4 className="font-semibold text-sm mb-4">RECENT INTELLIGENCE LOGS</h4>
               <div className="grid gap-4">
-                <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
+                <div className="p-4 border border-status-critical/30 bg-status-critical/10 rounded-lg">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="font-semibold text-red-700 text-sm">Big Box Roofing Corp</span>
-                    <span className="text-xs text-red-600 font-medium">THREAT DETECTED</span>
+                    <span className="font-semibold text-status-critical text-sm">Big Box Roofing Corp</span>
+                    <span className="text-xs text-status-critical font-medium">THREAT DETECTED</span>
                   </div>
-                  <p className="text-sm text-text whitespace-pre-wrap italic mb-3">
+                  <p className="text-sm text-text-primary whitespace-pre-wrap italic mb-3">
                     "Get a brand new roof with ZERO down! We waive your deductible! Call today."
                   </p>
                   <div className="flex gap-2">
-                    <span className="px-2 py-1 bg-white border border-red-200 rounded text-xs text-red-700">Violation: Waiving Deductible</span>
-                    <span className="px-2 py-1 bg-brand-100 text-brand-700 rounded text-xs">Counter-campaign drafted in Calendar</span>
+                    <span className="px-2 py-1 bg-bg-card border border-status-critical/30 rounded text-xs text-status-critical">Violation: Waiving Deductible</span>
+                    <span className="px-2 py-1 bg-brand-primary text-brand-primary rounded text-xs">Counter-campaign drafted in Calendar</span>
                   </div>
                 </div>
                 
-                <div className="p-4 border border-border bg-surface-50 rounded-lg">
+                <div className="p-4 border border-border-subtle bg-bg-app rounded-lg">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="font-semibold text-text text-sm">Storm Chasers LLC</span>
+                    <span className="font-semibold text-text-primary text-sm">Storm Chasers LLC</span>
                     <span className="text-xs text-text-secondary font-medium">Clear</span>
                   </div>
-                  <p className="text-sm text-text whitespace-pre-wrap italic mb-3">
+                  <p className="text-sm text-text-primary whitespace-pre-wrap italic mb-3">
                     "We are doing free inspections in Ascension Parish all week."
                   </p>
                   <div className="flex gap-2">
-                    <span className="px-2 py-1 bg-white border border-border rounded text-xs text-text-secondary">Standard Offer</span>
+                    <span className="px-2 py-1 bg-bg-card border border-border-subtle rounded text-xs text-text-secondary">Standard Offer</span>
                   </div>
                 </div>
               </div>
@@ -333,3 +333,4 @@ export default function CreativeStudioView() {
     </div>
   );
 }
+

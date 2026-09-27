@@ -1,3 +1,5 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+const queryClient = new QueryClient()
 import MemberPortal from '@/pages/MemberPortal'
 import MissionPage from '@/pages/MissionPage'
 import FreeRoofCheckPage from '@/pages/FreeRoofCheckPage'
@@ -52,7 +54,8 @@ function RouteAnalytics() {
 
 export default function App() {
   return (
-    <SessionProvider>
+    <QueryClientProvider client={queryClient}>
+      <SessionProvider>
       <RouteAnalytics />
       <SyncRunner />
       <UpdateBanner />
@@ -95,8 +98,11 @@ export default function App() {
         </Routes>
       </Suspense>
     </SessionProvider>
+    </QueryClientProvider>
   )
 }
+
+
 
 
 
