@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { getSupabase } from '@/lib/supabase';
 import { BarChart3, TrendingUp, Users, CalendarCheck, DollarSign, ArrowRight } from 'lucide-react';
 
 export default function SocialDashboardView() {

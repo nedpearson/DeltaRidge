@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { PenTool, Image as ImageIcon, Video, Sparkles, Wand2 } from 'lucide-react';
+import { PenTool, Image as ImageIcon, Video, Sparkles, Wand2, ShieldAlert } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
 
 export default function CreativeStudioView() {
-  const [activeTab, setActiveTab] = useState<'copy' | 'image' | 'video'>('copy');
+  const [activeTab, setActiveTab] = useState<'copy' | 'image' | 'video' | 'competitor'>('copy');
   const [topic, setTopic] = useState('');
   const [pillar, setPillar] = useState('Education');
   const [platform, setPlatform] = useState('Facebook / Meta');
@@ -87,6 +87,14 @@ export default function CreativeStudioView() {
             }`}
           >
             <Video className="w-4 h-4" /> Dustin Engine
+          </button>
+          <button 
+            onClick={() => setActiveTab('competitor')}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'competitor' ? 'bg-brand-50 text-brand-700' : 'text-text-secondary hover:bg-surface-100 hover:text-text'
+            }`}
+          >
+            <ShieldAlert className="w-4 h-4 text-orange-500" /> Competitor Watch
           </button>
         </div>
 
@@ -269,6 +277,54 @@ export default function CreativeStudioView() {
               <div className="mt-8 border-2 border-dashed border-border rounded-lg p-12 text-center hover:bg-surface-50 transition-colors cursor-pointer">
                 <p className="text-sm font-medium text-text">Drag & drop raw video file here</p>
                 <p className="text-xs text-text-secondary mt-1">MP4, MOV up to 2GB</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'competitor' && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="bg-white p-8 rounded-lg border border-border shadow-sm">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="bg-orange-100 p-3 rounded-xl shrink-0">
+                  <ShieldAlert className="w-8 h-8 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-text">Competitor Intelligence Engine</h3>
+                  <p className="text-sm text-text-secondary mt-1">
+                    The AI autonomously scrapes Meta Ad Library and local social channels to detect aggressive or illegal competitor offers (e.g. "Waiving Deductibles"). When threats are found, counter-messaging is instantly drafted to your Content Calendar.
+                  </p>
+                </div>
+              </div>
+              
+              <h4 className="font-semibold text-sm mb-4">RECENT INTELLIGENCE LOGS</h4>
+              <div className="grid gap-4">
+                <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-semibold text-red-700 text-sm">Big Box Roofing Corp</span>
+                    <span className="text-xs text-red-600 font-medium">THREAT DETECTED</span>
+                  </div>
+                  <p className="text-sm text-text whitespace-pre-wrap italic mb-3">
+                    "Get a brand new roof with ZERO down! We waive your deductible! Call today."
+                  </p>
+                  <div className="flex gap-2">
+                    <span className="px-2 py-1 bg-white border border-red-200 rounded text-xs text-red-700">Violation: Waiving Deductible</span>
+                    <span className="px-2 py-1 bg-brand-100 text-brand-700 rounded text-xs">Counter-campaign drafted in Calendar</span>
+                  </div>
+                </div>
+                
+                <div className="p-4 border border-border bg-surface-50 rounded-lg">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-semibold text-text text-sm">Storm Chasers LLC</span>
+                    <span className="text-xs text-text-secondary font-medium">Clear</span>
+                  </div>
+                  <p className="text-sm text-text whitespace-pre-wrap italic mb-3">
+                    "We are doing free inspections in Ascension Parish all week."
+                  </p>
+                  <div className="flex gap-2">
+                    <span className="px-2 py-1 bg-white border border-border rounded text-xs text-text-secondary">Standard Offer</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

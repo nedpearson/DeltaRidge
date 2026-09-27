@@ -72,10 +72,10 @@ serve(async (req) => {
           // Generate a counter-campaign automatically via the Brand Brain
           await supabase.from('content_calendar').insert({
             organization_id: orgId,
-            platform: 'facebook',
-            content_type: 'post',
+            content: `[AUTO-GENERATED COUNTER] Be careful of roofers promising to "waive your deductible." In Louisiana, this is insurance fraud and leaves the homeowner liable. At Delta Ridge, we believe in honest, legal, local business. Book a free inspection today.`,
+            post_type: 'organic',
+            content_pillar: 'education',
             status: 'draft',
-            asset_text: `[AUTO-GENERATED COUNTER] Be careful of roofers promising to "waive your deductible." In Louisiana, this is insurance fraud and leaves the homeowner liable. At Delta Ridge, we believe in honest, legal, local business. Book a free inspection today.`,
             scheduled_for: new Date(Date.now() + 3600000).toISOString() // Schedule for 1 hour from now
           })
         }
