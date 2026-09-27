@@ -118,3 +118,31 @@
     box-shadow: 0 0 15px rgba(40, 124, 255, 0.15);
   }
 }
+
+@layer base {
+  .theme-sunglare {
+    --color-bg-app: #FFFFFF;
+    --color-bg-page: #F3F4F6;
+    --color-bg-card: #FFFFFF;
+    --color-bg-elevated: #E5E7EB;
+    
+    --color-border-strong: #000000;
+    --color-border-subtle: #9CA3AF;
+    
+    --color-brand-primary: #1D4ED8;
+    --color-brand-hover: #1E40AF;
+    --color-brand-pressed: #1E3A8A;
+    
+    --color-text-primary: #000000;
+    --color-text-secondary: #1F2937;
+    --color-text-muted: #4B5563;
+    --color-text-disabled: #9CA3AF;
+
+    --color-status-success: #166534;
+    --color-status-warning: #9A3412;
+    --color-status-critical: #991B1B;
+    
+    --color-brand-gold: #B45309;
+    --color-brand-gold-highlight: #92400E;
+  }
+}

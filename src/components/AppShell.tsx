@@ -116,7 +116,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <button onClick={() => setIsAIAssistantOpen(true)} className="flex items-center gap-1.5 rounded-full bg-brand-primary/10 px-3 py-1.5 text-sm font-medium text-brand-400 hover:bg-brand-primary/20">
               <Bot size={16} />
-              <span className="hidden sm:inline">AI Assistant</span>
+              <span className="hidden sm:inline">AI</span>
+            </button>
+            <button onClick={() => document.body.classList.toggle('theme-sunglare')} className="flex items-center gap-1.5 rounded-full bg-warning-surface px-3 py-1.5 text-sm font-medium text-warning-highlight hover:bg-warning-surface/80" title="Sun Glare Mode">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
             </button>
             <UniversalSearch />
             <NotificationCenter />

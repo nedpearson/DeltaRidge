@@ -81,6 +81,7 @@ export default function DoorOutcomeSheet({
   const [when, setWhen] = useState('')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [isListening, setIsListening] = useState(false)
 
   const needsTime = picked === 'appointment_set'
   const needsNote = picked !== null && WANTS_NOTE.has(picked) && note.trim() === ''
@@ -167,18 +168,48 @@ export default function DoorOutcomeSheet({
         )}
 
         {picked !== null && (
-          <div className="mt-3">
+          <div className="mt-3 relative">
             <Field
               label={needsNote || (picked !== null && WANTS_NOTE.has(picked)) ? 'Note' : 'Note (optional)'}
               {...(picked !== null && WANTS_NOTE.has(picked)
                 ? { hint: 'Required — "something else" on its own tells the office nothing.' }
                 : {})}
             >
-              <TextArea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="What was said, in your words."
-              />
+              <div className="relative">
+                <TextArea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="What was said, in your words."
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+                    if (!SpeechRecognition) {
+                      alert("Voice dictation is not supported in this browser.")
+                      return
+                    }
+                    const recognition = new SpeechRecognition()
+                    recognition.continuous = false
+                    recognition.interimResults = false
+                    recognition.onstart = () => setIsListening(true)
+                    recognition.onresult = (event: any) => {
+                      const transcript = event.results[0][0].transcript
+                      setNote(prev => prev ? prev + ' ' + transcript : transcript)
+                    }
+                    recognition.onerror = () => setIsListening(false)
+                    recognition.onend = () => setIsListening(false)
+                    recognition.start()
+                  }}
+                  className={`absolute right-2 top-2 p-1.5 rounded-md transition-colors ${
+                    isListening ? 'bg-status-critical/20 text-status-critical animate-pulse' : 'bg-bg-elevated text-text-muted hover:text-text-primary'
+                  }`}
+                  title="Dictate Note"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                </button>
+              </div>
             </Field>
           </div>
         )}

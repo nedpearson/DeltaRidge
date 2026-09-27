@@ -132,8 +132,35 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* NEARBY SECTION */}
+      {/* PACE LEADERBOARD SECTION */}
       <div>
+        <SectionTitle>PACE LEADERBOARD</SectionTitle>
+        <Card className="mt-2 p-4 border-l-4 border-l-gold-500 bg-gradient-to-br from-bg-card to-bg-elevated">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gold-400">Your Daily Pace</p>
+              <p className="text-[28px] font-display font-bold leading-none mt-1 text-text-primary">64<span className="text-[16px] text-text-secondary">/100</span></p>
+              <p className="text-[11px] text-text-muted mt-1">Doors knocked today</p>
+            </div>
+            <div className="w-16 h-16 rounded-full border-4 border-bg-page flex items-center justify-center bg-gold-500/10 relative">
+              <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+                <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="none" className="text-bg-page" />
+                <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="none" strokeDasharray="175" strokeDashoffset={175 - (175 * 0.64)} className="text-gold-500 transition-all duration-1000" />
+              </svg>
+              <span className="text-[13px] font-bold text-gold-400 z-10">64%</span>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-border-subtle">
+            <div className="flex items-center justify-between text-[13px]">
+              <span className="text-text-secondary">Current Rank: <strong className="text-text-primary">#3</strong></span>
+              <span className="text-gold-400 text-[11px] font-bold uppercase">12 behind #1</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* NEARBY SECTION */}
+      <div className="mt-6">
         <SectionTitle>NEARBY OPPORTUNITIES</SectionTitle>
         <Card className="mt-2 bg-bg-card p-0 shadow-sm ring-1 ring-border-subtle divide-y divide-border-subtle overflow-hidden">
           {/* Top 3 mock nearby placeholders */}
