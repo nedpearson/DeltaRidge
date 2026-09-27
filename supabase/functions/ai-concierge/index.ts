@@ -96,7 +96,7 @@ Output JSON EXACTLY in this format:
       })
       if (resp.ok) {
         const json = await resp.json()
-        try { aiResult = JSON.parse(json.choices[0].message.content) } catch(e) {}
+        try { aiResult = JSON.parse(json.choices[0].message.content) } catch(e) { console.error('Parse err', e) }
       } else {
         console.error("OpenAI Error", await resp.text())
       }
@@ -170,7 +170,7 @@ Output JSON EXACTLY in this format:
           conversation.profile.platform_user_id,
           aiResult.reply
         );
-      } catch (err) {}
+      } catch (err) { console.error("Meta API err", err) }
     }
 
     return new Response(JSON.stringify({ success: true, reply: aiResult.reply }), {
