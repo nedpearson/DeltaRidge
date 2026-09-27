@@ -30,14 +30,14 @@ alter table notifications enable row level security;
 create policy "Users can read their own or org-wide notifications"
   on notifications for select
   using (
-    organization_id = app.current_organization()
+    organization_id in (select app.current_org_ids())
     and (user_id is null or user_id = auth.uid())
   );
 
 create policy "Users can update their own notifications (read/resolve)"
   on notifications for update
   using (
-    organization_id = app.current_organization()
+    organization_id in (select app.current_org_ids())
     and (user_id is null or user_id = auth.uid())
   );
 

@@ -29,7 +29,7 @@ create trigger touch_documents before update on documents for each row execute f
 
 alter table documents enable row level security;
 
-create policy "Users can read org documents" on documents for select using (organization_id = app.current_organization());
-create policy "Users can insert org documents" on documents for insert with check (organization_id = app.current_organization());
-create policy "Users can update org documents" on documents for update using (organization_id = app.current_organization());
-create policy "Users can delete org documents" on documents for delete using (organization_id = app.current_organization());
+create policy "Users can read org documents" on documents for select using (organization_id in (select app.current_org_ids()));
+create policy "Users can insert org documents" on documents for insert with check (organization_id in (select app.current_org_ids()));
+create policy "Users can update org documents" on documents for update using (organization_id in (select app.current_org_ids()));
+create policy "Users can delete org documents" on documents for delete using (organization_id in (select app.current_org_ids()));
