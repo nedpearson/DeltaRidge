@@ -27,6 +27,7 @@ const RouteHistoryPage = lazy(() => import('@/pages/RouteHistoryPage'))
 const InboxPage = lazy(() => import('@/pages/InboxPage'))
 const BrandBrainPage = lazy(() => import('@/pages/BrandBrainPage'))
 const CreativeStudioPage = lazy(() => import('@/pages/CreativeStudioPage'))
+const ContentCalendarPage = lazy(() => import('@/pages/ContentCalendarPage'))
 
 import { SessionProvider } from '@/features/auth/session'
 import { useSync } from '@/features/auth/useSync'
@@ -77,6 +78,7 @@ export default function App() {
                   <Route path="/inbox" element={<InboxPage />} />
                   <Route path="/brain" element={<BrandBrainPage />} />
                   <Route path="/studio" element={<CreativeStudioPage />} />
+                  <Route path="/calendar" element={<ContentCalendarPage />} />
                   <Route path="/inspections" element={<InspectionsPage />} />
                   <Route path="/new" element={<NewInspectionPage />} />
                   <Route path="/inspection/:id" element={<InspectionPage />} />

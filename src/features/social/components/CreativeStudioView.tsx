@@ -10,6 +10,11 @@ export default function CreativeStudioView() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResult, setGeneratedResult] = useState<string | null>(null);
 
+  // Image states
+  const [imagePrompt, setImagePrompt] = useState('');
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<any | null>(null);
+
   const handleGenerate = async () => {
     const supabase = getSupabase();
     if (!supabase) return;
@@ -17,22 +22,36 @@ export default function CreativeStudioView() {
     setIsGenerating(true);
     setGeneratedResult(null);
     try {
-      // Delta Ridge is organization index 0 in the mock or we query it. 
-      // We will just pass a hardcoded mock ID for the UI if auth isn't fully wired here, 
-      // but the real implementation gets it from session.
       const orgId = "00000000-0000-0000-0000-000000000000"; 
-      
       const { data, error } = await supabase.functions.invoke('generate-social-copy', {
         body: { topic, pillar, platform, organizationId: orgId }
       });
-      
       if (error) throw error;
       if (data?.copy) setGeneratedResult(data.copy);
     } catch (err) {
       console.error(err);
-      // In production, we'd show a toast notification here
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateImage = async () => {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    
+    setIsGeneratingImage(true);
+    setGeneratedImage(null);
+    try {
+      const orgId = "00000000-0000-0000-0000-000000000000"; 
+      const { data, error } = await supabase.functions.invoke('generate-social-image', {
+        body: { prompt: imagePrompt, organizationId: orgId }
+      });
+      if (error) throw error;
+      if (data?.asset) setGeneratedImage(data.asset);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsGeneratingImage(false);
     }
   };
 
@@ -140,7 +159,25 @@ export default function CreativeStudioView() {
                     </div>
                     <p className="text-sm text-text whitespace-pre-wrap">{generatedResult}</p>
                     <div className="mt-4 flex gap-2">
-                      <button className="px-3 py-1.5 bg-brand-600 text-white rounded text-xs font-medium hover:bg-brand-700">Schedule to Calendar</button>
+                      <button 
+                        onClick={async () => {
+                           const supabase = getSupabase();
+                           if (!supabase) return;
+                           const orgId = "00000000-0000-0000-0000-000000000000"; 
+                           await supabase.from('content_calendar').insert({
+                              organization_id: orgId,
+                              content: generatedResult,
+                              post_type: 'organic',
+                              content_pillar: pillar.toLowerCase(),
+                              status: 'draft',
+                              scheduled_for: new Date(Date.now() + 86400000).toISOString()
+                           });
+                           alert('Scheduled to Content Calendar as Draft!');
+                        }}
+                        className="px-3 py-1.5 bg-brand-600 text-white rounded text-xs font-medium hover:bg-brand-700"
+                      >
+                        Schedule to Calendar
+                      </button>
                       <button className="px-3 py-1.5 border border-brand-200 bg-white rounded text-xs font-medium text-text hover:bg-surface-50">Edit</button>
                     </div>
                   </div>
@@ -148,7 +185,7 @@ export default function CreativeStudioView() {
                 
                 <div className="bg-white p-4 rounded-lg border border-border shadow-sm">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-xs font-semibold px-2 py-1 bg-surface-100 rounded text-text-secondary">Google Business • Education</span>
+                    <span className="text-xs font-semibold px-2 py-1 bg-surface-100 rounded text-text-secondary">Google Business   Education</span>
                     <span className="text-xs text-text-secondary">2 hours ago</span>
                   </div>
                   <p className="text-sm text-text whitespace-pre-wrap">
@@ -158,10 +195,6 @@ export default function CreativeStudioView() {
                     {"\n\n"}
                     Dustin and the Delta Ridge team are offering free, honest roof assessments all week. We'll show you exactly what we find, no pressure.
                   </p>
-                  <div className="mt-4 flex gap-2">
-                    <button className="px-3 py-1.5 bg-brand-50 text-brand-700 rounded text-xs font-medium hover:bg-brand-100">Schedule to Calendar</button>
-                    <button className="px-3 py-1.5 border border-border rounded text-xs font-medium text-text hover:bg-surface-50">Edit</button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -170,13 +203,49 @@ export default function CreativeStudioView() {
 
         {activeTab === 'image' && (
           <div className="max-w-4xl mx-auto space-y-6">
+            <div className="bg-white p-6 rounded-lg border border-border shadow-sm">
+              <h3 className="font-semibold text-text mb-4">AI Image Generation</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-text mb-1">Visual Concept</label>
+                  <input 
+                    type="text" 
+                    value={imagePrompt}
+                    onChange={(e) => setImagePrompt(e.target.value)}
+                    placeholder="e.g. A realistic photo of hail damage on an asphalt shingle roof, extreme close-up" 
+                    className="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:border-brand-500" 
+                  />
+                </div>
+                <button 
+                  onClick={handleGenerateImage}
+                  disabled={isGeneratingImage || !imagePrompt}
+                  className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded font-medium text-sm hover:bg-brand-700 disabled:opacity-50"
+                >
+                  <Wand2 className="w-4 h-4" /> {isGeneratingImage ? 'Generating...' : 'Generate Image'}
+                </button>
+              </div>
+            </div>
+            
+            {generatedImage && (
+              <div className="bg-white p-6 rounded-lg border border-border shadow-sm">
+                <h3 className="font-semibold text-text mb-4">Generated Asset</h3>
+                <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden border border-border">
+                  <img src={generatedImage.url} alt="Generated asset" className="w-full h-full object-cover" />
+                </div>
+                <div className="mt-4 flex justify-center gap-4">
+                   <button className="px-4 py-2 bg-brand-600 text-white rounded font-medium text-sm hover:bg-brand-700">Save to Library</button>
+                   <button className="px-4 py-2 border border-border bg-white rounded font-medium text-sm hover:bg-surface-50">Create Post with Image</button>
+                </div>
+              </div>
+            )}
+            
             <div className="bg-white p-12 text-center rounded-lg border border-border shadow-sm">
               <ImageIcon className="w-12 h-12 text-brand-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-text">AI Image Enhancement</h3>
+              <h3 className="text-lg font-medium text-text">AI Image Enhancement (Coming Soon)</h3>
               <p className="text-sm text-text-secondary max-w-md mx-auto mt-2">
                 Upload raw project photos to automatically generate Before/After graphics, branded testimonial cards, or educational storm damage overlays.
               </p>
-              <button className="mt-6 px-4 py-2 bg-brand-600 text-white rounded font-medium text-sm hover:bg-brand-700">
+              <button className="mt-6 px-4 py-2 bg-brand-600 text-white rounded font-medium text-sm hover:bg-brand-700 opacity-50 cursor-not-allowed">
                 Upload Project Photos
               </button>
             </div>
