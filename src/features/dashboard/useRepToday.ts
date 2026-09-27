@@ -46,7 +46,7 @@ export function useRepToday() {
 
       const nextAppointment = appts?.[0] ? {
         time: new Date(appts[0].created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        address: (appts[0].leads as any)?.address || 'Unknown address'
+        address: (appts[0].leads as unknown)?.address || 'Unknown address'
       } : null
 
       // Get my active assignments
@@ -71,7 +71,7 @@ export function useRepToday() {
 
       // 3. Recommended doors = My Open Assigned Doors
       let doors = 0;
-      let myAssignedLeads: any[] = []
+      let myAssignedLeads: unknown[] = []
       if (assignedLeadIds.length > 0) {
         const { count, data: leads } = await supabase
           .from('leads')
@@ -85,7 +85,7 @@ export function useRepToday() {
       }
 
       // 4. Next Best Action (Highest score from MY assignments first, then fallback to general highest open)
-      let bestLead: any = null
+      let bestLead: unknown = null
       let reason = undefined
       if (myAssignedLeads.length > 0) {
         bestLead = myAssignedLeads[0]
@@ -125,3 +125,4 @@ export function useRepToday() {
 
   return { data, loading }
 }
+

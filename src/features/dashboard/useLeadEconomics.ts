@@ -31,7 +31,7 @@ export function useLeadEconomics() {
       const { data: leads } = await supabase.from('leads').select('status')
       const { data: handoffs } = await supabase.from('office_handoffs').select('status, contract_value')
 
-      let assigned = leads?.length || 0
+      const assigned = leads?.length || 0
       let attempted = 0
       let conversations = 0
       let appointments = 0
@@ -45,7 +45,7 @@ export function useLeadEconomics() {
       })
 
       // We'll approximate interested from lead status
-      let interested = leads?.filter(l => ['need_visit', 'appointment', 'inspected'].includes(l.status)).length || 0
+      const interested = leads?.filter(l => ['need_visit', 'appointment', 'inspected'].includes(l.status)).length || 0
 
       let proposals = 0
       let won = 0
@@ -80,3 +80,4 @@ export function useLeadEconomics() {
 
   return { data, loading }
 }
+

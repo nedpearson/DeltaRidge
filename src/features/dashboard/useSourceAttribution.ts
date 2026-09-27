@@ -32,7 +32,8 @@ export function useSourceAttribution() {
 
       let intelligenceOpp = 0, intelligenceAppt = 0, intelligenceWon = 0, intelligenceRev = 0
       let referralOpp = 0, referralAppt = 0, referralWon = 0, referralRev = 0
-      let totalOpp = 0, totalAppt = 0, totalWon = 0, totalRev = 0
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let totalOpp = 0, totalAppt = 0, totalWon = 0, totalRev = 0
 
       leads?.forEach(l => {
         totalOpp++
@@ -101,3 +102,4 @@ export function useSourceAttribution() {
 
   return { data, loading }
 }
+

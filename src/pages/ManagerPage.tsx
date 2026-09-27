@@ -3,6 +3,7 @@ import RoofcareManagerDashboard from '@/features/membership/RoofcareManagerDashb
 import RevenueLeakagePanel from '@/features/dashboard/RevenueLeakagePanel'
 import { useManagerCommandCenter } from '@/features/dashboard/useManagerCommandCenter';
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { StormWarRoomPanel } from '@/components/StormWarRoomPanel'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
 import { useSession } from '@/features/auth/session'
 import { readCachedRun } from '@/features/leads/engine'
@@ -76,7 +77,7 @@ import {
  * rep who did no work while the other is a bug. They are separate states here.
  */
 
-type Tab = 'command_center' | 'demand' | 'leads_territory'
+type Tab = 'command_center' | 'war_room' | 'demand' | 'leads_territory'
   | 'team_routes'
   | 'sales_revenue'
   | 'roofcare'
@@ -84,6 +85,7 @@ type Tab = 'command_center' | 'demand' | 'leads_territory'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'command_center', label: 'COMMAND CENTER' },
+  { id: 'war_room', label: 'WAR ROOM' },
   { id: 'demand', label: 'DEMAND' },
   { id: 'leads_territory', label: 'LEADS & TERRITORY' },
   { id: 'team_routes', label: 'TEAM & ROUTES' },
@@ -294,6 +296,15 @@ export default function ManagerPage() {
           <div>
             <div className="mb-3"><SectionTitle>ACTIVITY LOG</SectionTitle></div>
             <LogTab rows={snapshot.audit} nameOf={nameOf} loading={loading} />
+          </div>
+        </div>
+      )}
+
+      {tab === 'war_room' && (
+        <div className="space-y-8">
+          <div>
+            <div className="mb-3"><SectionTitle>ACTIVE STORM CAMPAIGNS</SectionTitle></div>
+            <StormWarRoomPanel />
           </div>
         </div>
       )}

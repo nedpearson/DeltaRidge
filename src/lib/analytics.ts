@@ -1,6 +1,6 @@
 import { getSupabase } from './supabase'
 
-export async function trackEvent(eventName: string, data?: Record<string, any>) {
+export async function trackEvent(eventName: string, data?: Record<string, unknown>) {
   const supabase = getSupabase()
   if (!supabase) return
 
@@ -13,3 +13,4 @@ export async function trackEvent(eventName: string, data?: Record<string, any>) 
     console.warn('Failed to track event', error)
   }
 }
+

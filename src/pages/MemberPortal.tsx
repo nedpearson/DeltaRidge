@@ -3,6 +3,7 @@ import { Card, Button } from '@/components/ui'
 import { ShieldCheck, Calendar, FileText, Zap, CreditCard } from 'lucide-react'
 
 export default function MemberPortal() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id: _id } = useParams<{ id: string }>()
 
   // Mocking the member data for the portal view. 
@@ -99,6 +100,7 @@ export default function MemberPortal() {
     </div>
   )
 }
+
 
 
 

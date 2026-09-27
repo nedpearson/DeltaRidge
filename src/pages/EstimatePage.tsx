@@ -4,6 +4,7 @@ import { RoofcareOfferPanel } from '@/features/membership/RoofcarePanel'
           <div className="my-8"><RoofcareOfferPanel onEnroll={(tier) => alert(`Added ${tier} RoofCare to Proposal!`)} /></div>
 
 import { useEffect, useMemo, useState } from 'react'
+import { SoldJobHandoffGate } from '@/components/SoldJobHandoffGate'
 import { Link, useParams } from 'react-router-dom'
 import { Button, Card, Field, SectionTitle, TextInput } from '@/components/ui'
 import { sendHandoff } from '@/features/handoff/api'
@@ -91,6 +92,7 @@ export default function EstimatePage() {
   const [estimate, setEstimate] = useState<SavedEstimate | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [showHandoffGate, setShowHandoffGate] = useState(false)
   const [roofrState, setRoofrState] = useState<'idle' | 'sending' | 'queued' | 'created'>('idle')
   const handleSendHandoff = async () => {
     setRoofrState('sending')
@@ -98,7 +100,7 @@ export default function EstimatePage() {
       await sendHandoff(id!, id!)
       setRoofrState('queued')
       setTimeout(() => setRoofrState('created'), 2000)
-    } catch (e) {
+    } catch { 
       setRoofrState('idle')
       console.error('Failed to send to Roofr.')
     }
@@ -542,7 +544,23 @@ export default function EstimatePage() {
         </Button>
       )}
 
+      {estimate && (
+        <Button variant="gold" full onClick={() => setShowHandoffGate(true)}>
+          Mark as Sold
+        </Button>
+      )}
+
       <Button full onClick={() => setForm(EMPTY)}>Clear</Button>
+
+      {showHandoffGate && (
+        <SoldJobHandoffGate 
+          onCancel={() => setShowHandoffGate(false)}
+          onConfirm={() => {
+            setShowHandoffGate(false);
+            alert("Job marked as sold and moved to production!");
+          }}
+        />
+      )}
 
       {allSaved.length > 0 && (
         <>
