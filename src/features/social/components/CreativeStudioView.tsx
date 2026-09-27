@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { PenTool, Image as ImageIcon, Video, Sparkles, Wand2, ShieldAlert } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { PenTool, Image as ImageIcon, Video, Sparkles, Wand2, ShieldAlert, CheckCircle } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
 import { useSession } from '@/features/auth/session';
 
@@ -13,9 +13,34 @@ export default function CreativeStudioView() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResult, setGeneratedResult] = useState<string | null>(null);
 
+  
+
   // Image states
   const [imagePrompt, setImagePrompt] = useState('');
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [videoJobId, setVideoJobId] = useState<string | null>(null);
+  const [videoSlices, setVideoSlices] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!videoJobId) return;
+    const interval = setInterval(async () => {
+      const supabase = getSupabase();
+      if (!supabase) return;
+      const { data } = await supabase.from('content_engine_jobs').select('*').eq('id', videoJobId).single();
+      if (data?.status === 'completed') {
+        setVideoSlices(data.results || []);
+        clearInterval(interval);
+      } else if (data?.status === 'failed') {
+        clearInterval(interval);
+        alert('Video processing failed: ' + data.error_message);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [videoJobId]);
+
+  
   const [generatedImage, setGeneratedImage] = useState<{ url: string } | null>(null);
 
   const handleGenerate = async () => {
@@ -277,10 +302,67 @@ export default function CreativeStudioView() {
                   </p>
                 </div>
               </div>
-              <div className="mt-8 border-2 border-dashed border-border-subtle rounded-lg p-12 text-center hover:bg-bg-app transition-colors cursor-pointer">
-                <p className="text-sm font-medium text-text-primary">Drag & drop raw video file here</p>
-                <p className="text-xs text-text-secondary mt-1">MP4, MOV up to 2GB</p>
-              </div>
+                              <div className="mt-8 border-2 border-dashed border-border-subtle rounded-lg p-12 text-center transition-colors">
+                  {!videoFile && !videoJobId ? (
+                    <>
+                      <input type="file" id="video-upload" className="hidden" accept="video/mp4,video/quicktime" onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setVideoFile(file);
+                        // Simulate upload
+                        let prog = 0;
+                        const int = setInterval(() => {
+                          prog += 10;
+                          setUploadProgress(prog);
+                          if (prog >= 100) {
+                            clearInterval(int);
+                            // Invoke engine
+                            const supabase = getSupabase();
+                            if (supabase) {
+                              supabase.functions.invoke('process-video-engine', {
+                                body: { video_url: 'https://example.com/mock-video.mp4', organizationId: orgId }
+                              }).then(({ data }) => {
+                                if (data?.job_id) setVideoJobId(data.job_id);
+                              });
+                            }
+                          }
+                        }, 300);
+                      }} />
+                      <label htmlFor="video-upload" className="cursor-pointer inline-block px-6 py-3 bg-bg-elevated border border-border-subtle rounded-lg font-medium text-text-primary hover:bg-bg-card">
+                        Select Video File
+                      </label>
+                      <p className="text-xs text-text-secondary mt-3">MP4, MOV up to 2GB</p>
+                    </>
+                  ) : videoJobId && videoSlices.length === 0 ? (
+                    <div className="space-y-4">
+                      <div className="animate-spin w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full mx-auto"></div>
+                      <p className="text-sm font-medium text-text-primary">Dustin Engine is slicing your video...</p>
+                      <p className="text-xs text-text-secondary">Generating shorts, reels, and copy. This takes a few minutes.</p>
+                    </div>
+                  ) : videoJobId && videoSlices.length > 0 ? (
+                    <div className="text-left space-y-4">
+                      <h4 className="font-medium text-text-primary mb-2 flex items-center gap-2"><CheckCircle className="w-5 h-5 text-status-success" /> Processing Complete</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        {videoSlices.map((slice, i) => (
+                          <div key={i} className="p-4 bg-bg-card rounded border border-border-subtle">
+                            <span className="text-xs font-semibold px-2 py-1 bg-brand-primary/20 text-brand-primary rounded uppercase">{slice.asset_type}</span>
+                            <p className="text-sm text-text-primary mt-2">{slice.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <button className="w-full mt-2 px-4 py-2 bg-brand-primary text-white rounded font-medium text-sm hover:bg-brand-primary">
+                        Review in Content Calendar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-text-primary">Uploading {videoFile?.name}...</p>
+                      <div className="w-full bg-bg-app rounded-full h-2.5">
+                        <div className="bg-brand-primary h-2.5 rounded-full transition-all" style={{ width: `${uploadProgress}%` }}></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
             </div>
           </div>
         )}
@@ -336,6 +418,14 @@ export default function CreativeStudioView() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
 
 
 
