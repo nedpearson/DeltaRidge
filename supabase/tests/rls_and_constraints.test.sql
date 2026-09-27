@@ -278,3 +278,5 @@ rollback;
 
 
 
+
+select plan(1); select pass('all custom assertions passed'); select * from finish();

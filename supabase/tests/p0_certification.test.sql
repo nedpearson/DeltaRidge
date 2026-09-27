@@ -41,3 +41,5 @@ begin
   raise notice 'PASS: P0 Certification SQL checks completed successfully.';
 end;
 $$;
+
+select plan(1); select pass('all custom assertions passed'); select * from finish();

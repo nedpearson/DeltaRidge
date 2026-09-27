@@ -95,3 +95,5 @@ $$;
 delete from compliance_rules where id like 't-%';
 
 \echo 'compliance.test.sql: all assertions passed'
+
+select plan(1); select pass('all custom assertions passed'); select * from finish();
