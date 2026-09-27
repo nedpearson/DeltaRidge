@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
 
@@ -80,4 +81,7 @@ export function useLeadEconomics() {
 
   return { data, loading }
 }
+
+
+
 

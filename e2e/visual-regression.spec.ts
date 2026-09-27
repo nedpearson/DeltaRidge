@@ -15,17 +15,18 @@ const VIEWPORTS = [
 ];
 
 for (const route of ROUTES) {
-  test.describe(\Visual Regression: \\, () => {
+  test.describe('Visual Regression: ' + route.name, () => {
     for (const viewport of VIEWPORTS) {
-      test(\\ viewport\, async ({ page }) => {
+      test(viewport.name + ' viewport', async ({ page }) => {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
-        await page.goto(\http://localhost:5173\\, { waitUntil: 'networkidle' });
+        await page.goto('http://localhost:4173' + route.path, { waitUntil: 'networkidle' });
         
         // Wait for potential animations or data loads
         await page.waitForTimeout(1000);
         
         // Assert visual snapshot
-        await expect(page).toHaveScreenshot(\\-\.png\, {
+        const filename = route.name.replace(/\s+/g, '-') + '-' + viewport.name.replace(/\s+/g, '-') + '.png';
+        await expect(page).toHaveScreenshot(filename, {
           fullPage: true,
           maxDiffPixels: 100 // Allow slight rendering differences
         });

@@ -25,7 +25,7 @@ export default function FreeRoofCheckPage() {
             <input 
               type="text" 
               className="border border-slate-300 rounded p-3 text-lg w-full"
-              placeholder="123 Main St, City, State"
+              placeholder="Enter your property address"
               value={address}
               onChange={e => setAddress(e.target.value)}
             />
@@ -66,3 +66,4 @@ export default function FreeRoofCheckPage() {
     </div>
   );
 }
+

@@ -20,7 +20,7 @@ interface Props {
   style?: 'streets' | 'satellite'
   height?: number
   through?: string
-  onStyleChange?: (style: unknown) => void
+  onStyleChange?: (style: 'streets' | 'satellite') => void
 }
 
 function FitBounds({ points, markers = [] }: { points: readonly RoutePoint[], markers?: readonly RouteMarker[] }) {
@@ -134,5 +134,6 @@ export default function RouteMap({ points, markers = [], className = 'h-full w-f
     </div>
   )
 }
+
 
 

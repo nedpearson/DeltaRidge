@@ -33,21 +33,21 @@ export function StormWarRoomPanel() {
                   <div className="font-bold">Jake</div>
                   <div className="text-xs text-text-secondary">28 properties (Highest close rate in 70808)</div>
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => alert("Assigned to Jake!")}>Assign</Button>
+                <Button variant="secondary" className="text-[11px] px-2 py-1" onClick={() => alert("Assigned to Jake!")}>Assign</Button>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-elevated p-3">
                 <div>
                   <div className="font-bold">Mike</div>
                   <div className="text-xs text-text-secondary">31 properties (Existing relationships in neighborhood)</div>
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => alert("Assigned to Mike!")}>Assign</Button>
+                <Button variant="secondary" className="text-[11px] px-2 py-1" onClick={() => alert("Assigned to Mike!")}>Assign</Button>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-elevated p-3">
                 <div>
                   <div className="font-bold">Sarah</div>
                   <div className="text-xs text-text-secondary">25 properties (Best performance with premium upgrades)</div>
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => alert("Assigned to Sarah!")}>Assign</Button>
+                <Button variant="secondary" className="text-[11px] px-2 py-1" onClick={() => alert("Assigned to Sarah!")}>Assign</Button>
               </div>
             </div>
           </div>
@@ -56,3 +56,4 @@ export function StormWarRoomPanel() {
     </div>
   )
 }
+

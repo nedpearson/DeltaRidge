@@ -21,6 +21,8 @@ jobs:
       run: npm run lint
     - name: Unit Tests
       run: npm run test
+    - name: Build UI
+      run: npm run build
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium
     - name: Run Playwright tests
@@ -31,3 +33,4 @@ jobs:
         name: playwright-report
         path: playwright-report/
         retention-days: 30
+
