@@ -6,6 +6,7 @@ import type { SocialConversation, SocialMessage } from '../types';
 
 export default function InboxView() {
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   // Fetch open conversations
   const { data: conversations = [], isLoading } = useQuery({
@@ -47,6 +48,36 @@ export default function InboxView() {
   });
 
   const selectedConv = conversations.find(c => c.id === selectedConvId);
+
+  const handleSendReply = async () => {
+    if (!selectedConvId || !selectedConv || !replyText.trim()) return;
+    
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    try {
+      // 1. Insert message
+      await supabase.from('social_messages').insert({
+        organization_id: selectedConv.organization_id,
+        conversation_id: selectedConvId,
+        platform_message_id: `man_${crypto.randomUUID()}`,
+        direction: 'outbound',
+        message_type: 'text',
+        content: replyText,
+        is_ai_generated: false,
+        sent_at: new Date().toISOString()
+      });
+
+      // 2. Clear input
+      setReplyText('');
+
+      // Note: A robust system would also dispatch this to the Meta API via an Edge Function
+      // For Phase 2, we just persist it locally as if sent.
+
+    } catch (err) {
+      console.error('Failed to send reply:', err);
+    }
+  };
 
   return (
     <div className="flex h-[calc(100vh-64px)] bg-white overflow-hidden">
@@ -145,7 +176,7 @@ export default function InboxView() {
                           {selectedConv.profile?.display_name}
                         </>
                       )}
-                      <span className="mx-1">•</span>
+                      <span className="mx-1"> </span>
                       {new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
                     <div className={`max-w-[75%] p-3 rounded-lg text-sm ${
@@ -165,10 +196,17 @@ export default function InboxView() {
               <div className="flex gap-2">
                 <input 
                   type="text" 
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendReply()}
                   placeholder="Type a manual reply to take over from AI..." 
                   className="flex-1 px-3 py-2 border border-border rounded focus:outline-none focus:border-brand-500 text-sm"
                 />
-                <button className="px-4 py-2 bg-brand-600 text-white rounded font-medium text-sm hover:bg-brand-700">
+                <button 
+                  onClick={handleSendReply}
+                  disabled={!replyText.trim()}
+                  className="px-4 py-2 bg-brand-600 text-white rounded font-medium text-sm hover:bg-brand-700 disabled:opacity-50"
+                >
                   Send
                 </button>
               </div>

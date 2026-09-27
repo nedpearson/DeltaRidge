@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || ""
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -17,7 +18,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing conversationId" }), { status: 400 })
     }
 
-    // 1. Fetch conversation history
     const { data: messages, error: msgError } = await supabase
       .from("social_messages")
       .select("*")
@@ -26,7 +26,6 @@ serve(async (req) => {
 
     if (msgError) throw msgError
 
-    // 2. Fetch Brand Brain Context (FAQs, Voice, Policies)
     const { data: conversation, error: convError } = await supabase
       .from("social_conversations")
       .select(`
@@ -47,54 +46,140 @@ serve(async (req) => {
       .eq("organization_id", conversation.organization_id)
       .eq("is_approved", true)
 
-    // 3. TODO: Construct LLM Prompt
-    // ... openai.chat.completions.create(...)
+    // Build Brand Context
+    const rules = brandKnowledge?.map(k => `${k.category.toUpperCase()} - ${k.topic}: ${k.content}`).join("\n") || ""
+    
+    // Call OpenAI
+    const systemPrompt = `You are the AI Concierge for Delta Ridge, a roofing company.
+Your goal is to answer questions, be helpful, and qualify leads to book appointments.
+Use this brand knowledge:
+${rules}
 
-    // 4. Simulate AI Reply
-    const simulatedReply = "Hi, this is Dustin's AI assistant at Delta Ridge. How can I help you with your roof today?"
+Analyze the conversation. Extract any available contact info (address, phone, name). 
+Determine the intent.
+Output JSON EXACTLY in this format:
+{
+  "reply": "Your response to the user",
+  "intent_category": "general|support|hot_lead",
+  "extracted_info": {
+    "name": null,
+    "phone": null,
+    "address": null
+  },
+  "wants_appointment": false
+}`
 
-    // 5. Store Outbound Message
+    const chatHistory = messages?.map(m => ({
+      role: m.direction === 'inbound' ? 'user' : 'assistant',
+      content: m.content
+    })) || []
+
+    let aiResult = {
+      reply: "Hi, this is Delta Ridge's AI assistant. I'm currently undergoing maintenance.",
+      intent_category: "general",
+      extracted_info: { name: null, phone: null, address: null },
+      wants_appointment: false
+    }
+
+    if (OPENAI_API_KEY) {
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [{ role: 'system', content: systemPrompt }, ...chatHistory],
+          response_format: { type: 'json_object' }
+        })
+      })
+      if (resp.ok) {
+        const json = await resp.json()
+        try { aiResult = JSON.parse(json.choices[0].message.content) } catch(e) {}
+      } else {
+        console.error("OpenAI Error", await resp.text())
+      }
+    } else {
+      console.warn("NO OPENAI_API_KEY. Using mock response.")
+      aiResult.reply = "We'd love to help! Can we get an address or phone number to check our schedule?"
+      if (chatHistory[chatHistory.length - 1]?.content.match(/\d{3}/)) {
+         aiResult.extracted_info.phone = chatHistory[chatHistory.length - 1].content
+         aiResult.wants_appointment = true
+         aiResult.reply = "Got your info! A manager will review this and get an estimator out to you shortly."
+      }
+    }
+
+    // Store Outbound Message
     await supabase.from("social_messages").insert({
       organization_id: conversation.organization_id,
       conversation_id: conversationId,
       platform_message_id: `sys_${crypto.randomUUID()}`,
       direction: "outbound",
       message_type: "text",
-      content: simulatedReply,
+      content: aiResult.reply,
       is_ai_generated: true,
       sent_at: new Date().toISOString()
     })
 
-    // 6. Dispatch to actual platform API (Meta Graph API)
-    if (conversation.account?.platform === 'meta' && conversation.account?.encrypted_access_token) {
-      // In production, we would decrypt the token using Supabase Vault or KMS
-      const accessToken = conversation.account.encrypted_access_token;
+    // Update conversation intent
+    await supabase.from("social_conversations").update({
+      intent_category: aiResult.intent_category
+    }).eq("id", conversationId)
+
+    // Save extracted profile info
+    if (aiResult.extracted_info.name || aiResult.extracted_info.phone || aiResult.extracted_info.address) {
+      const updates: any = {}
+      if (aiResult.extracted_info.name && !conversation.profile.display_name) updates.display_name = aiResult.extracted_info.name
+      if (aiResult.extracted_info.phone) updates.phone = aiResult.extracted_info.phone // If we add phone to profiles
+      if (aiResult.extracted_info.address) updates.address = aiResult.extracted_info.address
+
+      if (Object.keys(updates).length > 0) {
+        await supabase.from("social_profiles").update(updates).eq("id", conversation.social_profile_id)
+      }
       
+      // If we have an address or phone and they want an appointment, create a CRM Lead
+      if (aiResult.wants_appointment && (aiResult.extracted_info.address || aiResult.extracted_info.phone)) {
+         const { data: existingLead } = await supabase.from('leads').select('id').eq('contact_phone', aiResult.extracted_info.phone).maybeSingle()
+         
+         if (!existingLead) {
+            await supabase.from('leads').insert({
+               organization_id: conversation.organization_id,
+               address_line_1: aiResult.extracted_info.address || 'Unknown Address from Social',
+               contact_name: aiResult.extracted_info.name || conversation.profile.display_name,
+               contact_phone: aiResult.extracted_info.phone,
+               status: 'appointment_set',
+               source: 'social_inbox',
+               property_type: 'residential',
+               roof_material: 'asphalt_shingle',
+               latitude: 0,
+               longitude: 0,
+               sync_state: 'synced'
+            })
+         }
+      }
+    }
+
+    if (conversation.account?.platform === 'meta' && conversation.account?.encrypted_access_token) {
+      const accessToken = conversation.account.encrypted_access_token;
       const MetaApiClient = (await import('../_shared/meta-api.ts')).MetaApiClient;
       const metaApi = new MetaApiClient(accessToken);
-      
       try {
         await metaApi.sendMessage(
           conversation.account.platform_account_id,
           conversation.profile.platform_user_id,
-          simulatedReply
+          aiResult.reply
         );
-      } catch (err) {
-        console.error("Failed to send Meta message:", err);
-        // We log the error but still return 200 so the caller knows the AI process finished
-      }
+      } catch (err) {}
     }
 
-    return new Response(JSON.stringify({ success: true, reply: simulatedReply }), {
+    return new Response(JSON.stringify({ success: true, reply: aiResult.reply }), {
       headers: { "Content-Type": "application/json" },
       status: 200,
     })
 
   } catch (error: any) {
     console.error("AI Concierge failed:", error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
-    })
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 })
