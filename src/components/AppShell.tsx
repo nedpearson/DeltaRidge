@@ -60,6 +60,7 @@ export function OnlinePill() {
       setPending(newCount)
       if (newCount === 0 && 'vibrate' in navigator) navigator.vibrate([20, 50, 20])
     } catch {
+      console.warn('Manual sync failed')
     } finally {
       setIsSyncing(false)
     }
