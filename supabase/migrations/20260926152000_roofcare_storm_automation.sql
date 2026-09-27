@@ -54,8 +54,7 @@ begin
         'AUTOMATED DISPATCH: Property located within 2 miles of ' || NEW.hail_size_inches || ' inch hail report on ' || NEW.occurred_at::date || '.'
       );
 
-      -- Optional: We could also trigger an entry in 
-otification_center here for the manager
+      -- Optional: We could also trigger an entry in notification_center here for the manager
       
     end loop;
     
