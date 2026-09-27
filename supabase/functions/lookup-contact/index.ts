@@ -286,6 +286,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
+    // 4. Mock Fallback for Development/Demo
+    // If no API keys are provided, simulate a successful skip-trace lookup
+    // so the user can test the UI functionality.
+    if (!BATCHDATA_API_KEY && !REALESTATE_API_KEY) {
+      return json({
+        success: true,
+        residentName: String(body.ownerName || ownerFromBatch || 'Brad Vincent'),
+        phone: '(225) 555-0199',
+        phoneType: 'Wireless',
+        carrier: 'AT&T',
+        secondaryPhones: [],
+        source: 'third_party_lookup',
+        message: 'Mocked for demo mode.',
+      })
+    }
+
     return json({
       success: false,
       residentName: ownerFromBatch,
