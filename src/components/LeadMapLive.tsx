@@ -45,6 +45,7 @@ export default function LeadMapLive({ doors, leads, storms, onOpenLead, onFailed
   const allPoints = [...doors, ...leads]
   const defaultCenter: [number, number] = [39.8283, -98.5795] // Default to US center if no leads
   const [activeLead, setActiveLead] = useState<(ScoredLead | ManagedLead) | null>(null)
+  const [mapStyle, setMapStyle] = useState<'dark' | 'satellite'>('dark')
 
   const handleSelect = useCallback((lead: ScoredLead | ManagedLead) => {
     setActiveLead(lead)
@@ -69,8 +70,12 @@ export default function LeadMapLive({ doors, leads, storms, onOpenLead, onFailed
         zoomControl={false}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution={mapStyle === 'dark' 
+            ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            : 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}
+          url={mapStyle === 'dark' 
+            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"}
           eventHandlers={{
             tileerror: () => {
               if (onFailed) onFailed()
@@ -98,13 +103,32 @@ export default function LeadMapLive({ doors, leads, storms, onOpenLead, onFailed
         ))}
       </MapContainer>
 
+      {/* Map Style Toggle */}
+      <div className="absolute top-4 right-4 z-[1000]">
+        <button 
+          onClick={() => setMapStyle(s => s === 'dark' ? 'satellite' : 'dark')}
+          className="bg-bg-card/90 backdrop-blur-sm p-2 shadow-lg rounded-lg border border-border-subtle flex items-center gap-2 hover:bg-bg-elevated transition-colors text-[11px] font-bold uppercase tracking-wider text-text-primary"
+        >
+          {mapStyle === 'dark' ? '🛰️ Satellite' : '🗺️ Map'}
+        </button>
+      </div>
+
       {/* Custom Overlay UI instead of Leaflet Popup for better styling */}
       {activeLead && (
         <div className="absolute bottom-6 left-6 right-6 md:left-auto md:right-6 md:w-80 z-[1000]">
           <Card className="bg-bg-card p-4 shadow-xl border-t-4 border-t-brand-500 animate-in slide-in-from-bottom-4">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="font-bold text-[16px] text-text-primary">{activeLead.address}</h3>
+                <h3 className="font-bold text-[16px] text-text-primary flex items-center gap-2">
+                  {activeLead.address}
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(activeLead.address)}
+                    className="text-text-muted hover:text-brand-400 transition-colors p-1"
+                    title="Copy Address"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  </button>
+                </h3>
                 <div className="flex gap-2 mt-1">
                   <span className="text-[12px] font-bold text-status-success">Opp {activeLead.score}</span>
                   {(activeLead as ManagedLead).status && (

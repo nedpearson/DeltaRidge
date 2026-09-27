@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { outboxCount } from '@/lib/db'
+import { syncOutbox } from '@/lib/sync/index'
 import { UniversalSearch } from './UniversalSearch'
 import NotificationCenter from './NotificationCenter'
 import { AIAssistant } from './AIAssistant'
@@ -47,13 +48,35 @@ export function OnlinePill() {
   }, [])
 
   const label = !online ? 'Offline — saved on device' : pending > 0 ? `${pending} waiting to sync` : 'Saved on device'
-  const tone = !online ? 'bg-warning-surface/15 text-warning-highlight ring-warning-border' : 'bg-status-success/15 text-status-success ring-emerald-300/30'
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  const handleSync = async () => {
+    if (!online || pending === 0 || isSyncing) return
+    setIsSyncing(true)
+    if ('vibrate' in navigator) navigator.vibrate(20)
+    try {
+      await syncOutbox()
+      const newCount = await outboxCount()
+      setPending(newCount)
+      if (newCount === 0 && 'vibrate' in navigator) navigator.vibrate([20, 50, 20])
+    } catch {
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const tone = !online ? 'bg-warning-surface/15 text-warning-highlight ring-warning-border' : isSyncing ? 'bg-brand-primary/15 text-brand-400 ring-brand-400/30' : 'bg-status-success/15 text-status-success ring-emerald-300/30'
+  const finalLabel = isSyncing ? 'Syncing...' : label
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ${tone}`}>
-      <span className="size-1.5 rounded-full bg-current" />
-      {label}
-    </span>
+    <button 
+      onClick={handleSync}
+      disabled={!online || pending === 0 || isSyncing}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 transition-all ${tone} ${pending > 0 && online ? 'hover:bg-opacity-20 cursor-pointer active:scale-95' : 'cursor-default'}`}
+    >
+      <span className={`size-1.5 rounded-full bg-current ${isSyncing ? 'animate-ping' : ''}`} />
+      {finalLabel}
+    </button>
   )
 }
 
@@ -171,3 +194,4 @@ export default function AppShell({ children }: { children: ReactNode }) {
     </div>
   )
 }
+

@@ -90,6 +90,12 @@ export default function DoorOutcomeSheet({
   const submit = () => {
     if (picked === null) return
     const appointmentAt = toIso(when)
+    
+    // Haptic confirmation
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50)
+    }
+
     onRecord(picked, {
       ...(note.trim() !== '' ? { note: note.trim() } : {}),
       ...(appointmentAt !== undefined ? { appointmentAt } : {}),
