@@ -15,14 +15,14 @@ as $$
       select count(*) 
       from activities 
       where organization_id = org_id 
-        and type = 'door_knock'
+        and activity_type = 'door_knock'
         and date_trunc('day', created_at at time zone 'America/Chicago')::date = target_date
     ),
     'conversations', (
       select count(*) 
       from activities 
       where organization_id = org_id 
-        and type = 'conversation'
+        and activity_type = 'conversation'
         and date_trunc('day', created_at at time zone 'America/Chicago')::date = target_date
     ),
     'contract_value', (
