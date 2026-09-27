@@ -185,15 +185,17 @@ export default function DoorOutcomeSheet({
                 <button
                   type="button"
                   onClick={() => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
                     if (!SpeechRecognition) {
-                      alert("Voice dictation is not supported in this browser.")
+                      console.warn("Voice dictation is not supported in this browser.")
                       return
                     }
                     const recognition = new SpeechRecognition()
                     recognition.continuous = false
                     recognition.interimResults = false
                     recognition.onstart = () => setIsListening(true)
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     recognition.onresult = (event: any) => {
                       const transcript = event.results[0][0].transcript
                       setNote(prev => prev ? prev + ' ' + transcript : transcript)
