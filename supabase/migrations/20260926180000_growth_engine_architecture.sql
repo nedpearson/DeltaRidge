@@ -135,9 +135,7 @@ create table if not exists roofcare_service_requests (
 -- =============================================================================
 
 alter table lead_sources enable row level security;
-create policy lead_sources_org_access on lead_sources
-  for all using (organization_id in (select app.current_org_ids()))
-  with check (organization_id in (select app.current_org_ids()));
+
 
 alter table marketing_campaigns enable row level security;
 create policy marketing_campaigns_org_access on marketing_campaigns
