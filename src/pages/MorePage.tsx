@@ -25,6 +25,51 @@ export default function MorePage() {
             </div>
           </div>
         </Card></div>
+        
+        <h3 className="font-bold text-sm text-text-secondary pt-4 px-1 uppercase tracking-wider">Manager Tools</h3>
+        <div onClick={() => navigate('/manager')} className="cursor-pointer"><Card className="hover:bg-bg-elevated transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="p-3"><div className="w-6 h-6" /></div>
+            <div>
+              <h3 className="font-bold text-[15px]">Operations Dashboard</h3>
+            </div>
+          </div>
+        </Card></div>
+        
+        <h3 className="font-bold text-sm text-text-secondary pt-4 px-1 uppercase tracking-wider">Social Growth OS</h3>
+        <div onClick={() => navigate('/inbox')} className="cursor-pointer"><Card className="hover:bg-bg-elevated transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="p-3"><div className="w-6 h-6" /></div>
+            <div>
+              <h3 className="font-bold text-[15px]">Unified Social Inbox</h3>
+            </div>
+          </div>
+        </Card></div>
+        <div onClick={() => navigate('/studio')} className="cursor-pointer"><Card className="hover:bg-bg-elevated transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="p-3"><div className="w-6 h-6" /></div>
+            <div>
+              <h3 className="font-bold text-[15px]">Creative Studio</h3>
+            </div>
+          </div>
+        </Card></div>
+        <div onClick={() => navigate('/calendar')} className="cursor-pointer"><Card className="hover:bg-bg-elevated transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="p-3"><div className="w-6 h-6" /></div>
+            <div>
+              <h3 className="font-bold text-[15px]">Content Calendar</h3>
+            </div>
+          </div>
+        </Card></div>
+        <div onClick={() => navigate('/social-metrics')} className="cursor-pointer"><Card className="hover:bg-bg-elevated transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="p-3"><div className="w-6 h-6" /></div>
+            <div>
+              <h3 className="font-bold text-[15px]">Social ROI Funnel</h3>
+            </div>
+          </div>
+        </Card></div>
+
       </div>
       <div className="grid gap-4 mt-8 opacity-75">
         <AccountPanel />
@@ -42,5 +87,3 @@ export default function MorePage() {
     </div>
   )
 }
-
-
