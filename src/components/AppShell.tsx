@@ -11,7 +11,6 @@ export const NAV = [
   { to: '/', label: 'Today', icon: 'home' },
   { to: '/leads', label: 'Leads', icon: 'target' },
   { to: '/map', label: 'Map', icon: 'map' },
-  { to: '/inbox', label: 'Inbox', icon: 'message' },
   { to: '/inspections', label: 'Jobs', icon: 'clipboard' },
   { to: '/more', label: 'More', icon: 'menu' },
 ] as const
