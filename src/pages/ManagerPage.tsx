@@ -464,6 +464,10 @@ export default function ManagerPage() {
       {tab === 'sales_revenue' && (
         <div className="space-y-8">
           <div>
+            <div className="mb-3"><SectionTitle>SALES FUNNEL & CONVERSIONS</SectionTitle></div>
+            <SalesFunnelPanel />
+          </div>
+          <div>
             <div className="mb-3"><SectionTitle>LEAD ECONOMICS</SectionTitle></div>
             <LeadEconomicsPanel />
           </div>
@@ -1480,7 +1484,118 @@ function TerritoryIntelligencePanel() {
   )
 }
 
+function SalesFunnelPanel() {
+  const { data, loading } = useLeadEconomics();
 
+  if (loading || !data) {
+    return <div className="text-[13px] text-text-secondary py-4 text-center">Loading funnel data...</div>;
+  }
+
+  const leads = data.assigned;
+  const appts = data.appointments;
+  const proposals = data.proposals;
+  const jobs = data.won;
+
+  const leadToAppt = leads > 0 ? Math.round((appts / leads) * 100) : 0;
+  const apptToProposal = appts > 0 ? Math.round((proposals / appts) * 100) : 0;
+  const proposalToJob = proposals > 0 ? Math.round((jobs / proposals) * 100) : 0;
+  const totalConversion = leads > 0 ? Math.round((jobs / leads) * 100) : 0;
+
+  return (
+    <div className="space-y-3">
+      <Card>
+        <p className="text-[12px] leading-relaxed text-text-secondary mb-4">
+          Core conversion pipeline from initial lead to closed revenue.
+        </p>
+        
+        <div className="flex flex-col gap-2 relative">
+          {/* Step 1: Leads */}
+          <div className="flex items-center gap-4 bg-bg-elevated border border-border-subtle rounded p-3 relative z-10">
+            <div className="w-1/3">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">Total Leads</p>
+            </div>
+            <div className="flex-1">
+              <div className="h-6 bg-brand-gold/20 rounded relative w-full overflow-hidden">
+                 <div className="h-full bg-brand-gold" style={{ width: '100%' }}></div>
+              </div>
+            </div>
+            <div className="w-16 text-right">
+              <p className="text-[15px] font-semibold">{leads}</p>
+            </div>
+          </div>
+
+          <div className="flex justify-center -my-2 z-20">
+            <div className="bg-bg-app border border-border-subtle text-text-secondary text-[10px] font-bold rounded-full px-2 py-0.5 shadow-sm relative -top-1">
+              {leadToAppt}%
+            </div>
+          </div>
+
+          {/* Step 2: Appts */}
+          <div className="flex items-center gap-4 bg-bg-elevated border border-border-subtle rounded p-3 relative z-10">
+            <div className="w-1/3">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">Appointments</p>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="h-6 bg-brand-gold/20 rounded relative w-full overflow-hidden">
+                 <div className="h-full bg-brand-gold" style={{ width: `${Math.max(leadToAppt, 2)}%` }}></div>
+              </div>
+            </div>
+            <div className="w-16 text-right">
+              <p className="text-[15px] font-semibold">{appts}</p>
+            </div>
+          </div>
+
+          <div className="flex justify-center -my-2 z-20">
+            <div className="bg-bg-app border border-border-subtle text-text-secondary text-[10px] font-bold rounded-full px-2 py-0.5 shadow-sm relative -top-1">
+              {apptToProposal}%
+            </div>
+          </div>
+
+          {/* Step 3: Proposals */}
+          <div className="flex items-center gap-4 bg-bg-elevated border border-border-subtle rounded p-3 relative z-10">
+            <div className="w-1/3">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">Proposals Sent</p>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="h-6 bg-brand-gold/20 rounded relative w-full overflow-hidden">
+                 <div className="h-full bg-brand-gold" style={{ width: `${Math.max(leads > 0 ? (proposals/leads)*100 : 0, 2)}%` }}></div>
+              </div>
+            </div>
+            <div className="w-16 text-right">
+              <p className="text-[15px] font-semibold">{proposals}</p>
+            </div>
+          </div>
+
+          <div className="flex justify-center -my-2 z-20">
+            <div className="bg-bg-app border border-border-subtle text-text-secondary text-[10px] font-bold rounded-full px-2 py-0.5 shadow-sm relative -top-1">
+              {proposalToJob}%
+            </div>
+          </div>
+
+          {/* Step 4: Jobs */}
+          <div className="flex items-center gap-4 bg-bg-elevated border border-border-subtle rounded p-3 relative z-10">
+            <div className="w-1/3">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">Jobs Signed</p>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="h-6 bg-status-success/20 rounded relative w-full overflow-hidden">
+                 <div className="h-full bg-status-success" style={{ width: `${Math.max(totalConversion, 2)}%` }}></div>
+              </div>
+            </div>
+            <div className="w-16 text-right flex flex-col items-end">
+              <p className="text-[15px] font-semibold text-status-success">{jobs}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-border-subtle flex justify-between items-center">
+           <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest">Total Conversion Rate</p>
+           <p className="text-[14px] font-bold text-status-success">{totalConversion}%</p>
+        </div>
+      </Card>
+    </div>
+  )
+}
 
 
 

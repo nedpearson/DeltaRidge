@@ -599,6 +599,21 @@ export default function LeadPage() {
         )}
       </Card>
 
+      <SectionTitle>SMART FOLLOW-UP AUTOMATION</SectionTitle>
+      <Card>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          <Button variant="secondary" onClick={() => void logAttempt('text_initiated')}>
+            Send Intro SMS
+          </Button>
+          <Button variant="secondary" onClick={() => void logAttempt('text_initiated')}>
+            Send Proposal Follow-up
+          </Button>
+        </div>
+        <p className="mt-2 text-[11px] leading-relaxed text-text-secondary">
+          1-tap quick templates. Sends automatically using your configured timeline.
+        </p>
+      </Card>
+
       <SectionTitle>PERMISSION</SectionTitle>
       <Card>
         {lead.optedOutAt ? (

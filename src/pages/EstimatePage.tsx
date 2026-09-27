@@ -91,6 +91,8 @@ export default function EstimatePage() {
   const [saving, setSaving] = useState(false)
   const [showHandoffGate, setShowHandoffGate] = useState(false)
   const [roofrState, setRoofrState] = useState<'idle' | 'sending' | 'queued' | 'created'>('idle')
+  const [proposalStatus, setProposalStatus] = useState<'idle' | 'sent' | 'viewed' | 'signed'>('idle')
+
   const handleSendHandoff = async () => {
     setRoofrState('sending')
     try {
@@ -101,6 +103,22 @@ export default function EstimatePage() {
       setRoofrState('idle')
       console.error('Failed to send to Roofr.')
     }
+  }
+
+  const handleSendProposal = (_channel: 'sms' | 'email') => {
+    setProposalStatus('sent')
+    setTimeout(() => {
+      setProposalStatus('viewed')
+      setTimeout(() => {
+        setProposalStatus('signed')
+      }, 3000)
+    }, 3000)
+  }
+
+  const [referralSent, setReferralSent] = useState(false)
+
+  const handleSendReferral = () => {
+    setReferralSent(true)
   }
   const [photos, setPhotos] = useState<LocalPhoto[]>([])
   const [observations, setObservations] = useState<LocalObservation[]>([])
@@ -470,6 +488,58 @@ export default function EstimatePage() {
               <Button variant="secondary" className="mt-3 w-full text-[12px]" onClick={() => handleSendHandoff()} disabled={roofrState !== 'idle'}>{roofrState === 'idle' ? 'Select Option' : roofrState === 'sending' ? 'Sending...' : roofrState === 'queued' ? 'Queued' : 'Created'}</Button>
             </Card>
           </div>
+
+          <SectionTitle>DELIVER PROPOSAL</SectionTitle>
+          <Card>
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="secondary" onClick={() => handleSendProposal('sms')} disabled={proposalStatus !== 'idle'}>
+                {proposalStatus === 'idle' ? 'Send via SMS' : 'Sent'}
+              </Button>
+              <Button variant="secondary" onClick={() => handleSendProposal('email')} disabled={proposalStatus !== 'idle'}>
+                {proposalStatus === 'idle' ? 'Send via Email' : 'Sent'}
+              </Button>
+            </div>
+            
+            {proposalStatus !== 'idle' && (
+              <div className="mt-4 p-4 rounded-xl bg-bg-app border border-border-subtle shadow-sm">
+                <div className="flex items-center justify-between text-[12px] uppercase tracking-wider font-semibold">
+                  <div className={`flex flex-col items-center ${proposalStatus === 'sent' || proposalStatus === 'viewed' || proposalStatus === 'signed' ? 'text-brand-primary' : 'text-text-secondary opacity-50'}`}>
+                    <div className="size-6 rounded-full flex items-center justify-center bg-brand-primary/10 mb-1">✓</div>
+                    <span>Sent</span>
+                  </div>
+                  <div className={`h-px flex-1 mx-2 ${proposalStatus === 'viewed' || proposalStatus === 'signed' ? 'bg-brand-primary' : 'bg-border-subtle'}`} />
+                  <div className={`flex flex-col items-center ${proposalStatus === 'viewed' || proposalStatus === 'signed' ? 'text-brand-primary' : 'text-text-secondary opacity-50'}`}>
+                    <div className={`size-6 rounded-full flex items-center justify-center mb-1 ${proposalStatus === 'viewed' || proposalStatus === 'signed' ? 'bg-brand-primary/10' : 'bg-bg-elevated'}`}>
+                      {proposalStatus === 'viewed' || proposalStatus === 'signed' ? '✓' : '2'}
+                    </div>
+                    <span>Viewed</span>
+                  </div>
+                  <div className={`h-px flex-1 mx-2 ${proposalStatus === 'signed' ? 'bg-status-success' : 'bg-border-subtle'}`} />
+                  <div className={`flex flex-col items-center ${proposalStatus === 'signed' ? 'text-status-success' : 'text-text-secondary opacity-50'}`}>
+                    <div className={`size-6 rounded-full flex items-center justify-center mb-1 ${proposalStatus === 'signed' ? 'bg-status-success/10' : 'bg-bg-elevated'}`}>
+                      {proposalStatus === 'signed' ? '✓' : '3'}
+                    </div>
+                    <span>Signed</span>
+                  </div>
+                </div>
+                
+                {proposalStatus === 'signed' && (
+                  <div className="mt-5 pt-4 border-t border-border-subtle animate-in fade-in slide-in-from-bottom-2">
+                    <p className="text-[13px] text-text-secondary mb-3 text-center">Deal closed! Automate the next step.</p>
+                    {referralSent ? (
+                      <div className="w-full text-center py-2 text-[13px] text-brand-500 font-bold bg-brand-500/10 rounded">
+                        Referral Request Sent!
+                      </div>
+                    ) : (
+                      <Button variant="gold" full onClick={() => handleSendReferral()}>
+                        Send Referral Request
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
 
           
           <SectionTitle hint="internal — never shown to a homeowner">COST AND PRICE</SectionTitle>
