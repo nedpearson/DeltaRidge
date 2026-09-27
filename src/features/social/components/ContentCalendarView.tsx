@@ -22,11 +22,11 @@ export default function ContentCalendarView() {
         .order('scheduled_for', { ascending: true });
         
       if (error) throw error;
-      return data as Record<string, unknown>[];
+      return data as any[];
     }
   });
 
-  const filteredPosts = posts.filter(p => filter === 'all' || p.status === filter);
+  const filteredPosts = posts.filter((p: any) => filter === 'all' || p.status === filter);
 
   return (
     <div className="flex-1 bg-surface-50 p-6 overflow-y-auto">

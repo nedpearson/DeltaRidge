@@ -55,7 +55,7 @@ export function OnlinePill() {
     setIsSyncing(true)
     if ('vibrate' in navigator) navigator.vibrate(20)
     try {
-      await syncOutbox()
+      await syncOutbox(null, null)
       const newCount = await outboxCount()
       setPending(newCount)
       if (newCount === 0 && 'vibrate' in navigator) navigator.vibrate([20, 50, 20])
