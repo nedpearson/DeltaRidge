@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, no-console */
+ 
 /**
  * Resident Contact & Phone Enrichment Edge Function.
  *

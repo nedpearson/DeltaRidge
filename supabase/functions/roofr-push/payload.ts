@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, no-console */
+ 
 /**
  * Deciding whether a lead is allowed into Roofr, and what to say about it.
  *

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, no-console */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Meta Graph API Client
  * 

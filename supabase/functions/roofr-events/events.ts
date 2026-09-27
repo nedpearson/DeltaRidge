@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, no-console */
+ 
 /**
  * Turning a Zapier POST into something we are willing to store.
  *

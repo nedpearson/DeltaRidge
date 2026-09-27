@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, no-console */
+/* eslint-disable no-console */
 /**
  * The inbound half: Roofr -> Zapier -> here.
  *
@@ -316,7 +316,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   // One line per delivery, with no payload, no token and no homeowner in it.
   // Enough to correlate a Zapier run with a row here when a Zap misbehaves.
-  // eslint-disable-next-line no-console
+   
   console.log(`roofr-events: ${event.eventType} matched=${how}`)
   return json({ ok: true, matched: how, linked: leadId !== null }, 200)
 })
