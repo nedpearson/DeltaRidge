@@ -6,7 +6,7 @@ create extension if not exists pg_cron;
 select cron.schedule(
   'manager-daily-brief-cron',
   '0 11 * * *', -- 11:00 UTC is 6:00 AM CDT / 5:00 AM CST
-  $cron
+  $cron$
     select net.http_post(
         url := current_setting('app.settings.edge_function_base_url', true) || '/manager-daily-brief',
         headers := jsonb_build_object(
@@ -15,5 +15,5 @@ select cron.schedule(
         ),
         body := '{}'::jsonb
     );
-  $cron
+  $cron$
 );
