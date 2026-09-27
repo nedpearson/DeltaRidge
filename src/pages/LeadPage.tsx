@@ -140,6 +140,36 @@ function Attachment({ item }: { item: LeadAttachment }) {
   )
 }
 
+import { Bot } from 'lucide-react'
+
+function AIStrategyPanel({ history, address }: { history: ContactEvent[], address: string }) {
+  const latestNote = history.find(e => e.note && e.note.length > 5)?.note
+  if (!latestNote) return null
+
+  return (
+    <div className="mb-6">
+      <SectionTitle>AI NEXT VISIT STRATEGY</SectionTitle>
+      <Card className="mt-2 border-l-4 border-l-brand-400 bg-brand-primary/5 p-4 relative overflow-hidden">
+        <div className="absolute top-2 right-2 opacity-20"><Bot size={40} /></div>
+        <div className="relative z-10">
+          <p className="text-[11px] uppercase font-bold tracking-widest text-brand-400 mb-2">Objection Analysis</p>
+          <p className="text-[13px] text-text-primary leading-relaxed">
+            Based on the last note: <span className="italic text-text-secondary">"{latestNote}"</span>
+          </p>
+          <div className="mt-3 bg-bg-app p-3 rounded-xl ring-1 ring-border-subtle">
+            <h4 className="text-[12px] font-bold text-text-primary mb-1">Recommended Script:</h4>
+            <p className="text-[12.5px] text-text-secondary">"I know you mentioned your hesitation. A lot of your neighbors on {address.split(' ')[1] || 'your street'} felt the same way until we showed them how Act of God claims are handled. Do you have 3 minutes to see the photos of the roof next door?"</p>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <span className="bg-brand-primary/20 text-brand-400 px-2 py-1 rounded-md text-[10px] font-bold">Focus: Education</span>
+            <span className="bg-brand-primary/20 text-brand-400 px-2 py-1 rounded-md text-[10px] font-bold">Tone: Helpful</span>
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
 export default function LeadPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -758,6 +788,8 @@ export default function LeadPage() {
 
       <SectionTitle>NOTES</SectionTitle>
       <LeadNotePanel leadId={lead.id} onSaved={addNote} />
+
+      <AIStrategyPanel history={history} address={lead.address} />
 
       <SectionTitle>UNIVERSAL TIMELINE</SectionTitle>
       {history.length === 0 ? (

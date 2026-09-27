@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { MapContainer, TileLayer, CircleMarker, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, useMap, Polyline, Polygon } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Button, Card } from '@/components/ui'
 import { STATUS_LABEL, type LeadStatus, type ManagedLead } from '@/features/leads/pipeline'
@@ -46,6 +46,8 @@ export default function LeadMapLive({ doors, leads, storms, onOpenLead, onFailed
   const defaultCenter: [number, number] = [39.8283, -98.5795] // Default to US center if no leads
   const [activeLead, setActiveLead] = useState<(ScoredLead | ManagedLead) | null>(null)
   const [mapStyle, setMapStyle] = useState<'dark' | 'satellite'>('dark')
+  const [managerMode, setManagerMode] = useState(false)
+  const [turfClaimed, setTurfClaimed] = useState(false)
 
   const handleSelect = useCallback((lead: ScoredLead | ManagedLead) => {
     setActiveLead(lead)
@@ -85,6 +87,25 @@ export default function LeadMapLive({ doors, leads, storms, onOpenLead, onFailed
         
         {allPoints.length > 0 && <FitBounds leads={allPoints} />}
 
+        {managerMode && allPoints.length > 1 && (
+          <Polyline 
+            positions={allPoints.map(p => [p.latitude, p.longitude])} 
+            pathOptions={{ color: '#E8BD63', weight: 3, dashArray: '5, 10', opacity: 0.8 }} 
+          />
+        )}
+
+        {turfClaimed && allPoints.length > 0 && (
+          <Polygon 
+            positions={[
+              [Math.max(...allPoints.map(p => p.latitude)) + 0.005, Math.min(...allPoints.map(p => p.longitude)) - 0.005],
+              [Math.max(...allPoints.map(p => p.latitude)) + 0.005, Math.max(...allPoints.map(p => p.longitude)) + 0.005],
+              [Math.min(...allPoints.map(p => p.latitude)) - 0.005, Math.max(...allPoints.map(p => p.longitude)) + 0.005],
+              [Math.min(...allPoints.map(p => p.latitude)) - 0.005, Math.min(...allPoints.map(p => p.longitude)) - 0.005],
+            ]}
+            pathOptions={{ fillColor: '#E75A64', fillOpacity: 0.2, color: '#E75A64', weight: 2 }}
+          />
+        )}
+
         {allPoints.map(lead => (
           <CircleMarker
             key={'id' in lead ? lead.id : `${lead.latitude}-${lead.longitude}`}
@@ -103,13 +124,25 @@ export default function LeadMapLive({ doors, leads, storms, onOpenLead, onFailed
         ))}
       </MapContainer>
 
-      {/* Map Style Toggle */}
-      <div className="absolute top-4 right-4 z-[1000]">
+      {/* Map Tools */}
+      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
         <button 
           onClick={() => setMapStyle(s => s === 'dark' ? 'satellite' : 'dark')}
           className="bg-bg-card/90 backdrop-blur-sm p-2 shadow-lg rounded-lg border border-border-subtle flex items-center gap-2 hover:bg-bg-elevated transition-colors text-[11px] font-bold uppercase tracking-wider text-text-primary"
         >
           {mapStyle === 'dark' ? '🛰️ Satellite' : '🗺️ Map'}
+        </button>
+        <button 
+          onClick={() => setTurfClaimed(t => !t)}
+          className={`bg-bg-card/90 backdrop-blur-sm p-2 shadow-lg rounded-lg border border-border-subtle flex items-center gap-2 hover:bg-bg-elevated transition-colors text-[11px] font-bold uppercase tracking-wider ${turfClaimed ? 'text-status-critical' : 'text-text-primary'}`}
+        >
+          🚩 {turfClaimed ? 'Release Turf' : 'Claim Turf'}
+        </button>
+        <button 
+          onClick={() => setManagerMode(m => !m)}
+          className={`bg-bg-card/90 backdrop-blur-sm p-2 shadow-lg rounded-lg border border-border-subtle flex items-center gap-2 hover:bg-bg-elevated transition-colors text-[11px] font-bold uppercase tracking-wider ${managerMode ? 'text-brand-gold' : 'text-text-primary'}`}
+        >
+          👁️ {managerMode ? 'Hide Paths' : 'Manager View'}
         </button>
       </div>
 
