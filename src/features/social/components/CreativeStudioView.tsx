@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { PenTool, Image as ImageIcon, Video, Sparkles, Wand2, ShieldAlert } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
+import { useSession } from '@/features/auth/session';
 
 export default function CreativeStudioView() {
+  const session = useSession();
+  const orgId = session?.user?.organizationId || '00000000-0000-0000-0000-000000000000';
   const [activeTab, setActiveTab] = useState<'copy' | 'image' | 'video' | 'competitor'>('copy');
   const [topic, setTopic] = useState('');
   const [pillar, setPillar] = useState('Education');
@@ -22,7 +25,6 @@ export default function CreativeStudioView() {
     setIsGenerating(true);
     setGeneratedResult(null);
     try {
-      const orgId = "00000000-0000-0000-0000-000000000000"; 
       const { data, error } = await supabase.functions.invoke('generate-social-copy', {
         body: { topic, pillar, platform, organizationId: orgId }
       });
@@ -42,7 +44,6 @@ export default function CreativeStudioView() {
     setIsGeneratingImage(true);
     setGeneratedImage(null);
     try {
-      const orgId = "00000000-0000-0000-0000-000000000000"; 
       const { data, error } = await supabase.functions.invoke('generate-social-image', {
         body: { prompt: imagePrompt, organizationId: orgId }
       });
@@ -171,15 +172,17 @@ export default function CreativeStudioView() {
                         onClick={async () => {
                            const supabase = getSupabase();
                            if (!supabase) return;
-                           const orgId = "00000000-0000-0000-0000-000000000000"; 
-                           await supabase.from('content_calendar').insert({
+                           const { data: assetData, error: assetErr } = await supabase.from('creative_assets').insert({ organization_id: orgId, asset_type: 'copy', provenance: 'ai_generated', content: generatedResult }).select().single();
+                             if (!assetErr && assetData) {
+                               await supabase.from('content_calendar').insert({
                               organization_id: orgId,
-                              content: generatedResult,
+                              creative_asset_id: assetData.id,
                               post_type: 'organic',
                               content_pillar: pillar.toLowerCase(),
                               status: 'draft',
                               scheduled_for: new Date(Date.now() + 86400000).toISOString()
                            });
+                             }
                            setGeneratedResult(null); // Clear on schedule
                         }}
                         className="px-3 py-1.5 bg-brand-primary text-white rounded text-xs font-medium hover:bg-brand-primary"
@@ -333,4 +336,6 @@ export default function CreativeStudioView() {
     </div>
   );
 }
+
+
 

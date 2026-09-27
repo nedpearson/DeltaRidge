@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabase';
 import { Calendar as CalendarIcon, CheckCircle, Clock, BarChart2 } from 'lucide-react';
 
 export default function ContentCalendarView() {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'draft' | 'scheduled' | 'published'>('all');
 
   const { data: posts = [], isLoading } = useQuery({
@@ -37,7 +39,7 @@ export default function ContentCalendarView() {
           <h1 className="text-2xl font-semibold text-text-primary">Content Calendar</h1>
           <p className="text-text-secondary mt-1">Schedule, approve, and track ROI on your creative assets.</p>
         </div>
-        <button className="px-4 py-2 bg-brand-primary text-white rounded font-medium hover:bg-brand-primary">
+        <button onClick={() => navigate('/studio')} className="px-4 py-2 bg-brand-primary text-white rounded font-medium hover:bg-brand-primary">
           Create Post
         </button>
       </div>
@@ -120,4 +122,5 @@ export default function ContentCalendarView() {
     </div>
   );
 }
+
 
