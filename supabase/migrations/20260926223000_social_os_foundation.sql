@@ -195,7 +195,7 @@ create policy social_autonomy_config_org_access on social_autonomy_config
   with check (organization_id in (select app.current_org_ids()));
 
 -- Webhook Retry RPC
-create or replace function increment_webhook_retry(webhook_id uuid, error_msg text) returns void as 
+create or replace function increment_webhook_retry(webhook_id uuid, error_msg text) returns void as $$
 begin
   update social_webhooks
   set processing_status = case when retry_count >= 3 then 'dead_letter' else 'pending' end,
@@ -204,4 +204,4 @@ begin
       updated_at = now()
   where id = webhook_id;
 end;
- language plpgsql;
+$$ language plpgsql;
