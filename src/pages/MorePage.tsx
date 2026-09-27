@@ -29,6 +29,15 @@ export default function MorePage() {
       <div className="grid gap-4 mt-8 opacity-75">
         <AccountPanel />
         <SyncPanel />
+
+        {/* Build Identity */}
+        <Card className="p-4 bg-bg-app border-border-subtle text-xs text-text-muted font-mono">
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between"><span>App Version</span><span>1.0.0</span></div>
+            <div className="flex justify-between"><span>Environment</span><span className="text-status-success">PRODUCTION</span></div>
+            <div className="flex justify-between"><span>Schema Version</span><span>20260926</span></div>
+          </div>
+        </Card>
       </div>
     </div>
   )

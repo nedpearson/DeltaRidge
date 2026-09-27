@@ -21,8 +21,12 @@ jobs:
       run: npm run lint
     - name: Unit Tests
       run: npm run test
-    - name: Build UI
+    - name: Build UI (with Production Truth Checks)
       run: npm run build
+    - name: Start Supabase Local
+      run: npx supabase start
+    - name: Test Database Migrations
+      run: npx supabase db reset && npx supabase test db
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium
     - name: Run Playwright tests

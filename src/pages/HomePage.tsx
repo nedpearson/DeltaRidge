@@ -110,7 +110,7 @@ export default function HomePage() {
 
               <div className="mt-2 flex gap-2">
                 <Button variant="primary" className="flex-1 text-[12px]" onClick={() => navigate('/map')}>Navigate</Button>
-                <Button variant="secondary" className="flex-1 text-[12px]" onClick={() => navigate(`/property/${today.nextBestAction?.id}`)}>Open Lead</Button>
+                <Button variant="secondary" className="flex-1 text-[12px]" onClick={() => navigate(`/lead/${today.nextBestAction?.id}`)}>Open Lead</Button>
               </div>
             </div>
           </Card>

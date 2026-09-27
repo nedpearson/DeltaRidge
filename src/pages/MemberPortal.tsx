@@ -50,7 +50,7 @@ export default function MemberPortal() {
               RoofCare membership active through {member.renewsAt}.
             </p>
             <div className="mt-4 pt-4 border-t border-border-subtle/50 flex gap-2">
-              <Button variant="primary" className="text-[12px] bg-brand-gold text-bg-app hover:bg-brand-goldHighlight w-full">
+              <Button variant="primary" className="text-[12px] bg-brand-gold text-bg-app hover:bg-brand-goldHighlight w-full" disabled title="Billing integration not yet enabled in demo mode">
                 <CreditCard className="w-4 h-4 mr-2" /> Manage Billing
               </Button>
             </div>
@@ -88,7 +88,7 @@ export default function MemberPortal() {
                     <p className="text-[11px] text-text-secondary">{item.date} • {item.status}</p>
                   </div>
                 </div>
-                <Button variant="secondary" className="text-[11px] px-3 py-1">
+                <Button variant="secondary" className="text-[11px] px-3 py-1" disabled title="Report generation disabled in demo mode">
                   <FileText className="w-3 h-3 mr-1" /> View Report
                 </Button>
               </Card>
