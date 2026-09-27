@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, no-console */
 
 
 const BATCHDATA_API_KEY = Deno.env.get('BATCHDATA_API_KEY') || ''

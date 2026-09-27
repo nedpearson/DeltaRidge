@@ -58,7 +58,7 @@ export interface SocialMessage {
   direction: 'inbound' | 'outbound';
   message_type: 'text' | 'image' | 'video' | 'system';
   content: string | null;
-  attachments: any | null;
+  attachments: Record<string, unknown>[] | null;
   is_ai_generated: boolean;
   sent_at: string;
   read_at: string | null;

@@ -30,7 +30,7 @@ export default function CreativeStudioView() {
       if (data?.copy) setGeneratedResult(data.copy);
     } catch (err) {
       console.error(err);
-      alert("Failed to generate copy");
+      // In production, we'd show a toast notification here
     } finally {
       setIsGenerating(false);
     }
