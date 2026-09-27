@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabase';
-import { Calendar as CalendarIcon, CheckCircle, Clock, XCircle, BarChart2 } from 'lucide-react';
-import type { ContentCalendar } from '../types';
+import { Calendar as CalendarIcon, CheckCircle, Clock, BarChart2 } from 'lucide-react';
 
 export default function ContentCalendarView() {
   const [filter, setFilter] = useState<'all' | 'draft' | 'scheduled' | 'published'>('all');
@@ -23,7 +22,7 @@ export default function ContentCalendarView() {
         .order('scheduled_for', { ascending: true });
         
       if (error) throw error;
-      return data as any[];
+      return data as Record<string, unknown>[];
     }
   });
 
@@ -45,7 +44,7 @@ export default function ContentCalendarView() {
         {['all', 'draft', 'scheduled', 'published'].map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f as any)}
+            onClick={() => setFilter(f as 'all' | 'draft' | 'scheduled' | 'published')}
             className={`px-4 py-2 rounded-full text-sm font-medium capitalize ${
               filter === f 
                 ? 'bg-brand-100 text-brand-700 ring-1 ring-brand-500' 

@@ -13,7 +13,7 @@ export default function CreativeStudioView() {
   // Image states
   const [imagePrompt, setImagePrompt] = useState('');
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState<any | null>(null);
+  const [generatedImage, setGeneratedImage] = useState<{ url: string } | null>(null);
 
   const handleGenerate = async () => {
     const supabase = getSupabase();
@@ -172,7 +172,7 @@ export default function CreativeStudioView() {
                               status: 'draft',
                               scheduled_for: new Date(Date.now() + 86400000).toISOString()
                            });
-                           alert('Scheduled to Content Calendar as Draft!');
+                           setGeneratedResult(null); // Clear on schedule
                         }}
                         className="px-3 py-1.5 bg-brand-600 text-white rounded text-xs font-medium hover:bg-brand-700"
                       >
