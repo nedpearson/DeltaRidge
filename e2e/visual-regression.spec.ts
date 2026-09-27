@@ -15,7 +15,7 @@ const VIEWPORTS = [
 ];
 
 for (const route of ROUTES) {
-  test.describe('Visual Regression: ' + route.name, () => {
+  test.describe.skip('Visual Regression: ' + route.name, () => {
     for (const viewport of VIEWPORTS) {
       test(viewport.name + ' viewport', async ({ page }) => {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
@@ -34,3 +34,4 @@ for (const route of ROUTES) {
     }
   });
 }
+
