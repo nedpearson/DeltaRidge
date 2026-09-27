@@ -5,7 +5,7 @@ import { useSession } from '@/features/auth/session';
 
 export default function CreativeStudioView() {
   const session = useSession();
-  const orgId = session?.user?.organizationId || '00000000-0000-0000-0000-000000000000';
+  const orgId = session?.membership?.organizationId || '00000000-0000-0000-0000-000000000000';
   const [activeTab, setActiveTab] = useState<'copy' | 'image' | 'video' | 'competitor'>('copy');
   const [topic, setTopic] = useState('');
   const [pillar, setPillar] = useState('Education');
@@ -336,6 +336,7 @@ export default function CreativeStudioView() {
     </div>
   );
 }
+
 
 
 
