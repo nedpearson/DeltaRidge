@@ -11,7 +11,7 @@ create or replace function process_roofcare_storm_alerts()
 returns trigger
 language plpgsql
 security definer
-as $func
+as $$
 declare
   member_record record;
   search_radius_meters float = 3218.69; -- 2 miles in meters
@@ -63,7 +63,7 @@ otification_center here for the manager
 
   return NEW;
 end;
-$func;
+$$;
 
 drop trigger if exists roofcare_storm_alert_trigger on storm_events;
 create trigger roofcare_storm_alert_trigger

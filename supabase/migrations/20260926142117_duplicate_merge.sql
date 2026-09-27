@@ -2,7 +2,7 @@ create or replace function merge_leads(target_lead_id uuid, duplicate_lead_id uu
 returns void
 language plpgsql
 security definer
-as $body
+as $$
 begin
   -- Transfer activities (which includes notes)
   update activities
@@ -19,4 +19,4 @@ begin
   set deleted_at = now()
   where id = duplicate_lead_id;
 end;
-$body;
+$$;

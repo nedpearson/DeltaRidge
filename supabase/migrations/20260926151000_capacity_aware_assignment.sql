@@ -10,7 +10,7 @@ create or replace function check_rep_capacity()
 returns trigger
 language plpgsql
 security definer
-as $func
+as $$
 declare
   open_assignments int;
 begin
@@ -31,7 +31,7 @@ begin
 
   return NEW;
 end;
-$func;
+$$;
 
 drop trigger if exists enforce_rep_capacity on lead_assignments;
 create trigger enforce_rep_capacity

@@ -3,7 +3,7 @@ returns jsonb
 language sql
 security definer
 set search_path = public
-as $func
+as $$
   select jsonb_build_object(
     'doors_assigned', (
       select count(*) 
@@ -40,4 +40,4 @@ as $func
         and updated_at < now() - interval '2 days'
     )
   );
-$func;
+$$;
