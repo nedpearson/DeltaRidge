@@ -11,6 +11,7 @@ export const NAV = [
   { to: '/', label: 'Today', icon: 'home' },
   { to: '/leads', label: 'Leads', icon: 'target' },
   { to: '/map', label: 'Map', icon: 'map' },
+  { to: '/inbox', label: 'Inbox', icon: 'message' },
   { to: '/inspections', label: 'Jobs', icon: 'clipboard' },
   { to: '/more', label: 'More', icon: 'menu' },
 ] as const
@@ -22,6 +23,7 @@ function Icon({ name }: { name: string }) {
   if (name === 'target') return <svg {...common} aria-hidden="true"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.2" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2" /></svg>
   if (name === 'tag') return <svg {...common} aria-hidden="true"><path d="M3 12.5V4a1 1 0 0 1 1-1h8.5L21 11.5 12.5 20z" /><circle cx="7.5" cy="7.5" r="1.4" /></svg>
   if (name === 'map') return <svg {...common} aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" /><line x1="9" y1="3" x2="9" y2="18" /><line x1="15" y1="6" x2="15" y2="21" /></svg>
+  if (name === 'message') return <svg {...common} aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
   if (name === 'menu') return <svg {...common} aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
   return <svg {...common} aria-hidden="true"><path d="M3 8h3.5L8 6h8l1.5 2H21v11H3z" /><circle cx="12" cy="13.5" r="3.5" /></svg>
 }

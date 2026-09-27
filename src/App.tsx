@@ -24,6 +24,9 @@ const DiagnosticsPage = lazy(() => import('@/pages/DiagnosticsPage'))
 const CostBookPage = lazy(() => import('@/pages/CostBookPage'))
 const TrainingSimulatorPage = lazy(() => import('@/pages/TrainingSimulatorPage'))
 const RouteHistoryPage = lazy(() => import('@/pages/RouteHistoryPage'))
+const InboxPage = lazy(() => import('@/pages/InboxPage'))
+const BrandBrainPage = lazy(() => import('@/pages/BrandBrainPage'))
+const CreativeStudioPage = lazy(() => import('@/pages/CreativeStudioPage'))
 
 import { SessionProvider } from '@/features/auth/session'
 import { useSync } from '@/features/auth/useSync'
@@ -71,6 +74,9 @@ export default function App() {
                   <Route path="/diagnostics" element={<DiagnosticsPage />} />
                   <Route path="/manager" element={<ManagerPage />} />
                   <Route path="/routes" element={<RouteHistoryPage />} />
+                  <Route path="/inbox" element={<InboxPage />} />
+                  <Route path="/brain" element={<BrandBrainPage />} />
+                  <Route path="/studio" element={<CreativeStudioPage />} />
                   <Route path="/inspections" element={<InspectionsPage />} />
                   <Route path="/new" element={<NewInspectionPage />} />
                   <Route path="/inspection/:id" element={<InspectionPage />} />
