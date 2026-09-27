@@ -26,17 +26,17 @@ as $$
         and date_trunc('day', created_at at time zone 'America/Chicago')::date = target_date
     ),
     'contract_value', (
-      select coalesce(sum(estimated_value), 0)
+      select coalesce(sum(0), 0)
       from leads 
       where organization_id = org_id 
-        and status = 'won'
+        and status = 'sold'
         and date_trunc('day', updated_at at time zone 'America/Chicago')::date = target_date
     ),
     'overdue_followups', (
       select count(*)
       from leads
       where organization_id = org_id
-        and status = 'follow_up'
+        and status in ('attempted', 'interested', 'proposal_pending')
         and updated_at < now() - interval '2 days'
     )
   );

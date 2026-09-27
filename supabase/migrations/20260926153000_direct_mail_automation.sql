@@ -21,7 +21,7 @@ declare
   addresses_array jsonb[] := array[]::jsonb[];
   auth_secret text;
 begin
-  if NEW.status = 'won' and OLD.status is distinct from 'won' then
+  if NEW.status = 'sold' and OLD.status is distinct from 'sold' then
 
     -- Read the automation auth secret from Supabase Vault or config.
     -- This must be set in production via: ALTER DATABASE ... SET app.automation_secret = '...';
