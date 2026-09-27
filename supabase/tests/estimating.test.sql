@@ -18,14 +18,14 @@ begin;
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'manager@dr.test'),
-  ('22222222-2222-2222-2222-222222222222', 'rep@dr.test');
+  ('22222222-2222-2222-2222-222222222222', 'rep@dr.test') on conflict (id) do nothing;
 
 insert into organizations (id, name, slug)
-  values ('aaaaaaaa-0000-0000-0000-000000000001', 'Delta Ridge Test', 'dr-test');
+  values ('aaaaaaaa-0000-0000-0000-000000000001', 'Delta Ridge Test', 'dr-test') on conflict (id) do nothing;
 
 insert into organization_members (organization_id, user_id, role) values
   ('aaaaaaaa-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'manager'),
-  ('aaaaaaaa-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'salesperson');
+  ('aaaaaaaa-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'salesperson') on conflict do nothing;
 
 insert into price_books (id, organization_id, version, is_active)
   values ('bbbbbbbb-0000-0000-0000-000000000001',
@@ -58,7 +58,7 @@ insert into waste_models (id, organization_id, version, base_bps, hip_valley_str
 
 insert into properties (id, organization_id, address_line1, city)
   values ('ffffffff-0000-0000-0000-000000000001',
-          'aaaaaaaa-0000-0000-0000-000000000001', '123 Main St', 'Baton Rouge');
+          'aaaaaaaa-0000-0000-0000-000000000001', '123 Main St', 'Baton Rouge') on conflict (id) do nothing;
 
 insert into estimates (id, organization_id, property_id)
   values ('99999999-0000-0000-0000-000000000001',
@@ -231,3 +231,7 @@ $$;
 \echo 'estimating.test.sql: all assertions passed'
 
 rollback;
+
+
+
+
