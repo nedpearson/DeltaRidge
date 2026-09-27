@@ -13,7 +13,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
  * Scheduled via pg_cron to run weekly.
  * 1. Queries the Meta Ad Library API for known local competitor pages.
  * 2. Parses active ads, offers, and messaging.
- * 3. Logs new threats to the `competitor_intelligence` table.
+ * 3. Logs new threats to the `competitor_ad_intelligence` table.
  * 4. Triggers the AI Concierge / Creative Studio to draft counter-messaging if a competitor is blanketing the area with a heavy discount.
  */
 serve(async (req) => {
@@ -58,7 +58,7 @@ serve(async (req) => {
         
         if (isIllegalOffer) {
           // Log it to the DB
-          await supabase.from('competitor_intelligence').insert({
+          await supabase.from('competitor_ad_intelligence').insert({
             organization_id: orgId,
             competitor_name: ad.page_name,
             platform: 'meta',
