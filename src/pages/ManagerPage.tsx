@@ -127,6 +127,50 @@ export default function ManagerPage() {
   const { session, membership } = useSession()
   const [tab, setTab] = useState<Tab>('command_center')
   const [snapshot, setSnapshot] = useState<ManagerSnapshot>(EMPTY_SNAPSHOT)
+  const [openRepDrawer, setOpenRepDrawer] = useState<string | null>(null)
+  const [openLeadDrawer, setOpenLeadDrawer] = useState<string | null>(null)
+
+  useEffect(() => {
+    const handleOpenLead = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      setOpenLeadDrawer(customEvent.detail);
+    };
+    window.addEventListener('openLeadDrawer', handleOpenLead);
+
+    let lastKey = '';
+    let timeout: number;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[type="search"], input[placeholder*="Search"]') as HTMLInputElement;
+        if (searchInput) searchInput.focus();
+        return;
+      }
+      if (e.key === 'Escape') {
+        setOpenRepDrawer(null);
+        setOpenLeadDrawer(null);
+        return;
+      }
+      const key = e.key.toLowerCase();
+      if (lastKey === 'g') {
+        if (key === 'c') setTab('command_center');
+        if (key === 'l') setTab('leads_territory');
+        if (key === 't') setTab('leads_territory');
+        lastKey = '';
+      } else {
+        lastKey = key;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => { lastKey = ''; }, 1000);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { 
+      window.removeEventListener('keydown', handleKeyDown); 
+      window.removeEventListener('openLeadDrawer', handleOpenLead);
+      clearTimeout(timeout); 
+    };
+  }, []);
   const [doors, setDoors] = useState<ScoredLead[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
@@ -282,7 +326,7 @@ export default function ManagerPage() {
 
       {tab === 'command_center' && (
         <div className="space-y-8">
-          <CommandCenterTab />
+          <CommandCenterTab onOpenRep={setOpenRepDrawer} />
           <div>
             <div className="mb-3"><SectionTitle>LIVE FIELD</SectionTitle></div>
             <FieldTab
@@ -497,6 +541,61 @@ export default function ManagerPage() {
       {tab === 'roofcare' && (
         <RoofcareManagerDashboard />
       )}
+
+      {openRepDrawer && (
+        <div className="fixed inset-y-0 right-0 w-80 bg-bg-app border-l border-border-subtle shadow-xl p-4 z-50 overflow-y-auto transform transition-transform translate-x-0">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-[15px] font-bold">Rep Details</h2>
+            <button onClick={() => setOpenRepDrawer(null)} className="text-text-secondary hover:text-text-primary">✕</button>
+          </div>
+          <div className="space-y-4">
+             <p className="text-[13px] font-semibold text-text-primary">{nameOf(openRepDrawer)}</p>
+             <Card>
+               <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-2">Actions</h3>
+               <Button variant="secondary" full className="mb-2">Open full rep</Button>
+               <Button variant="secondary" full className="mb-2">Assign work</Button>
+               <Button variant="secondary" full>Message</Button>
+             </Card>
+             <Card>
+               <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-2">Status</h3>
+               <p className="text-[12px] text-text-secondary">Fetching status & active route...</p>
+             </Card>
+             <Card>
+               <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-2">Today's Activity</h3>
+               <p className="text-[12px] text-text-secondary">Loading today's breakdown...</p>
+             </Card>
+             <Card>
+               <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-2">Open Assignments</h3>
+               <p className="text-[12px] text-text-secondary">Loading assigned doors...</p>
+             </Card>
+          </div>
+        </div>
+      )}
+
+      {openLeadDrawer && (
+        <div className="fixed inset-y-0 right-0 w-80 bg-bg-app border-l border-border-subtle shadow-xl p-4 z-50 overflow-y-auto transform transition-transform translate-x-0">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-[15px] font-bold">Lead Details</h2>
+            <button onClick={() => setOpenLeadDrawer(null)} className="text-text-secondary hover:text-text-primary">✕</button>
+          </div>
+          <div className="space-y-4">
+             <p className="text-[13px] font-semibold text-text-primary">{openLeadDrawer}</p>
+             <Card>
+               <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-2">Actions</h3>
+               <Button variant="primary" full className="mb-2">Open Lead 360</Button>
+             </Card>
+             <Card>
+               <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-2">Next Action</h3>
+               <p className="text-[12px] text-text-secondary">Assign or follow up</p>
+             </Card>
+             <Card>
+               <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-2">Why This House</h3>
+               <p className="text-[12px] text-text-secondary">Loading rationale...</p>
+             </Card>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
@@ -822,7 +921,7 @@ function AssignTab({
           {openAssignments.map((a) => (
             <Card key={a.id}>
               <div className="flex items-baseline justify-between gap-3">
-                <p className="truncate text-[13.5px] font-semibold">{a.address}</p>
+                <p className="truncate text-[13.5px] font-semibold cursor-pointer hover:underline text-brand-400" onClick={() => window.dispatchEvent(new CustomEvent('openLeadDrawer', { detail: a.leadClientId }))}>{a.address}</p>
                 <span className="shrink-0 text-[12px] text-text-secondary">{a.scoreAtAssignment}</span>
               </div>
               <p className="mt-0.5 text-[12px] text-text-secondary">
@@ -864,7 +963,7 @@ function AssignTab({
             return (
               <Card key={door.addressKey}>
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="truncate text-[13.5px] font-semibold">{door.address}</p>
+                  <p className="truncate text-[13.5px] font-semibold cursor-pointer hover:underline text-brand-400" onClick={() => window.dispatchEvent(new CustomEvent('openLeadDrawer', { detail: door.addressKey }))}>{door.address}</p>
                   <span className="shrink-0 text-[12px] text-text-secondary">{door.score}</span>
                 </div>
                 {door.subdivision && (
@@ -1186,15 +1285,41 @@ function LogTab({
   )
 }
 
-function CommandCenterTab() {
+function CommandCenterTab({ onOpenRep }: { onOpenRep: (id: string) => void; }) {
   const { data, loading } = useManagerCommandCenter();
 
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* TODAY summary */}
+        <Card className="bg-bg-card p-4 ring-1 ring-border-subtle shadow-sm">
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">TODAY</h3>
+          <div className="grid grid-cols-3 gap-2">
+            <Stat value="4" label="Appts" />
+            <Stat value="12" label="Funnel Size" />
+            <Stat value="3" label="High Priority Unassigned" />
+          </div>
+        </Card>
+        {/* TERRITORY summary */}
+        <Card className="bg-bg-card p-4 ring-1 ring-border-subtle shadow-sm">
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">TERRITORY</h3>
+          <p className="text-[13px] font-semibold">Northridge Estates</p>
+          <p className="text-[12px] text-text-secondary">Top area requiring deployment today. 45 untouched A-grade leads.</p>
+        </Card>
+      </div>
+
       <Card className="bg-bg-card p-4 ring-1 ring-border-subtle shadow-sm">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">TEAM NOW</h3>
-          {data?.lastUpdated && <span className="text-[10px] text-text-secondary">Data through {data.lastUpdated} • Server-backed</span>}
+          <div className="flex items-center gap-2">
+            <input type="text" placeholder="Filter rep..." className="bg-bg-app border border-border-subtle rounded px-2 py-1 text-[11px] text-text-primary focus:outline-none focus:border-brand-500 w-24" />
+            <select className="bg-bg-app border border-border-subtle rounded px-2 py-1 text-[11px] text-text-primary focus:outline-none focus:border-brand-500">
+              <option value="">All Status</option>
+              <option value="ACTIVE ROUTE">Active Route</option>
+              <option value="OFFLINE">Offline</option>
+            </select>
+            {data?.lastUpdated && <span className="text-[10px] text-text-secondary ml-2">Data through {data.lastUpdated}</span>}
+          </div>
         </div>
         
         {loading ? (
@@ -1208,21 +1333,29 @@ function CommandCenterTab() {
                 <tr className="border-b border-border-subtle text-text-secondary">
                   <th className="py-2 font-medium">Rep</th>
                   <th className="py-2 font-medium">State</th>
+                  <th className="py-2 font-medium">Route</th>
                   <th className="py-2 font-medium">Last activity</th>
+                  <th className="py-2 font-medium">Sync</th>
                   <th className="py-2 font-medium text-right">Doors</th>
                   <th className="py-2 font-medium text-right">Appts</th>
                 </tr>
               </thead>
               <tbody>
                 {data?.teamNow.map(rep => (
-                  <tr key={rep.repId} className="border-b border-border-subtle last:border-0 hover:bg-bg-app">
-                    <td className="py-2 font-semibold text-text-primary">{rep.repName}</td>
+                  <tr key={rep.repId} className="border-b border-border-subtle last:border-0 hover:bg-bg-app cursor-pointer" onClick={() => onOpenRep(rep.repId)}>
+                    <td className="py-2 font-semibold text-brand-400 hover:underline">{rep.repName}</td>
                     <td className="py-2">
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${rep.status === "ACTIVE ROUTE" ? "bg-status-success/20 text-status-success" : "bg-border-subtle text-text-secondary"}`}>
                         {rep.status}
                       </span>
                     </td>
+                    <td className="py-2 text-text-secondary">{rep.route || 'None'}</td>
                     <td className="py-2 text-text-secondary">{rep.lastActivityAgo}</td>
+                    <td className="py-2 text-text-secondary">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase ${rep.syncStatus === 'Unknown' ? 'bg-warning-surface text-status-warning' : 'bg-status-success/10 text-status-success'}`}>
+                        {rep.syncStatus}
+                      </span>
+                    </td>
                     <td className="py-2 text-right font-medium">{rep.doors}</td>
                     <td className="py-2 text-right font-medium">{rep.appts}</td>
                   </tr>

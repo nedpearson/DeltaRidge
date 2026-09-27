@@ -402,7 +402,7 @@ export default function LeadPage() {
    * moment. The window is computed rather than trained, because a poster on a
    * wall has never stopped anybody.
    */
-  const window = mayCallAt(
+  const callWindow = mayCallAt(
     ALL_SOLICITATION_RULES,
     { state: 'LA', parish: 'East Baton Rouge', municipality: null },
     new Date(),
@@ -431,19 +431,19 @@ export default function LeadPage() {
         latitude={lead.latitude}
         longitude={lead.longitude}
         call={{
-          allowed: callBlock.allowed && window.allowed,
+          allowed: callBlock.allowed && callWindow.allowed,
           reason: !callBlock.allowed
             ? callBlock.reason
-            : !window.allowed
-              ? (window.reasons[0] ?? 'Outside the calling window')
+            : !callWindow.allowed
+              ? (callWindow.reasons[0] ?? 'Outside the calling window')
               : null,
         }}
         text={{
-          allowed: smsBlock.allowed && window.allowed,
+          allowed: smsBlock.allowed && callWindow.allowed,
           reason: !smsBlock.allowed
             ? smsBlock.reason
-            : !window.allowed
-              ? (window.reasons[0] ?? 'Outside the calling window')
+            : !callWindow.allowed
+              ? (callWindow.reasons[0] ?? 'Outside the calling window')
               : null,
         }}
         onCall={() => void logAttempt('call_placed')}
@@ -496,9 +496,9 @@ export default function LeadPage() {
           <p className="text-[13px] text-text-secondary">No phone number on this lead.</p>
         )}
 
-        {!window.allowed && lead.contactPhone && (
+        {!callWindow.allowed && lead.contactPhone && (
           <div className="mt-2 rounded-xl bg-warning-surface px-3 py-2 ring-1 ring-warning-border">
-            {window.reasons.map((reason) => (
+            {callWindow.reasons.map((reason) => (
               <p key={reason} className="text-[12px] leading-relaxed text-warning-highlight/80">
                 {reason}
               </p>
@@ -507,7 +507,7 @@ export default function LeadPage() {
         )}
 
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {callBlock.allowed && window.allowed && lead.contactPhone ? (
+          {callBlock.allowed && callWindow.allowed && lead.contactPhone ? (
             <a href={`tel:${lead.contactPhone}`} className="contents">
               <Button variant="secondary" onClick={() => void logAttempt('call_placed')}>
                 Call
@@ -518,7 +518,7 @@ export default function LeadPage() {
               Call
             </Button>
           )}
-          {smsBlock.allowed && window.allowed && lead.contactPhone ? (
+          {smsBlock.allowed && callWindow.allowed && lead.contactPhone ? (
             <a href={`sms:${lead.contactPhone}`} className="contents">
               <Button variant="secondary" onClick={() => void logAttempt('text_initiated')}>
                 Text
@@ -591,7 +591,7 @@ export default function LeadPage() {
           </Button>
         )}
 
-        {window.allowed && window.requires.length > 0 && (
+        {callWindow.allowed && callWindow.requires.length > 0 && (
           <p className="mt-1 text-[10.5px] leading-relaxed text-text-secondary">
             The hour is allowed. It does not clear the number — the state and national do-not-call
             lists are screened outside this app, and legal holidays are not in it.
@@ -679,7 +679,7 @@ export default function LeadPage() {
 
       <SectionTitle>WHAT HAPPENED</SectionTitle>
 
-      <Card className="grid grid-cols-2 gap-2">
+      <Card id="outcome-section" className="grid grid-cols-2 gap-2">
         {QUICK.map((outcome) => (
           <Button key={outcome} variant="secondary" onClick={() => void record(outcome)}>
             {OUTCOME_LABEL[outcome]}
@@ -760,7 +760,7 @@ export default function LeadPage() {
           hasEmail: false,
           callConsentAt: lead.consent?.call?.at ?? null,
           smsConsentAt: lead.consent?.sms?.at ?? null,
-          callWindowRuleIds: window.ruleIds,
+          callWindowRuleIds: callWindow.ruleIds,
           optedOut: lead.optedOutAt !== undefined,
           stormSource: null,
           stormEventAt: null,
@@ -812,9 +812,19 @@ export default function LeadPage() {
       }}>
         Generate Neighbor Referral Campaign
       </Button>
-      <Button variant="ghost" full className="mt-6" onClick={() => navigate('/leads')}>
+      <Button variant="ghost" full className="mt-6 mb-20" onClick={() => navigate('/leads')}>
         Back to the list
       </Button>
+
+      {/* CONTEXTUAL ACTION BAR (Mobile Only) */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-bg-app/95 backdrop-blur-md border-t border-border-subtle flex gap-3 z-40 sm:hidden">
+        <Button variant="primary" className="flex-1 font-bold tracking-wide" onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(lead.address)}`)}>
+          NAVIGATE
+        </Button>
+        <Button variant="secondary" className="flex-1 font-bold tracking-wide" onClick={() => document.getElementById('outcome-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
+          OUTCOME
+        </Button>
+      </div>
     </div>
   )
 }

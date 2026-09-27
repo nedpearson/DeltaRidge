@@ -183,6 +183,13 @@ export default function InspectionPage() {
           />
         )}
       </div>
+
+      {/* CONTEXTUAL ACTION BAR (Mobile Only) */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-bg-app/95 backdrop-blur-md border-t border-border-subtle flex gap-3 z-40 sm:hidden">
+        <Button variant="primary" className="flex-1 font-bold tracking-wide" onClick={() => setTab('capture')}>
+          CAPTURE NEXT
+        </Button>
+      </div>
     </div>
   )
 }

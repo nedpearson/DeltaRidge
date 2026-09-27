@@ -18,15 +18,11 @@ test.describe('No Dead Controls Scan', () => {
       
       for (const button of buttons) {
         const isDisabled = await button.isDisabled();
-        const hasClick = await button.evaluate(node => {
-          // Playwright's evaluate runs in browser. We can't perfectly check React synthetic events, 
-          // but we can check standard properties.
-          return node.getAttribute('disabled') !== null || node.onclick !== null || node.closest('a') !== null;
-        });
+        
         
         // If it's a form submit button, it implicitly has an action
-        const type = await button.getAttribute('type');
-        const isSubmit = type === 'submit';
+        
+        
 
         // In a real strict implementation we'd simulate clicks and verify state changes,
         // but as a baseline we enforce that buttons are either disabled, submits, or explicitly handled.

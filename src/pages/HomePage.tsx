@@ -1,17 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, SectionTitle } from '@/components/ui'
-import { listInspections, localStorageFootprint, type LocalInspection } from '@/lib/db'
+import { listInspections, type LocalInspection } from '@/lib/db'
 import { backendStatus } from '@/lib/backend'
 import { readCachedRun, type LeadRun } from '@/features/leads/engine'
 import { useSession } from '@/features/auth/session'
 import { useRepToday } from '@/features/dashboard/useRepToday'
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+import { AlertCircle, CalendarClock, ChevronRight, MapPin, Target } from 'lucide-react'
 
 export function inspectionTitle(i: LocalInspection): string {
   if (i.addressLine1) return i.addressLine1
@@ -23,7 +18,6 @@ export default function HomePage() {
   const navigate = useNavigate()
   const { session } = useSession()
   const [, setInspections] = useState<LocalInspection[]>([])
-  const [footprint, setFootprint] = useState(0)
   const [, setRun] = useState<LeadRun | null>(null)
   const backend = backendStatus()
   
@@ -31,113 +25,133 @@ export default function HomePage() {
 
   useEffect(() => {
     void listInspections().then(setInspections)
-    void localStorageFootprint().then(setFootprint)
     void readCachedRun().then(setRun)
   }, [])
 
   const rawEmail = session?.user?.email?.split('@')[0] || 'Rep'
   const repName = rawEmail.charAt(0).toUpperCase() + rawEmail.slice(1)
 
+  // Determine single highest priority for the NEXT section
+  const nextTarget = today?.nextAppointment 
+    ? { type: 'appointment', label: 'Upcoming Appointment', title: today.nextAppointment.time, subtitle: today.nextAppointment.address, id: null } // We don't have lead ID from appointment yet in mock
+    : today?.nextBestAction 
+      ? { type: 'lead', label: 'Highest Priority Opportunity', title: today.nextBestAction.address, subtitle: today.nextBestAction.reason || 'Recommended target', id: today.nextBestAction.id }
+      : null;
+
   return (
-    <div className="space-y-6 pb-6">
+    <div className="space-y-6 pb-20">
       <div className="mb-2">
-        <h1 className="text-2xl font-bold font-display tracking-tight">Good Morning, {repName}</h1>
-        <p className="text-sm text-text-secondary mt-1">Here is your cockpit for today.</p>
+        <h1 className="text-2xl font-bold font-display tracking-tight text-text-primary">Good Morning, {repName}</h1>
       </div>
 
+      {/* NEXT SECTION */}
+      <div>
+        <SectionTitle>NEXT</SectionTitle>
+        {loading ? (
+          <Card className="mt-2 p-4 text-center text-text-secondary text-sm">Loading priority...</Card>
+        ) : nextTarget ? (
+          <Card className="mt-2 border-l-4 border-l-brand-500 bg-brand-500/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-3 opacity-10">
+              {nextTarget.type === 'appointment' ? <CalendarClock size={48} /> : <Target size={48} />}
+            </div>
+            <div className="flex flex-col gap-3 relative z-10">
+              <div>
+                <span className="text-[10px] uppercase tracking-wider text-brand-500 font-bold">{nextTarget.label}</span>
+                <h3 className="font-bold text-[18px] text-text-primary leading-tight mt-1">{nextTarget.title}</h3>
+                <p className="text-[13px] text-text-secondary font-medium mt-0.5">{nextTarget.subtitle}</p>
+              </div>
+              
+              <div className="mt-2 flex gap-2">
+                <Button variant="primary" className="flex-1 text-[13px] py-2.5 font-bold" onClick={() => navigate('/mission')}>GO</Button>
+                {nextTarget.type === 'lead' && nextTarget.id && (
+                  <Button variant="secondary" className="flex-1 text-[13px] py-2.5" onClick={() => navigate(`/lead/${nextTarget.id}`)}>OPEN</Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        ) : (
+          <Card className="mt-2 p-4 text-center text-text-secondary text-sm border border-border-subtle">
+            You have no critical appointments or assigned leads.
+          </Card>
+        )}
+      </div>
+
+      {/* YOUR DAY SECTION */}
       <div>
         <SectionTitle>YOUR DAY</SectionTitle>
-        <div className="mt-2 space-y-2">
+        <div className="mt-2">
           {loading ? (
-            <Card className="bg-bg-card p-4 text-center text-text-secondary text-sm">Loading your day...</Card>
+            <Card className="bg-bg-card p-4 text-center text-text-secondary text-sm">Loading...</Card>
           ) : (
-            <Card className="bg-bg-card p-3 shadow-sm ring-1 ring-border-subtle">
-              <div className="flex justify-between items-center mb-2 pb-2 border-b border-border-subtle">
-                <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Next Appointment</span>
-                <span className="text-[14px] font-bold text-text-primary">
-                  {today?.nextAppointment ? `${today.nextAppointment.time} - ${today.nextAppointment.address}` : 'No appointments'}
-                </span>
+            <Card className="bg-bg-card p-0 shadow-sm ring-1 ring-border-subtle divide-y divide-border-subtle overflow-hidden">
+              <div className="flex justify-between items-center p-3">
+                <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Appointments</span>
+                <span className="text-[14px] font-bold text-text-primary">{today?.nextAppointment ? '1 scheduled' : '0 scheduled'}</span>
               </div>
-              <div className="flex justify-between items-center mb-2 pb-2 border-b border-border-subtle">
-                <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Follow-ups Due</span>
-                <span className={`text-[14px] font-bold ${today?.followUpsDue ? 'text-status-error' : 'text-text-primary'}`}>
+              <div className="flex justify-between items-center p-3">
+                <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Route Progress</span>
+                <span className="text-[14px] font-bold text-text-primary">{today?.recommendedDoors || 0} doors</span>
+              </div>
+              <div className="flex justify-between items-center p-3">
+                <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Follow-ups</span>
+                <span className={`text-[14px] font-bold ${today?.followUpsDue ? 'text-status-warning' : 'text-text-primary'}`}>
                   {today?.followUpsDue || 0} due
                 </span>
-              </div>
-              <div className="flex justify-between items-center mb-2 pb-2 border-b border-border-subtle">
-                <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Active Campaign</span>
-                <span className="text-[14px] font-bold text-brand-500">{today?.activeCampaign || 'None'}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Assigned Doors</span>
-                <span className="text-[14px] font-bold text-status-success">{today?.recommendedDoors || 0} doors</span>
               </div>
             </Card>
           )}
         </div>
       </div>
 
-      <div>
-        <SectionTitle>NEXT BEST ACTION</SectionTitle>
-        {loading ? (
-          <Card className="mt-2 p-4 text-center text-text-secondary text-sm">Finding best action...</Card>
-        ) : today?.nextBestAction ? (
-          <Card className="mt-2 border-l-4 border-l-brand-500 bg-brand-500/5">
-            <div className="flex flex-col gap-3">
-              <div>
-                <h3 className="font-bold text-[16px] text-text-primary">{today.nextBestAction.address}</h3>
-                <p className="text-[13px] text-text-secondary font-medium mt-1">{today.nextBestAction.reason || 'Recommended target'}</p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2 text-[12.5px]">
-                <div className="bg-bg-app/50 p-2 rounded">
-                  <span className="block text-text-secondary text-[10px] uppercase tracking-wider mb-0.5">Score</span>
-                  <span className="font-bold text-status-success">Opportunity {today.nextBestAction.score}</span>
+      {/* ATTENTION SECTION (Only shows if there are actionable exceptions) */}
+      {(today?.followUpsDue || !backend.configured) && (
+        <div>
+          <SectionTitle>ATTENTION</SectionTitle>
+          <div className="mt-2 space-y-2">
+            {!backend.configured && (
+              <div className="rounded-xl bg-status-error/10 ring-1 ring-status-error/30 p-3 flex gap-3 items-start cursor-pointer hover:bg-status-error/20 transition-colors" onClick={() => navigate('/diagnostics')}>
+                <AlertCircle className="w-5 h-5 text-status-error shrink-0" />
+                <div>
+                  <h4 className="text-[13px] font-bold text-text-primary">System Offline</h4>
+                  <p className="text-[12px] text-text-secondary mt-0.5">{backend.reason}</p>
                 </div>
-                {today.nextBestAction.roofAge && (
-                  <div className="bg-bg-app/50 p-2 rounded">
-                    <span className="block text-text-secondary text-[10px] uppercase tracking-wider mb-0.5">Age</span>
-                    <span className="font-medium text-text-primary">{today.nextBestAction.roofAge}</span>
-                  </div>
-                )}
-                {today.nextBestAction.stormEvidence && (
-                  <div className="bg-bg-app/50 p-2 rounded">
-                    <span className="block text-text-secondary text-[10px] uppercase tracking-wider mb-0.5">Storm</span>
-                    <span className="font-bold text-status-warning">{today.nextBestAction.stormEvidence}</span>
-                  </div>
-                )}
+                <ChevronRight className="w-4 h-4 text-text-muted ml-auto my-auto" />
               </div>
+            )}
+            {today?.followUpsDue && today.followUpsDue > 0 && (
+              <div className="rounded-xl bg-status-warning/10 ring-1 ring-status-warning/30 p-3 flex gap-3 items-start cursor-pointer hover:bg-status-warning/20 transition-colors" onClick={() => navigate('/leads')}>
+                <AlertCircle className="w-5 h-5 text-status-warning shrink-0" />
+                <div>
+                  <h4 className="text-[13px] font-bold text-text-primary">{today.followUpsDue} Overdue Follow-ups</h4>
+                  <p className="text-[12px] text-text-secondary mt-0.5">Contacts that require immediate attention.</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-text-muted ml-auto my-auto" />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
-              <div className="mt-2 flex gap-2">
-                <Button variant="primary" className="flex-1 text-[12px]" onClick={() => navigate('/map')}>Navigate</Button>
-                <Button variant="secondary" className="flex-1 text-[12px]" onClick={() => navigate(`/lead/${today.nextBestAction?.id}`)}>Open Lead</Button>
+      {/* NEARBY SECTION */}
+      <div>
+        <SectionTitle>NEARBY OPPORTUNITIES</SectionTitle>
+        <Card className="mt-2 bg-bg-card p-0 shadow-sm ring-1 ring-border-subtle divide-y divide-border-subtle overflow-hidden">
+          {/* Top 3 mock nearby placeholders */}
+          {[1, 2, 3].map(i => (
+            <div key={i} className="flex gap-3 items-center p-3 cursor-pointer hover:bg-bg-elevated transition-colors" onClick={() => navigate('/map')}>
+              <div className="bg-bg-elevated p-2 rounded-lg shrink-0">
+                <MapPin className="w-4 h-4 text-brand-cyan" />
               </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-[13px] font-bold text-text-primary truncate">1{i}2 Oak Ridge Drive</h4>
+                <p className="text-[11px] text-text-secondary truncate">0.{i} miles • Hail Match</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-text-muted shrink-0" />
             </div>
-          </Card>
-        ) : (
-          <Card className="mt-2 p-4 text-center text-text-secondary text-sm border border-border-subtle">
-            You have no open high-scoring leads in your territory.
-          </Card>
-        )}
-      </div>
-
-      {!backend.configured && (
-        <Card className="mt-4 bg-warning-surface ring-1 ring-warning-border border-l-4 border-l-warning-base">
-          <p className="text-[12px] leading-relaxed text-status-warning/90">{backend.reason}</p>
+          ))}
         </Card>
-      )}
-
-      {/* Account and Sync panels moved to bottom as per recommendation */}
-      <div className="grid gap-4 mt-8 opacity-75">
-        
-        
       </div>
 
-      {footprint > 0 && (
-        <p className="mt-6 text-center text-[11px] text-text-secondary">
-          {formatBytes(footprint)} of photos stored on this device
-        </p>
-      )}
     </div>
   )
 }
