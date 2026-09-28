@@ -58,7 +58,7 @@ serve(async (req) => {
         .single()
         
       if (orgError) {
-        throw new Error(Failed to resolve organization: \)
+        throw new Error("Failed to resolve organization: " + payload)
       }
       
       const organizationId = orgData.id
@@ -93,7 +93,7 @@ serve(async (req) => {
       })
 
     } catch (err: any) {
-      console.error(Webhook ingestion error for \:, err)
+      console.error("Webhook ingestion error for " + platform, err)
       return new Response(JSON.stringify({ error: err.message }), {
         headers: { "Content-Type": "application/json" },
         status: 400,
@@ -120,3 +120,6 @@ function getEventType(platform: string, payload: any): string {
   }
   return 'unknown_event'
 }
+
+
+

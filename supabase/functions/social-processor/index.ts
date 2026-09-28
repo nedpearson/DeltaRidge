@@ -205,7 +205,7 @@ async function processTwilioMessaging(event: any) {
     .eq("platform", "twilio")
     .maybeSingle()
 
-  if (!account) throw new Error(Unknown recipient ID: \);
+  if (!account) throw new Error("Unknown recipient ID: " + payload.recipient_id);
 
   // 2. Identity Resolution
   const { data: profile } = await resolveSocialProfile(
@@ -239,3 +239,5 @@ async function processTwilioMessaging(event: any) {
 
   await triggerAiConcierge(conversation.id);
 }
+
+

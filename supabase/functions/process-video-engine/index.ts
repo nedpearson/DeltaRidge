@@ -68,7 +68,7 @@ serve(async (req) => {
         const whisperRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
           method: "POST",
           headers: {
-            "Authorization": Bearer \
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
           },
           body: formData
         });
@@ -84,12 +84,12 @@ serve(async (req) => {
       }
 
       // 3. Generate derivative assets with GPT-4
-      const prompt = Based on the following transcription of a roofing company video, generate 3 derivatives: 2 short video slice ideas (quote/topic) and 1 social media copy. Return exactly as JSON array of objects with keys 'asset_type' (video or copy) and 'content' (the text or idea). Transcription: \;
+      const prompt = `Based on the following transcription of a roofing company video, generate 3 derivatives: 2 short video slice ideas (quote/topic) and 1 social media copy. Return exactly as JSON array of objects with keys 'asset_type' (video or copy) and 'content' (the text or idea). Transcription: ${transcription}`;
       
       const gptRes = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": Bearer \,
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -155,3 +155,6 @@ serve(async (req) => {
     })
   }
 })
+
+
+

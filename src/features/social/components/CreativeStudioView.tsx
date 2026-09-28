@@ -450,7 +450,7 @@ export default function CreativeStudioView() {
               )}
             </div>
           </div>
-        )}}
+        )}
       </div>
     </div>
   );
