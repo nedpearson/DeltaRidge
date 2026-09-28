@@ -38,10 +38,19 @@ serve(async (req) => {
   // 2. Ingest Payload (POST)
   if (method === "POST") {
     try {
-      const payload = await req.json()
+      const contentType = req.headers.get("content-type") || ""
+      let payload: any = {}
+      
+      if (contentType.includes("application/x-www-form-urlencoded")) {
+        const formData = await req.formData()
+        for (const [key, value] of formData.entries()) {
+          payload[key] = value
+        }
+      } else {
+        payload = await req.json()
+      }
       
       // Determine Organization ID (For Delta Ridge, we can assume a single org or look it up based on platform account if multi-tenant)
-      // Since it's a first implementation for Delta Ridge, we'll fetch the first organization or assume it's provided in token mapping.
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .select('id')
@@ -49,7 +58,7 @@ serve(async (req) => {
         .single()
         
       if (orgError) {
-        throw new Error(`Failed to resolve organization: ${orgError.message}`)
+        throw new Error(Failed to resolve organization: \)
       }
       
       const organizationId = orgData.id
@@ -70,15 +79,21 @@ serve(async (req) => {
       }
 
       // Return 200 OK immediately so platforms don't timeout
+      // Twilio expects TwiML XML if responding to an SMS webhook, but empty string is fine.
+      if (platform === 'twilio') {
+        return new Response("<Response></Response>", {
+          headers: { "Content-Type": "text/xml" },
+          status: 200,
+        })
+      }
+
       return new Response(JSON.stringify({ success: true }), {
         headers: { "Content-Type": "application/json" },
         status: 200,
       })
 
     } catch (err: any) {
-      console.error(`Webhook ingestion error for ${platform}:`, err)
-      // Still return 200 to prevent platform from retrying endlessly if the format is fundamentally broken,
-      // but maybe 400 for bad JSON.
+      console.error(Webhook ingestion error for \:, err)
       return new Response(JSON.stringify({ error: err.message }), {
         headers: { "Content-Type": "application/json" },
         status: 400,
@@ -95,6 +110,9 @@ function getEventType(platform: string, payload: any): string {
     if (payload.object === 'page' || payload.object === 'instagram') {
       return 'messaging_event'
     }
+  }
+  if (platform === 'twilio') {
+    return 'sms_event'
   }
   if (platform === 'google_business') {
     // Google might send specific review or message types
