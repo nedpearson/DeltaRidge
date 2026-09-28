@@ -68,8 +68,12 @@ serve(async (req) => {
            post.content || post.asset_text || ""
         );
 
+        if (!result || result.error || !result.id) {
+           throw new Error(Invalid response from Meta API: );
+        }
+
         // Update post status to published
-        await supabase
+        const { error: updateError } = await supabase
           .from('content_calendar')
           .update({
             status: 'published',
@@ -77,6 +81,10 @@ serve(async (req) => {
             platform_post_id: result.id
           })
           .eq('id', post.id)
+          
+        if (updateError) {
+           throw new Error(Failed to update post status after publish: );
+        }
 
         publishedCount++
       } catch (err: any) {

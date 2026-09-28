@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSupabase } from '@/lib/supabase';
 import { Calendar as CalendarIcon, CheckCircle, Clock, BarChart2 } from 'lucide-react';
 
 export default function ContentCalendarView() {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<'all' | 'draft' | 'scheduled' | 'published'>('all');
+  const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');|const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');|const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');|const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['content_calendar'],
@@ -30,6 +30,21 @@ export default function ContentCalendarView() {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string, status: string }) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error('No Supabase client');
+      const { error } = await supabase
+        .from('content_calendar')
+        .update({ status })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['content_calendar'] });
+    }
+  });
+
   const filteredPosts = posts.filter((p: any) => filter === 'all' || p.status === filter);
 
   return (
@@ -45,10 +60,10 @@ export default function ContentCalendarView() {
       </div>
 
       <div className="flex gap-4 mb-6">
-        {['all', 'draft', 'scheduled', 'published'].map((f) => (
+        {['all', 'draft', 'awaiting_approval', 'scheduled', 'published', 'failed'].map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f as 'all' | 'draft' | 'scheduled' | 'published')}
+            onClick={() => setFilter(f as any)}|const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');|const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');|onClick={() => setFilter(f as any)}
             className={`px-4 py-2 rounded-full text-sm font-medium capitalize ${
               filter === f 
                 ? 'bg-brand-primary text-brand-primary ring-1 ring-brand-500' 
@@ -91,14 +106,43 @@ export default function ContentCalendarView() {
                       {post.content_pillar}
                     </span>
                     {post.status === 'published' && <span className="flex items-center gap-1 text-green-600 text-xs font-medium"><CheckCircle className="w-3 h-3" /> Published</span>}
-                    {post.status === 'scheduled' && <span className="flex items-center gap-1 text-brand-primary text-xs font-medium"><Clock className="w-3 h-3" /> Scheduled</span>}
-                    {post.status === 'draft' && <span className="flex items-center gap-1 text-status-warning text-xs font-medium"><Clock className="w-3 h-3" /> Draft</span>}
+                    {post.status ===const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');&& <span className="flex items-center gap-1 text-brand-primary text-xs font-medium"><Clock className="w-3 h-3" /> Scheduled</span>}
+                    {post.status ===const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');&& <span className="flex items-center gap-1 text-status-warning text-xs font-medium"><Clock className="w-3 h-3" /> Draft</span>}
                   </div>
                   <div className="text-sm font-medium text-text-secondary">
                     {new Date(post.scheduled_for || post.created_at).toLocaleDateString()}
                   </div>
                 </div>
                 <p className="text-sm text-text-primary line-clamp-2 mb-4">{post.content}</p>
+                <div className="flex gap-2 mb-4">
+                  {post.status === 'draft' && (
+                    <button 
+                      onClick={() => updateStatusMutation.mutate({ id: post.id, status: 'awaiting_approval' })}
+                      className="px-3 py-1 bg-brand-primary text-white text-xs rounded font-medium hover:bg-brand-primary/90"
+                      disabled={updateStatusMutation.isPending}
+                    >
+                      Submit for Approval
+                    </button>
+                  )}
+                  {post.status === 'awaiting_approval' && (
+                    <button 
+                      onClick={() => updateStatusMutation.mutate({ id: post.id, status: 'scheduled' })}
+                      className="px-3 py-1 bg-green-600 text-white text-xs rounded font-medium hover:bg-green-700"
+                      disabled={updateStatusMutation.isPending}
+                    >
+                      Approve & Schedule
+                    </button>
+                  )}
+                  {post.status === 'failed' && (
+                    <button 
+                      onClick={() => updateStatusMutation.mutate({ id: post.id, status: 'scheduled' })}
+                      className="px-3 py-1 bg-red-600 text-white text-xs rounded font-medium hover:bg-red-700"
+                      disabled={updateStatusMutation.isPending}
+                    >
+                      Retry Publish
+                    </button>
+                  )}
+                </div>
                 
                 {post.status === 'published' && (
                   <div className="flex gap-4 p-3 bg-bg-app rounded border border-border-subtle">
@@ -122,5 +166,6 @@ export default function ContentCalendarView() {
     </div>
   );
 }
+
 
 
