@@ -8,6 +8,11 @@ import { ALL_SOLICITATION_RULES } from '@/features/compliance/solicitation'
 import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/components/ui'
 import DocumentCenter from '@/features/documents/DocumentCenter'
 import ContactActions from '@/components/ContactActions'
+import { StructuredFollowUpPanel, LostReasonIntelligence } from '@/components/StructuredFollowUpPanel'
+import { SalesPlaybookPanel } from '@/components/SalesPlaybookPanel'
+import { ReferralEnginePanel } from '@/components/ReferralEnginePanel'
+import { ProposalOptionsPanel } from '@/components/ProposalOptionsPanel'
+import NextBestActionPanel from '@/components/NextBestActionPanel'
 import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
 import IntegrityPanel from '@/features/leads/IntegrityPanel'
 import { readLink } from '@/features/integrations/roofr/store'
@@ -535,6 +540,22 @@ export default function LeadPage() {
         </div>
       </div>
 
+      
+      {lead.status === 'inspected' && (
+        <>
+          <SectionTitle>REFERRAL GENERATOR</SectionTitle>
+          <Card className="border-l-4 border-l-brand-400 bg-brand-primary/5 mb-6">
+            <h3 className="text-[13px] font-bold text-text-primary">1-Tap Referral Request</h3>
+            <p className="text-[11px] text-text-secondary mt-1 mb-3">Send a personalized SMS with their unique referral link. They earn $250 per closed referral.</p>
+            <div className="flex gap-2">
+              <Button variant="gold" full onClick={() => void logAttempt('text_initiated')}>Send Referral SMS</Button>
+              <Button variant="secondary" full onClick={() => navigator.clipboard.writeText('https://deltaridge.com/ref/' + lead.id)}>Copy Link</Button>
+            </div>
+          </Card>
+        </>
+      )}
+
+      <NextBestActionPanel lead={lead} />
       <SectionTitle>REACH THEM</SectionTitle>
       <Card>
         {lead.contactPhone ? (
@@ -858,7 +879,12 @@ export default function LeadPage() {
       <RoofrPanel leadId={lead.id} />
 
       <SectionTitle>DOCUMENT CENTER</SectionTitle>
-      <DocumentCenter leadId={lead.id}  />
+      <StructuredFollowUpPanel lead={lead} />
+        <LostReasonIntelligence />
+        <ProposalOptionsPanel />
+        <ReferralEnginePanel status={lead.status} />
+        <SalesPlaybookPanel />
+        <DocumentCenter leadId={lead.id}  />
 
       <div className="my-6" />
       <SectionTitle>WHY IT WAS ON THE LIST</SectionTitle>

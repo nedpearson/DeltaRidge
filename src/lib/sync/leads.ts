@@ -32,30 +32,30 @@ const UNIQUE_VIOLATION = '23505'
  */
 export function remoteLeadStatus(status: LeadStatus): string {
   switch (status) {
-    // Promoted but no outcome recorded yet: it is a target, not an attempt.
-    case 'new':
-      return 'target'
-    case 'attempted':
-      return 'no_answer'
-    case 'follow_up':
-      return 'spoke'
-    case 'need_visit':
-      return 'inspection_requested'
-    case 'appointment':
-      return 'appointment'
-    case 'inspected':
-      return 'inspected'
-    case 'not_interested':
-      return 'not_interested'
-    // A roof already replaced or a house nobody lives in. 'lost' is the closest
-    // honest word the office vocabulary has: the opportunity is gone, and it is
-    // not a refusal that a future campaign should treat as one.
-    case 'disqualified':
-      return 'lost'
-    // The strongest word the database has. Anything weaker would let a future
-    // campaign contact someone who asked not to be.
-    case 'do_not_knock':
-      return 'do_not_contact'
+    case 'generated': return 'target'
+    case 'assigned': return 'target'
+    case 'attempted': return 'no_answer'
+    case 'reached': return 'spoke'
+    case 'interested': return 'spoke'
+    case 'inspection_requested': return 'inspection_requested'
+    case 'appointment': return 'appointment'
+    case 'inspected': return 'inspected'
+    case 'estimate_proposal': return 'proposal'
+    case 'won': return 'won'
+    case 'lost': return 'lost'
+    case 'nurture': return 'nurture'
+    case 'customer': return 'won'
+    case 'roofcare': return 'won'
+    
+    // Legacy
+    case 'new': return 'target'
+    case 'follow_up': return 'spoke'
+    case 'need_visit': return 'inspection_requested'
+    case 'not_interested': return 'not_interested'
+    case 'disqualified': return 'disqualified'
+    case 'do_not_knock': return 'do_not_knock'
+    
+    default: return 'target'
   }
 }
 

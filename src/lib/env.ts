@@ -5,7 +5,7 @@ import { z } from 'zod'
  *
  * Deliberate design choice: this schema treats almost every integration
  * credential as OPTIONAL. The app must boot and be useful in the field with
- * nothing but a Supabase URL and key. A missing Mapbox token degrades the map;
+ * nothing but a Supabase URL and key. Missing tokens gracefully degrade features;
  * a missing AI key degrades photo assist; a missing CompanyCam token degrades
  * the handoff to PDF. None of them may prevent a rep from documenting a roof.
  */

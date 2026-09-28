@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || ""
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -24,14 +25,14 @@ serve(async (req) => {
     // 1. Fetch Appointment Context
     const { data: appointment, error: apptError } = await supabase
       .from("appointments")
-      .select(`
+      .select(
         id, scheduled_start,
         lead:leads(
-          id, source, lead_source_id, utm_campaign,
+          id, source, lead_source_id,
           property:properties(id, raw_address, normalized_address)
         ),
-        customer:customers(id, first_name, last_name, phone, email)
-      `)
+        customer:customers(id, first_name, last_name, primary_phone, email)
+      )
       .eq("id", appointmentId)
       .single()
 
@@ -41,58 +42,65 @@ serve(async (req) => {
     let socialSummary = "No direct social conversation linked."
     const { data: conversations } = await supabase
       .from("social_conversations")
-      .select(`
+      .select(
         id, intent_category,
         account:social_accounts(platform),
         messages:social_messages(content, direction, sent_at)
-      `)
+      )
       .eq("lead_id", appointment.lead?.id)
       .order("created_at", { ascending: false })
       .limit(1)
 
+    let systemPromptData = ""
     if (conversations && conversations.length > 0) {
       const conv = conversations[0]
-      const msgs = conv.messages?.map(m => `[${m.direction.toUpperCase()}]: ${m.content}`).join("\n") || ""
-      socialSummary = `Platform: ${conv.account?.platform}\nIntent: ${conv.intent_category}\n\nChat History:\n${msgs}`
+      const msgs = conv.messages?.map(m => []: ).join("\n") || ""
+      socialSummary = Platform: \nIntent: \n\nChat History:\n
+      systemPromptData += socialSummary
+    } else {
+      systemPromptData += "No social history."
     }
 
-    // 3. TODO: Fetch Storm/Permit data using the existing scoring logic views
-    // const propertyContext = await fetchPropertyStormHistory(appointment.lead.property.id)
+    let intelligenceBrief = "";
+    
+    if (OPENAI_API_KEY) {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": Bearer ,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [{
+             role: "system", 
+             content: Generate a concise Intelligence Brief for a roofing sales rep based on this lead data:\n\n\n\nDo not invent facts, leaks, storm sizes, or objections that are not present in the data.
+          }],
+          temperature: 0.1,
+        })
+      });
 
-    // 4. Generate the Intelligence Brief using an LLM (Simulated)
-    // In production, we send the `socialSummary` and `propertyContext` to OpenAI to summarize.
-    const intelligenceBrief = `
+      if (response.ok) {
+        const json = await response.json();
+        intelligenceBrief = json.choices[0].message.content;
+      } else {
+        intelligenceBrief = "Failed to generate brief via AI."
+      }
+    } else {
+       intelligenceBrief = 
 EXECUTIVE SUMMARY:
-Homeowner ${appointment.customer?.first_name || 'Unknown'} booked via ${conversations?.[0]?.account?.platform || 'Social'} after engaging with the ${appointment.lead?.utm_campaign || 'recent'} campaign.
-
-THE PROBLEM:
-Homeowner indicated an active leak developing near the chimney. 
-
-STORM CORRELATION:
-Property address (${appointment.lead?.property?.raw_address}) is within 1.2 miles of the 1.5" hail report from 14 days ago. Roof is estimated at 12 years old (no recent re-roof permits found).
+Homeowner  booked via .
+No AI analysis available (OpenAI Key missing).
 
 CONVERSATIONAL HIGHLIGHTS:
-- Extremely responsive to AI agent.
-- Explicitly requested an afternoon inspection.
-- Mentioned they have State Farm insurance but haven't filed a claim yet.
 
-LIKELY OBJECTIONS:
-- "I want to wait to see if insurance will cover it before committing."
-- "I heard contractors chase storms."
+       .trim()
+    }
 
-RECOMMENDED APPROACH:
-1. Validate the leak immediately to build trust.
-2. Provide education on the State Farm claims process, as they are hesitant.
-3. Emphasize Delta Ridge's local Ascension Parish roots to counter the "storm chaser" fear.
-    `.trim()
-
-    // 5. Store the brief.
-    // If an `appointment_briefs` table doesn't exist yet, we append it to the `notes` column 
-    // or store it in a new dedicated column/table. For now, we update `appointments.notes`.
     const { error: updateError } = await supabase
       .from("appointments")
       .update({
-        notes: `--- INTELLIGENCE BRIEF ---\n${intelligenceBrief}\n\n--- ORIGINAL NOTES ---\n`
+        notes: --- INTELLIGENCE BRIEF ---\n\n\n--- ORIGINAL NOTES ---\n
       })
       .eq("id", appointmentId)
 

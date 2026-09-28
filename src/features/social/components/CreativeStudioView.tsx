@@ -305,16 +305,7 @@ export default function CreativeStudioView() {
               </div>
             )}
             
-            <div className="bg-bg-card p-12 text-center rounded-lg border border-border-subtle shadow-sm">
-              <ImageIcon className="w-12 h-12 text-brand-primary mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-text-primary">AI Image Enhancement (Coming Soon)</h3>
-              <p className="text-sm text-text-secondary max-w-md mx-auto mt-2">
-                Upload raw project photos to automatically generate Before/After graphics, branded testimonial cards, or educational storm damage overlays.
-              </p>
-              <button className="mt-6 px-4 py-2 bg-brand-primary text-white rounded font-medium text-sm hover:bg-brand-primary opacity-50 cursor-not-allowed">
-                Upload Project Photos
-              </button>
-            </div>
+            
           </div>
         )}
 
@@ -335,29 +326,44 @@ export default function CreativeStudioView() {
                               <div className="mt-8 border-2 border-dashed border-border-subtle rounded-lg p-12 text-center transition-colors">
                   {!videoFile && !videoJobId ? (
                     <>
-                      <input type="file" id="video-upload" className="hidden" accept="video/mp4,video/quicktime" onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setVideoFile(file);
-                        // Simulate upload
-                        let prog = 0;
-                        const int = setInterval(() => {
-                          prog += 10;
-                          setUploadProgress(prog);
-                          if (prog >= 100) {
-                            clearInterval(int);
-                            // Invoke engine
-                            const supabase = getSupabase();
-                            if (supabase) {
-                              supabase.functions.invoke('process-video-engine', {
-                                body: { video_url: 'https://example.com/mock-video.mp4', organizationId: orgId }
-                              }).then(({ data }) => {
-                                if (data?.job_id) setVideoJobId(data.job_id);
-                              });
-                            }
+                                              <input type="file" id="video-upload" className="hidden" accept="video/mp4,video/quicktime" onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          if (file.size > 50 * 1024 * 1024) {
+                            alert('Video must be smaller than 50MB');
+                            return;
                           }
-                        }, 300);
-                      }} />
+                          
+                          setVideoFile(file);
+                          setUploadProgress(10);
+                          const supabase = getSupabase();
+                          if (!supabase) return;
+                          
+                          const ext = file.name.split('.').pop();
+                          const path = "${orgId}/-.";
+                          
+                          const { data: uploadData, error: uploadError } = await supabase.storage
+                            .from('creative-assets')
+                            .upload(path, file);
+                            
+                          setUploadProgress(100);
+                          
+                          if (uploadError) {
+                            console.error('Upload error:', uploadError);
+                            setVideoFile(null);
+                            alert('Upload failed');
+                            return;
+                          }
+                          
+                          const { data: publicUrlData } = supabase.storage.from('creative-assets').getPublicUrl(path);
+
+                          supabase.functions.invoke('process-video-engine', {
+                            body: { video_url: publicUrlData.publicUrl, organizationId: orgId }
+                          }).then(({ data }) => {
+                            if (data?.job_id) setVideoJobId(data.job_id);
+                          });
+                        }} />
                       <label htmlFor="video-upload" className="cursor-pointer inline-block px-6 py-3 bg-bg-elevated border border-border-subtle rounded-lg font-medium text-text-primary hover:bg-bg-card">
                         Select Video File
                       </label>
@@ -456,6 +462,7 @@ export default function CreativeStudioView() {
     </div>
   );
 }
+
 
 
 

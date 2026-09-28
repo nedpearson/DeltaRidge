@@ -13,29 +13,27 @@
 
 import { newId } from '@/lib/db'
 
-export type LeadStatus =
-  /** On the list, never knocked. */
-  | 'new'
-  /** Knocked, nobody came to the door. */
+export type LeadStatus = 
+  | 'generated'
+  | 'assigned'
   | 'attempted'
-  /** Spoke to somebody who asked to be approached again later. */
-  | 'follow_up'
-  /** Wants a roof looked at. Nothing is booked yet. */
-  | 'need_visit'
-  /** A time was agreed. */
+  | 'reached'
+  | 'interested'
+  | 'inspection_requested'
   | 'appointment'
-  /** An inspection was captured against this address. */
   | 'inspected'
+  | 'estimate_proposal'
+  | 'won'
+  | 'lost'
+  | 'nurture'
+  | 'customer'
+  | 'roofcare'
+  // Legacy aliases to keep old code compiling temporarily while we migrate
+  | 'new'
+  | 'follow_up'
+  | 'need_visit'
   | 'not_interested'
-  /**
-   * Not a prospect, and not because of anything the homeowner decided: the roof
-   * is already new, the lot is empty, the building is gone. Held apart from
-   * 'not_interested' because a rep who turns up twenty of these has been given
-   * a bad list, which is a different problem from a rep who is being turned
-   * down at the door.
-   */
   | 'disqualified'
-  /** Asked not to be called on again. Never appears on a door list. */
   | 'do_not_knock'
 
 /**
@@ -108,12 +106,25 @@ export const CONTACT_KIND_LABEL: Record<ContactKind, string> = {
 }
 
 export const STATUS_LABEL: Record<LeadStatus, string> = {
-  new: 'New',
-  attempted: 'Not home',
-  follow_up: 'Follow-up',
-  need_visit: 'Needs a visit',
+  generated: 'Generated',
+  assigned: 'Assigned',
+  attempted: 'Attempted',
+  reached: 'Reached',
+  interested: 'Interested',
+  inspection_requested: 'Inspection Requested',
   appointment: 'Appointment',
   inspected: 'Inspected',
+  estimate_proposal: 'Estimate / Proposal',
+  won: 'Won',
+  lost: 'Lost',
+  nurture: 'Nurture',
+  customer: 'Customer',
+  roofcare: 'RoofCare',
+  
+  // Legacy
+  new: 'New',
+  follow_up: 'Follow-up',
+  need_visit: 'Needs a visit',
   not_interested: 'Not interested',
   disqualified: 'Not a prospect',
   do_not_knock: 'Do not knock',
@@ -187,6 +198,25 @@ export interface ManagedLead {
    * permanently, on every channel.
    */
   optedOutAt?: string
+
+  // -- SPEED TO LEAD ENGINE --
+  assignedAt?: string
+  firstAttemptAt?: string
+  firstContactAt?: string
+  
+  // -- ENGAGEMENT & TRACKING --
+  proposalState?: 'sent' | 'delivered' | 'viewed' | 'signed' | 'declined' | 'expired'
+  proposalSentAt?: string
+  proposalViewedAt?: string
+  proposalSignedAt?: string
+  
+  // -- OBJECTIONS & LOST REASONS --
+  lostReason?: 'price' | 'competitor' | 'timing' | 'insurance' | 'no_damage' | 'no_response' | 'financing' | 'homeowner_declined' | 'duplicate' | 'other'
+  objections?: ('too_expensive' | 'spouse_decision' | 'already_has_roofer' | 'wants_insurance_first' | 'not_enough_damage' | 'timing' | 'financing' | 'distrust' | 'no_urgency')[]
+  
+  // -- REFERRALS & CUSTOMER LIFETIME --
+  referredBy?: string
+  isRoofCareMember?: boolean
 }
 
 export type ContactChannel = 'call' | 'sms' | 'email'

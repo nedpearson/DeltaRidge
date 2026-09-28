@@ -50,7 +50,7 @@ export default function BrandBrainView() {
             category: activeTab,
             topic,
             content: entryContent,
-            is_approved: true
+            is_approved: false
           });
         if (error) throw error;
       }
@@ -229,4 +229,5 @@ export default function BrandBrainView() {
     </div>
   );
 }
+
 

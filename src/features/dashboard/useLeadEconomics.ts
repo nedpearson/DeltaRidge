@@ -26,7 +26,7 @@ export function useLeadEconomics() {
         return
       }
 
-      const { data: activities } = await supabase.from('activities').select('type')
+      const { data: activities } = await supabase.from('activities').select('activity_type')
       const { data: leads } = await supabase.from('leads').select('status')
       const { data: handoffs } = await supabase.from('office_handoffs').select('status, contract_value')
       const { data: callOutcomes } = await supabase.from('call_outcomes').select('outcome')
@@ -37,9 +37,9 @@ export function useLeadEconomics() {
       let inspections = 0
       
       activities?.forEach(act => {
-        if (act.type === 'knock' || act.type === 'call') attempted++
-        if (act.type === 'appointment') appointments++
-        if (act.type === 'inspection') inspections++
+        if (act.activity_type === 'knock' || act.activity_type === 'call') attempted++
+        if (act.activity_type === 'appointment') appointments++
+        if (act.activity_type === 'inspection') inspections++
       })
 
       let conversations = 0

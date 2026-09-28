@@ -5,7 +5,7 @@ import { getSupabase } from '@/lib/supabase';
 export default function FreeRoofCheckPage() {
   const [address, setAddress] = useState('');
   const [result, setResult] = useState<'idle' | 'loading' | 'done'>('idle');
-  const [hasStorm, setHasStorm] = useState(false);
+  const [assessmentStatus, setAssessmentStatus] = useState<'exposed' | 'clear' | 'unable_to_determine'>('clear');
 
   const handleLookup = async (e: FormEvent) => {
     e.preventDefault();
@@ -14,25 +14,26 @@ export default function FreeRoofCheckPage() {
     
     const supabase = getSupabase();
     if (!supabase) {
-      setHasStorm(false);
+      setAssessmentStatus('unable_to_determine');
       setResult('done');
       return;
     }
 
     try {
-      // In a real app we'd geocode the address and use PostGIS ST_Intersects
-      // For this demo, we'll check if there's any recent severe storm data
-      const { data, error } = await supabase
-        .from('storm_events')
-        .select('id, event_type, hail_size_inches')
-        .order('occurred_at', { ascending: false })
-        .limit(1);
+      // Hardcoded org ID for the public form demo, in reality driven by tenant domain
+      const orgId = '00000000-0000-0000-0000-000000000000'; // Or rely on a public configuration
+
+      const { data, error } = await supabase.rpc('check_storm_exposure_for_address', {
+        org_id: orgId,
+        search_address: address
+      });
         
       if (error) throw error;
-      setHasStorm(data && data.length > 0);
+      
+      setAssessmentStatus(data?.status || 'unable_to_determine');
     } catch (err) {
       console.error(err);
-      setHasStorm(true); // Fallback for demo
+      setAssessmentStatus('unable_to_determine');
     }
     
     setResult('done');
@@ -70,9 +71,11 @@ export default function FreeRoofCheckPage() {
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 text-center">
             <h2 className="text-xl font-semibold mb-2">Assessment Complete</h2>
             <p className="text-slate-700 mb-6">
-              {hasStorm 
+              {assessmentStatus === 'exposed'
                 ? 'Your property is within an area with recorded storm activity.'
-                : 'We checked your area. No severe recent storm activity was recorded, but a check is still recommended.'}
+                : assessmentStatus === 'unable_to_determine'
+                  ? 'We are unable to automatically determine storm exposure for this location right now, but a check is still recommended.'
+                  : 'We checked your area. No severe recent storm activity was recorded, but a check is still recommended.'}
             </p>
             <button className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded text-lg mb-3">
               Schedule Free Inspection

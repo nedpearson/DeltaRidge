@@ -41,7 +41,7 @@ export interface LeadMapLiveProps {
   onFailed?: () => void
 }
 
-export default function LeadMapLive({ doors, leads, storms, onOpenLead, onFailed }: LeadMapLiveProps) {
+export default function LeadMapLive({ doors, leads, storms, onOpenLead }: LeadMapLiveProps) {
   const allPoints = [...doors, ...leads]
   const defaultCenter: [number, number] = [39.8283, -98.5795] // Default to US center if no leads
   const [activeLead, setActiveLead] = useState<(ScoredLead | ManagedLead) | null>(null)
@@ -72,18 +72,18 @@ export default function LeadMapLive({ doors, leads, storms, onOpenLead, onFailed
         zoomControl={false}
       >
         <TileLayer
-          attribution={mapStyle === 'dark' 
-            ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            : 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'}
-          url={mapStyle === 'dark' 
-            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"}
-          eventHandlers={{
-            tileerror: () => {
-              if (onFailed) onFailed()
-            }
-          }}
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors - Street view only.'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
+        {mapStyle === 'satellite' && (
+           <div className="absolute inset-0 z-[400] flex items-center justify-center bg-bg-app/80 backdrop-blur-sm">
+              <div className="bg-bg-elevated p-4 rounded-lg border border-status-warning/30 text-center shadow-xl">
+                 <p className="text-[13px] font-bold text-status-warning mb-1">EagleView Imagery Unavailable</p>
+                 <p className="text-[11px] text-text-secondary">Delta Ridge is strictly entitled for EagleView aerial imagery.</p>
+                 <p className="text-[11px] text-text-secondary mt-1">Provider configuration required.</p>
+              </div>
+           </div>
+        )}
         
         {allPoints.length > 0 && <FitBounds leads={allPoints} />}
 

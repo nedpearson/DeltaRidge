@@ -40,8 +40,8 @@ export function useManagerCommandCenter() {
       // ---------------------------------------------------------------
       const { data: recentActivities } = await supabase
         .from('activities')
-        .select('user_id, created_at, type, leads(address)')
-        .order('created_at', { ascending: false })
+        .select('user_id, occurred_at, activity_type, leads(address)')
+        .order('occurred_at', { ascending: false })
         .limit(200)
 
       const repMap = new Map<string, { lastActivity: string; doors: number; appts: number; name: string }>()
@@ -50,17 +50,17 @@ export function useManagerCommandCenter() {
         for (const act of recentActivities) {
           if (!act.user_id) continue
           const existing = repMap.get(act.user_id) || {
-            lastActivity: act.created_at,
+            lastActivity: act.occurred_at,
             doors: 0,
             appts: 0,
             name: 'Rep ' + act.user_id.substring(0, 4)
           }
 
-          if (new Date(act.created_at) > new Date(existing.lastActivity)) {
-            existing.lastActivity = act.created_at
+          if (new Date(act.occurred_at) > new Date(existing.lastActivity)) {
+            existing.lastActivity = act.occurred_at
           }
-          if (act.type === 'knock') existing.doors++
-          if (act.type === 'appointment') existing.appts++
+          if (act.activity_type === 'knock') existing.doors++
+          if (act.activity_type === 'appointment') existing.appts++
           repMap.set(act.user_id, existing)
         }
       }

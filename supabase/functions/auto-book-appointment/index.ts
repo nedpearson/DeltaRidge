@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
+import { requireOrgMember } from "../_shared/auth.ts"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
@@ -15,26 +16,40 @@ interface AutoBookRequest {
 }
 
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      }
+    })
+  }
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 })
 
   try {
     const { conversationId, selectedStartTime, selectedEndTime, propertyAddress } = await req.json() as AutoBookRequest
 
-    if (!conversationId || !selectedStartTime || !propertyAddress) {
+    if (!conversationId || !selectedStartTime) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400 })
     }
 
     // 1. Fetch conversation and check config
     const { data: conversation, error: convError } = await supabase
       .from("social_conversations")
-      .select(`\n        organization_id, 
+      .select(`
+        organization_id, 
         social_profile_id,
         lead_id,
-        profile:social_profiles(customer_id)\n      `)
+        profile:social_profiles(customer_id),
+        lead:leads(property_id)
+      `)
       .eq("id", conversationId)
       .single()
 
-    if (convError) throw convError
+    if (convError || !conversation) throw convError || new Error("Conversation not found")
+
+    await requireOrgMember(req, conversation.organization_id)
 
     const { data: config } = await supabase
       .from("social_autonomy_config")
@@ -47,22 +62,26 @@ serve(async (req) => {
     }
 
     // 2. Resolve Property
-    const { data: property, error: propError } = await supabase.rpc('resolve_property_from_address', {
-      org_id: conversation.organization_id,
-      address_query: propertyAddress
-    })
-    
-    let propertyId = property?.[0]?.id
-    if (!propertyId) {
-      const { data: newProp } = await supabase.from('properties').insert({
-        organization_id: conversation.organization_id,
-        raw_address: propertyAddress,
-        normalized_address: propertyAddress.toUpperCase()
-      }).select('id').single()
-      propertyId = newProp?.id
+    let propertyId = conversation.lead?.property_id;
+
+    if (!propertyId && propertyAddress) {
+      const { data: property, error: propError } = await supabase.rpc('resolve_property_from_address', {
+        org_id: conversation.organization_id,
+        address_query: propertyAddress
+      })
+      
+      propertyId = property?.[0]?.id
+      if (!propertyId) {
+        const { data: newProp } = await supabase.from('properties').insert({
+          organization_id: conversation.organization_id,
+          raw_address: propertyAddress,
+          normalized_address: propertyAddress.toUpperCase()
+        }).select('id').single()
+        propertyId = newProp?.id
+      }
     }
 
-    if (!propertyId) throw new Error("Failed to resolve property")
+    if (!propertyId) throw new Error("Failed to resolve property. A property address is required.")
 
     // 3. Find Rep Availability and Prevent Double Booking
     const start = selectedStartTime;

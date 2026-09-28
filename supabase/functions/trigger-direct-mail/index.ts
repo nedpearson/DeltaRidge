@@ -36,12 +36,7 @@ serve(async (req) => {
       })
     }
 
-    if (!LOB_API_KEY) {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabase = createClient(supabaseUrl, serviceKey);
-      const { data } = await supabase.from('system_secrets').select('secret_value').eq('id', 'LOB_API_KEY').single();
-      if (data) LOB_API_KEY = data.secret_value;
-    }
+    
 
     if (!LOB_API_KEY) {
       throw new Error("LOB_API_KEY is not configured. Cannot execute real network request.");

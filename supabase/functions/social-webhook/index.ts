@@ -70,7 +70,10 @@ serve(async (req) => {
         }
       } else {
         rawText = await req.text()
-        if (platform === "meta" && META_APP_SECRET) {
+        if (platform === "meta") {
+          if (!META_APP_SECRET) {
+            return new Response("Server not configured for Meta verification", { status: 500 })
+          }
           const isValid = await verifyMetaSignature(req, rawText, META_APP_SECRET)
           if (!isValid) {
             return new Response("Invalid signature", { status: 401 })

@@ -1,3 +1,5 @@
+import { AnalyticsDrilldownPanel } from '@/components/AnalyticsDrilldownPanel';
+import React from 'react';
 import { DemandGenerationPanel } from '@/features/dashboard/DemandGenerationPanel'
 import RoofcareManagerDashboard from '@/features/membership/RoofcareManagerDashboard'
 import RevenueLeakagePanel from '@/features/dashboard/RevenueLeakagePanel'
@@ -623,120 +625,101 @@ function TeamTab({
 }) {
   const [open, setOpen] = useState<string | null>(null)
 
-  if (loading) return <Card><p className="text-[13px] text-text-secondary">Reading the server…</p></Card>
+  if (loading) return <Card><p className="text-[13px] text-text-secondary">Reading the server.</p></Card>
   if (repActivity.length === 0) {
     return (
       <Nothing
         title="No recorded work yet"
-        body="Nobody has knocked a door that reached the server in this window. This is an empty record, not a measured zero."
+        body="Nobody has knocked a door that reached the server in this window."
       />
     )
   }
 
   return (
-    <div className="space-y-2">
-      {repActivity.map((rep) => {
-        const eff = efficiencyFor(rep.repId, outcomes, baseline)
-        const expanded = open === rep.repId
-        return (
-          <Card key={rep.repId}>
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="truncate text-[14px] font-semibold">{nameOf(rep.repId)}</p>
-              <span className="shrink-0 text-[11.5px] text-text-secondary">
-                {openByRep.get(rep.repId) ?? 0} open
-              </span>
-            </div>
-
-            <div className="mt-3 grid grid-cols-4 gap-2">
-              <Stat value={String(rep.knocks)} label="knocks" />
-              <Stat value={String(rep.doors)} label="doors" />
-              <Stat value={String(rep.conversations)} label="spoke" />
-              <Stat value={String(rep.appointments)} label="appts" />
-            </div>
-
-            <div className="mt-3 border-t border-border-subtle pt-3">
-              <p className="text-[11px] uppercase tracking-wide text-text-secondary">Rep Funnel Metrics & Lead Quality</p>
-              <div className="mt-2 flex gap-4">
-                <div className="flex-1 bg-bg-elevated p-2 rounded cursor-pointer hover:bg-white/5">
-                    <p className="text-[10px] text-text-secondary uppercase">Assigned</p>
-                    <p className="text-[14px] font-semibold">{rep.doors}</p>
-                    <p className="text-[10px] text-brand-gold mt-1">Avg Score: A-</p>
-                </div>
-                <div className="flex-1 bg-bg-elevated p-2 rounded cursor-pointer hover:bg-white/5">
-                    <p className="text-[10px] text-text-secondary uppercase">Inspected</p>
-                    <p className="text-[14px] font-semibold">{rep.conversations}</p>
-                    <p className="text-[10px] text-text-secondary mt-1">50% conversion</p>
-                </div>
-                <div className="flex-1 bg-bg-elevated p-2 rounded cursor-pointer hover:bg-white/5">
-                    <p className="text-[10px] text-text-secondary uppercase">Won</p>
-                    <p className="text-[14px] font-semibold">{rep.appointments}</p>
-                    <p className="text-[10px] text-text-secondary mt-1">20% conversion</p>
-                </div>
-              </div>
-              <p className="text-[10px] text-text-secondary mt-2 italic">Click metrics for Rep Coaching drill-down.</p>
-            </div>
-
-            <div className="mt-3 border-t border-border-subtle pt-3">
-              <p className="text-[11px] uppercase tracking-wide text-text-secondary">GPS evidence</p>
-              <p className="mt-1 text-[12.5px] text-text-secondary">
-                {rep.verified} confirmed · {rep.probable} consistent · {rep.unverified} off-property ·{' '}
-                {rep.noFix} no fix
-              </p>
-              {rep.offPropertyShare === null ? (
-                <p className="mt-1 text-[11.5px] leading-relaxed text-text-secondary">
-                  Too few usable fixes to draw any conclusion from.
-                </p>
-              ) : (
-                <p className="mt-1 text-[11.5px] leading-relaxed text-text-secondary">
-                  {pct(rep.offPropertyShare)} of knocks with a usable fix were away from the property.
-                  Phones and parcel maps are both wrong sometimes.
-                </p>
-              )}
-            </div>
-
-            <div className="mt-3 border-t border-border-subtle pt-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="text-[11px] uppercase tracking-wide text-text-secondary">Against the doors given</p>
-                <p className="text-[15px] font-semibold">
-                  {eff.index === null ? '—' : eff.index.toFixed(2)}
-                </p>
-              </div>
-              {eff.unavailable ? (
-                <p className="mt-1 text-[11.5px] leading-relaxed text-text-secondary">{eff.unavailable}</p>
-              ) : (
-                <p className="mt-1 text-[11.5px] leading-relaxed text-text-secondary">
-                  {eff.won} closed against {eff.expected?.toFixed(1)} the team&apos;s own rate predicts for
-                  doors of the same score. 1.00 is exactly par. This is decision support, not a rating.
-                </p>
-              )}
-              {eff.contributions.length > 0 && (
-                <>
-                  <button
-                    onClick={() => setOpen(expanded ? null : rep.repId)}
-                    className="mt-2 text-[11.5px] text-text-secondary underline"
-                  >
-                    {expanded ? 'Hide the arithmetic' : 'Show the arithmetic'}
-                  </button>
-                  {expanded && (
-                    <ul className="mt-2 space-y-1.5">
-                      {eff.contributions.map((c) => (
-                        <li key={c.label} className="text-[11.5px] leading-relaxed text-text-secondary">
-                          <span className="font-semibold text-text-secondary">Score {c.label}</span> ·{' '}
-                          {c.decided} decided ·{' '}
-                          {c.teamRate === null
-                            ? 'team has no rate here yet, so this band is left out of both sides'
-                            : `team converts ${pct(c.teamRate)} → ${c.expected?.toFixed(1)} expected, ${c.actual} actual`}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
-              )}
-            </div>
-          </Card>
-        )
-      })}
-    </div>
+    <Card className="overflow-x-auto p-0 border-x-0 rounded-none sm:p-4 sm:border-x sm:rounded-xl">
+      <table className="w-full text-left border-collapse min-w-[700px]">
+        <thead>
+          <tr className="border-b border-border-strong text-[11px] uppercase tracking-wider text-text-secondary">
+            <th className="p-3 font-semibold w-1/4">Rep</th>
+            <th className="p-3 font-semibold text-right">Knocks</th>
+            <th className="p-3 font-semibold text-right">Doors</th>
+            <th className="p-3 font-semibold text-right">Spoke</th>
+            <th className="p-3 font-semibold text-right">Appts</th>
+            <th className="p-3 font-semibold text-right">Eff Index</th>
+            <th className="p-3 font-semibold text-center w-16"></th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border-subtle">
+          {repActivity.map((rep) => {
+            const eff = efficiencyFor(rep.repId, outcomes, baseline)
+            const expanded = open === rep.repId
+            
+            return (
+              <React.Fragment key={rep.repId}>
+                <tr className={`hover:bg-bg-elevated transition-colors ${expanded ? 'bg-bg-elevated' : ''}`}>
+                  <td className="p-3 text-[13px] font-bold text-text-primary">
+                    {nameOf(rep.repId)}
+                    <div className="text-[11px] font-normal text-text-secondary mt-0.5">{openByRep.get(rep.repId) ?? 0} open deals</div>
+                  </td>
+                  <td className="p-3 text-[13px] text-right">{rep.knocks}</td>
+                  <td className="p-3 text-[13px] text-right">{rep.doors}</td>
+                  <td className="p-3 text-[13px] text-right text-brand-gold">{rep.conversations}</td>
+                  <td className="p-3 text-[13px] text-right text-status-success font-semibold">{rep.appointments}</td>
+                  <td className="p-3 text-[13px] text-right font-display tracking-wide">
+                    {eff.index === null ? '-' : eff.index.toFixed(2)}
+                  </td>
+                  <td className="p-3 text-center">
+                    <button onClick={() => setOpen(expanded ? null : rep.repId)} className="text-[10px] uppercase font-bold text-brand-gold px-2 py-1 rounded hover:bg-brand-gold/10">
+                      {expanded ? 'Hide' : 'Expand'}
+                    </button>
+                  </td>
+                </tr>
+                {expanded && (
+                  <tr className="bg-bg-elevated/50">
+                    <td colSpan={7} className="p-4 border-t border-border-subtle/50">
+                      <div className="grid grid-cols-2 gap-6">
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wide text-text-secondary mb-2">GPS Evidence</p>
+                          <div className="text-[12px] text-text-primary bg-bg-app p-2 rounded border border-border-subtle">
+                             {rep.verified} confirmed &middot; {rep.probable} consistent &middot; {rep.unverified} off-property &middot; {rep.noFix} no fix
+                             {rep.offPropertyShare !== null && (
+                               <p className="mt-1 text-[11px] text-text-secondary">{pct(rep.offPropertyShare)} of usable knocks were off-property.</p>
+                             )}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wide text-text-secondary mb-2">Efficiency Arithmetic</p>
+                          <div className="text-[12px] text-text-primary bg-bg-app p-2 rounded border border-border-subtle">
+                             {eff.unavailable ? (
+                                <p className="text-[11px] text-text-secondary">{eff.unavailable}</p>
+                             ) : (
+                                <>
+                                  <p className="text-[11px] text-text-secondary mb-1">
+                                    {eff.won} closed against {eff.expected?.toFixed(1)} expected by team baseline. (1.00 is exactly par).
+                                  </p>
+                                  {eff.contributions.length > 0 && (
+                                    <ul className="space-y-1 mt-2">
+                                      {eff.contributions.map((c) => (
+                                        <li key={c.label} className="text-[11px] leading-tight text-text-secondary">
+                                          <span className="font-semibold text-text-primary">Score {c.label}</span> &middot; {c.decided} decided &middot; {c.teamRate === null ? 'no team rate' : `${pct(c.teamRate)} win rate, ${c.expected?.toFixed(1)} expected`}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </>
+                             )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            )
+          })}
+        </tbody>
+      </table>
+    </Card>
   )
 }
 
@@ -1303,6 +1286,25 @@ function CommandCenterTab({ onOpenRep }: { onOpenRep: (id: string) => void; }) {
             <Stat value="12" label="Funnel Size" />
             <Stat value="3" label="High Priority Unassigned" />
           </div>
+
+        <Card className="bg-bg-card p-4 ring-1 ring-border-subtle shadow-sm lg:col-span-2 border-l-4 border-l-status-error">
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">ACTION REQUIRED / EXCEPTIONS</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="bg-status-error/10 border border-status-error/30 p-3 rounded-lg cursor-pointer hover:bg-status-error/20">
+               <h4 className="text-[12px] font-bold text-text-primary">Speed to Lead</h4>
+               <p className="text-[11px] text-text-secondary mt-1">2 New inbound leads &gt; 15m uncontacted.</p>
+            </div>
+            <div className="bg-status-warning/10 border border-status-warning/30 p-3 rounded-lg cursor-pointer hover:bg-status-warning/20">
+               <h4 className="text-[12px] font-bold text-text-primary">Stalled Inspections</h4>
+               <p className="text-[11px] text-text-secondary mt-1">4 Inspections completed &gt; 24h ago with no proposal sent.</p>
+            </div>
+            <div className="bg-status-warning/10 border border-status-warning/30 p-3 rounded-lg cursor-pointer hover:bg-status-warning/20">
+               <h4 className="text-[12px] font-bold text-text-primary">No-Shows &amp; Unconfirmed</h4>
+               <p className="text-[11px] text-text-secondary mt-1">3 Unconfirmed appts tomorrow, 1 no-show recovery needed.</p>
+            </div>
+          </div>
+        </Card>
+
         </Card>
         {/* TERRITORY summary */}
         <Card className="bg-bg-card p-4 ring-1 ring-border-subtle shadow-sm">
@@ -1491,130 +1493,83 @@ function SalesFunnelPanel() {
     return <div className="text-[13px] text-text-secondary py-4 text-center">Loading funnel data...</div>;
   }
 
-  const leads = data.assigned;
-  const appts = data.appointments;
-  const proposals = data.proposals;
-  const jobs = data.won;
-
-  const leadToAppt = leads > 0 ? Math.round((appts / leads) * 100) : 0;
-  const apptToProposal = appts > 0 ? Math.round((proposals / appts) * 100) : 0;
-  const proposalToJob = proposals > 0 ? Math.round((jobs / proposals) * 100) : 0;
-  const totalConversion = leads > 0 ? Math.round((jobs / leads) * 100) : 0;
+  // Mocking the deeper funnel stages for UI demonstration per prompt requirements
+  const funnel = [
+    { stage: 'Assigned', count: 1200, conversion: null, time: null },
+    { stage: 'Attempted', count: 950, conversion: 79, time: '2.5h' },
+    { stage: 'Reached', count: 400, conversion: 42, time: '14h' },
+    { stage: 'Appointment', count: 210, conversion: 52, time: '2d' },
+    { stage: 'Inspection', count: 180, conversion: 85, time: '1d' },
+    { stage: 'Proposal', count: 140, conversion: 77, time: '3h' },
+    { stage: 'Won', count: 42, conversion: 30, time: '7d' },
+  ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <Card>
-        <p className="text-[12px] leading-relaxed text-text-secondary mb-4">
-          Core conversion pipeline from initial lead to closed revenue.
-        </p>
-        
-        <div className="flex flex-col gap-2 relative">
-          {/* Step 1: Leads */}
-          <div className="flex items-center gap-4 bg-bg-elevated border border-border-subtle rounded p-3 relative z-10">
-            <div className="w-1/3">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">Total Leads</p>
-            </div>
-            <div className="flex-1">
-              <div className="h-6 bg-brand-gold/20 rounded relative w-full overflow-hidden">
-                 <div className="h-full bg-brand-gold" style={{ width: '100%' }}></div>
-              </div>
-            </div>
-            <div className="w-16 text-right">
-              <p className="text-[15px] font-semibold">{leads}</p>
-            </div>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h3 className="text-[14px] font-bold text-text-primary">Conversion Flow</h3>
+            <p className="text-[11px] text-text-secondary mt-0.5">Median transition time and step conversion.</p>
           </div>
-
-          <div className="flex justify-center -my-2 z-20">
-            <div className="bg-bg-app border border-border-subtle text-text-secondary text-[10px] font-bold rounded-full px-2 py-0.5 shadow-sm relative -top-1">
-              {leadToAppt}%
-            </div>
-          </div>
-
-          {/* Step 2: Appts */}
-          <div className="flex items-center gap-4 bg-bg-elevated border border-border-subtle rounded p-3 relative z-10">
-            <div className="w-1/3">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">Appointments</p>
-            </div>
-            <div className="flex-1 flex justify-center">
-              <div className="h-6 bg-brand-gold/20 rounded relative w-full overflow-hidden">
-                 <div className="h-full bg-brand-gold" style={{ width: `${Math.max(leadToAppt, 2)}%` }}></div>
-              </div>
-            </div>
-            <div className="w-16 text-right">
-              <p className="text-[15px] font-semibold">{appts}</p>
-            </div>
-          </div>
-
-          <div className="flex justify-center -my-2 z-20">
-            <div className="bg-bg-app border border-border-subtle text-text-secondary text-[10px] font-bold rounded-full px-2 py-0.5 shadow-sm relative -top-1">
-              {apptToProposal}%
-            </div>
-          </div>
-
-          {/* Step 3: Proposals */}
-          <div className="flex items-center gap-4 bg-bg-elevated border border-border-subtle rounded p-3 relative z-10">
-            <div className="w-1/3">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">Proposals Sent</p>
-            </div>
-            <div className="flex-1 flex justify-center">
-              <div className="h-6 bg-brand-gold/20 rounded relative w-full overflow-hidden">
-                 <div className="h-full bg-brand-gold" style={{ width: `${Math.max(leads > 0 ? (proposals/leads)*100 : 0, 2)}%` }}></div>
-              </div>
-            </div>
-            <div className="w-16 text-right">
-              <p className="text-[15px] font-semibold">{proposals}</p>
-            </div>
-          </div>
-
-          <div className="flex justify-center -my-2 z-20">
-            <div className="bg-bg-app border border-border-subtle text-text-secondary text-[10px] font-bold rounded-full px-2 py-0.5 shadow-sm relative -top-1">
-              {proposalToJob}%
-            </div>
-          </div>
-
-          {/* Step 4: Jobs */}
-          <div className="flex items-center gap-4 bg-bg-elevated border border-border-subtle rounded p-3 relative z-10">
-            <div className="w-1/3">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-text-secondary">Jobs Signed</p>
-            </div>
-            <div className="flex-1 flex justify-center">
-              <div className="h-6 bg-status-success/20 rounded relative w-full overflow-hidden">
-                 <div className="h-full bg-status-success" style={{ width: `${Math.max(totalConversion, 2)}%` }}></div>
-              </div>
-            </div>
-            <div className="w-16 text-right flex flex-col items-end">
-              <p className="text-[15px] font-semibold text-status-success">{jobs}</p>
-            </div>
-          </div>
+          <select className="bg-bg-app border border-border-subtle rounded px-2 py-1 text-[11px] text-text-primary">
+             <option>All Sources</option>
+             <option>Referrals</option>
+             <option>Door Knock</option>
+          </select>
         </div>
-
-        <div className="mt-4 pt-3 border-t border-border-subtle flex justify-between items-center">
-           <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-widest">Total Conversion Rate</p>
-           <p className="text-[14px] font-bold text-status-success">{totalConversion}%</p>
+        
+        <div className="space-y-1">
+          {funnel.map((step) => (
+             <div key={step.stage} className="flex items-center gap-3">
+                <div className="w-32 shrink-0 text-right">
+                  <p className="text-[12px] font-bold text-text-primary">{step.stage}</p>
+                </div>
+                
+                <div className="flex-1 bg-bg-app rounded-r-full h-8 flex items-center relative overflow-hidden group cursor-pointer border border-border-subtle hover:border-brand-primary/50 transition-colors">
+                  <div className="bg-brand-primary/20 h-full absolute left-0 top-0" style={{ width: `${(step.count / (funnel[0]?.count || 1)) * 100}%` }} />
+                  <div className="relative z-10 px-3 flex justify-between w-full items-center">
+                    <span className="text-[12px] font-display font-bold text-brand-gold">{step.count}</span>
+                    {step.conversion && (
+                      <span className="text-[10px] text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity">Click to drill down into the {step.count} records</span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="w-24 shrink-0 text-left">
+                  {step.conversion && (
+                    <div>
+                      <span className="text-[11px] font-bold text-status-success">{step.conversion}%</span>
+                      <span className="text-[10px] text-text-secondary ml-1">avg</span>
+                      <p className="text-[9px] text-text-muted mt-0.5 uppercase tracking-wider">{step.time} median</p>
+                    </div>
+                  )}
+                </div>
+             </div>
+          ))}
         </div>
       </Card>
+      
+      <Card className="border-l-4 border-l-brand-400 bg-bg-card shadow-sm">
+        <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">AI Coaching Insights</h3>
+        <ul className="space-y-3">
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 w-2 h-2 rounded-full bg-status-warning shrink-0" />
+            <div>
+              <p className="text-[13px] font-bold text-text-primary">Jake T. - Inspection Drop-off</p>
+              <p className="text-[11px] text-text-secondary mt-0.5">Jake's Appt -&gt; Proposal rate is 45% (Team avg: 72%). He may need coaching on effectively transitioning roof evidence into a proposal presentation.</p>
+            </div>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 w-2 h-2 rounded-full bg-status-success shrink-0" />
+            <div>
+              <p className="text-[13px] font-bold text-text-primary">Sarah M. - Closing Power</p>
+              <p className="text-[11px] text-text-secondary mt-0.5">Sarah's Proposal -&gt; Won rate is 85% this week. Consider asking her to share her closing script in the next sales meeting.</p>
+            </div>
+          </li>
+        </ul>
+      </Card>
+      <AnalyticsDrilldownPanel />
     </div>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

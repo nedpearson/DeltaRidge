@@ -1,28 +1,8 @@
-# Supabase CLI project configuration.
-# Links this repo to the DeltaRidge project so `supabase db push` knows where
-# migrations go. Contains no secrets.
 project_id = "udrxvpkihkbrudvwggpr"
 
 [db]
 major_version = 17
 
-# -----------------------------------------------------------------------------
-# Edge Functions
-# -----------------------------------------------------------------------------
-# verify_jwt stays TRUE for the Roofr endpoint, which is not the obvious choice
-# and is worth explaining.
-#
-# Turning it off is the usual advice for a webhook, because the sender cannot
-# mint a Supabase JWT. But leaving it on costs nothing here: Zapier sends the
-# publishable anon key as the Authorization bearer, which is already in every
-# copy of the browser bundle and grants nothing on its own, and sends the real
-# credential in x-delta-ridge-token. The gateway check is therefore a free
-# outer layer in front of our own, rather than the thing standing between an
-# anonymous POST and the database.
-#
-# The credential that actually matters is per-organisation, stored only as a
-# SHA-256 hash, and set as an Edge Function secret — never in this file, never
-# in the repo.
 [functions.roofr-events]
 verify_jwt = true
 
@@ -33,42 +13,10 @@ verify_jwt = true
 enabled = true
 verify_jwt = false
 import_map = "./functions/manager-daily-brief/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/manager-daily-brief/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/manager-daily-brief/*.html" ]
 
 [functions.process-video-engine]
 enabled = true
 verify_jwt = false
 import_map = "./functions/process-video-engine/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/process-video-engine/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/process-video-engine/*.html" ]
-
-[functions.store-api-keys]
-enabled = true
-verify_jwt = false
-import_map = "./functions/store-api-keys/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/store-api-keys/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/store-api-keys/*.html" ]
-
-[functions.run-migration]
-enabled = true
-verify_jwt = false
-import_map = "./functions/run-migration/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/run-migration/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/run-migration/*.html" ]

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
+import * as crypto from "https://deno.land/std@0.177.0/crypto/crypto.ts"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
@@ -13,15 +14,17 @@ serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 })
 
   try {
-    // 1. Fetch posts scheduled for right now or in the past that are still 'scheduled'
+    // We expect this to be called by a cron. We could authenticate via secret token here.
+    
+    // 1. Fetch posts scheduled for right now or in the past that are still 'scheduled' or 'queued'
     const now = new Date().toISOString()
     const { data: postsToPublish, error: fetchError } = await supabase
       .from('content_calendar')
-      .select(`
+      .select(
         *,
         account:social_accounts(*)
-      `)
-      .eq('status', 'scheduled')
+      )
+      .in('status', ['scheduled', 'queued'])
       .lte('scheduled_for', now)
       .limit(10)
 
@@ -35,6 +38,9 @@ serve(async (req) => {
 
     // 2. Publish each post
     for (const post of postsToPublish) {
+      // Create idempotency key
+      const idempotencyKey = post.id + '-' + (post.retry_count || 0)
+      
       try {
         const orgId = post.organization_id;
 
@@ -45,7 +51,7 @@ serve(async (req) => {
           .single()
 
         if (config?.master_kill_switch) {
-          console.log(`Skipping publish for post ${post.id}: master kill switch is active`);
+          console.log(Skipping publish for post  + post.id + : master kill switch is active);
           continue;
         }
 
@@ -54,22 +60,39 @@ serve(async (req) => {
         }
 
         if (post.account.is_active === false) {
-           console.log(`Skipping publish for post ${post.id}: channel is paused`);
+           console.log(Skipping publish for post  + post.id + : channel is paused);
            continue;
         }
+
+        // Only proceed for supported platforms
+        if (post.account.platform !== 'meta') {
+           throw new Error("Provider Not yet supported: " + post.account.platform);
+        }
+
+        // Set status to attempting
+        await supabase.from('content_calendar').update({ status: 'attempting' }).eq('id', post.id)
         
-        // Dynamic import of MetaApiClient (or other platforms)
+        // Log attempt
+        await supabase.from('integration_traces').insert({
+          organization_id: orgId,
+          provider: post.account.platform,
+          endpoint: 'publish',
+          request_payload: { post_id: post.id, content: post.content },
+          status_code: 0
+        })
+
+        // Dynamic import of MetaApiClient
         const MetaApiClient = (await import('../_shared/meta-api.ts')).MetaApiClient;
         const metaApi = new MetaApiClient(post.account.encrypted_access_token);
         
-        // Dispatch to Graph API to create a post on the page's feed
+        // Dispatch to Graph API
         const result = await metaApi.publishPost(
            post.account.platform_account_id,
            post.content || post.asset_text || ""
         );
 
         if (!result || result.error || !result.id) {
-           throw new Error("Invalid response from Meta API");
+           throw new Error(result?.error?.message || "Invalid response from Meta API");
         }
 
         // Update post status to published
@@ -88,9 +111,9 @@ serve(async (req) => {
 
         publishedCount++
       } catch (err: any) {
-        console.error(`Failed to publish post ${post.id}:`, err)
-        // Mark as failed so it doesn't get retried infinitely without human review
-        await supabase.from('content_calendar').update({ status: 'failed' }).eq('id', post.id)
+        console.error(Failed to publish post  + post.id + :, err)
+        // Mark as failed
+        await supabase.from('content_calendar').update({ status: 'failed', failure_reason: err.message }).eq('id', post.id)
       }
     }
 
@@ -104,5 +127,3 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 })
-
-

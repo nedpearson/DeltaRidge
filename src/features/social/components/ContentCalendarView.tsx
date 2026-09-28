@@ -61,18 +61,21 @@ export default function ContentCalendarView() {
         </button>
       </div>
 
-      <div className="flex gap-4 mb-6">
-        {['all', 'draft', 'awaiting_approval', 'scheduled', 'published', 'failed'].map((f) => (
+            <div className="flex gap-4 mb-6">
+        {[
+          { id: 'all', label: 'All' },
+          { id: 'draft', label: 'Draft' },
+          { id: 'awaiting_approval', label: 'Awaiting Approval' },
+          { id: 'scheduled', label: 'Scheduled' },
+          { id: 'published', label: 'Published' },
+          { id: 'failed', label: 'Failed' }
+        ].map((f) => (
           <button
-            key={f}
-            onClick={() => setFilter(f as any)}
-            className={`px-4 py-2 rounded-full text-sm font-medium capitalize ${
-              filter === f 
-                ? 'bg-brand-primary text-brand-primary ring-1 ring-brand-500' 
-                : 'bg-bg-card text-text-secondary hover:bg-bg-elevated'
-            }`}
+            key={f.id}
+            onClick={() => setFilter(f.id as any)}
+            className={px-4 py-2 rounded-full text-sm font-medium }
           >
-            {f}
+            {f.label}
           </button>
         ))}
       </div>
@@ -107,9 +110,11 @@ export default function ContentCalendarView() {
                     <span className="px-2 py-0.5 bg-bg-elevated text-text-secondary text-xs rounded font-medium capitalize">
                       {post.content_pillar}
                     </span>
-                    {post.status === 'published' && <span className="flex items-center gap-1 text-green-600 text-xs font-medium"><CheckCircle className="w-3 h-3" /> Published</span>}
+                                        {post.status === 'published' && <span className="flex items-center gap-1 text-green-600 text-xs font-medium"><CheckCircle className="w-3 h-3" /> Published</span>}
                     {post.status === 'scheduled' && <span className="flex items-center gap-1 text-brand-primary text-xs font-medium"><Clock className="w-3 h-3" /> Scheduled</span>}
                     {post.status === 'draft' && <span className="flex items-center gap-1 text-status-warning text-xs font-medium"><Clock className="w-3 h-3" /> Draft</span>}
+                    {post.status === 'awaiting_approval' && <span className="flex items-center gap-1 text-status-warning text-xs font-medium"><Clock className="w-3 h-3" /> Awaiting Approval</span>}
+                    {post.status === 'failed' && <span className="flex items-center gap-1 text-red-600 text-xs font-medium"><CheckCircle className="w-3 h-3" /> Failed</span>}
                   </div>
                   <div className="text-sm font-medium text-text-secondary">
                     {new Date(post.scheduled_for || post.created_at).toLocaleDateString()}
@@ -168,6 +173,8 @@ export default function ContentCalendarView() {
     </div>
   );
 }
+
+
 
 
 

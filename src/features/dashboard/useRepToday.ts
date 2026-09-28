@@ -46,30 +46,29 @@ export function useRepToday() {
       // -------------------------------------------------------------------
       const nowIso = new Date().toISOString()
       const { data: appts } = await supabase
-        .from('activities')
-        .select('id, scheduled_at, created_at, lead_id, type, metadata, leads(address)')
-        .eq('type', 'appointment')
-        .eq('user_id', user.id)
-        .gte('scheduled_at', nowIso)
-        .order('scheduled_at', { ascending: true })
+        .from('appointments')
+        .select('id, scheduled_start, lead_id, status, leads(address)')
+        .eq('assigned_to', user.id)
+        .gte('scheduled_start', nowIso)
+        .not('status', 'in', '("cancelled","completed","no_show")')
+        .order('scheduled_start', { ascending: true })
         .limit(1)
 
       let nextAppointment: RepTodayData['nextAppointment'] = null
       if (appts && appts.length > 0 && appts[0]) {
         const appt = appts[0]
-        // Use scheduled_at if it exists; fall back to created_at only with a warning label
-        const appointmentTime = (appt as Record<string, unknown>).scheduled_at as string || appt.created_at
-        const leadJoin = appt.leads as unknown
+        const appointmentTime = (appt as any).scheduled_start
+        const leadJoin = appt.leads as any
         const leadAddress = Array.isArray(leadJoin) && leadJoin[0]
-          ? (leadJoin[0] as Record<string, unknown>).address as string
+          ? (leadJoin[0] as any).address as string
           : typeof leadJoin === 'object' && leadJoin !== null
-            ? (leadJoin as Record<string, unknown>).address as string
+            ? (leadJoin as any).address as string
             : 'Address unavailable'
-        const meta = (appt as Record<string, unknown>).metadata as Record<string, unknown> | null
+        
         nextAppointment = {
           time: new Date(appointmentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           address: leadAddress || 'Address unavailable',
-          confirmed: meta?.confirmed === true,
+          confirmed: appt.status === 'confirmed',
           leadId: appt.lead_id
         }
       }

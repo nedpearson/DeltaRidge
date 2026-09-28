@@ -49,37 +49,51 @@ export default function InboxView() {
 
   const selectedConv = conversations.find(c => c.id === selectedConvId);
 
-  const handleAssign = async () => { if (!selectedConvId || !selectedConv) return; const supabase = getSupabase(); if (!supabase) return; try { const { data: leadData } = await supabase.from('leads').insert({ organization_id: selectedConv.organization_id, first_name: selectedConv.profile?.display_name?.split(' ')[0] || 'Unknown', last_name: selectedConv.profile?.display_name?.split(' ').slice(1).join(' ') || 'User', lead_source: 'Social', status: 'New' }).select().single(); if (leadData) { await supabase.from('social_conversations').update({ lead_id: leadData.id }).eq('id', selectedConvId); console.log('Assigned to new lead: ' + leadData.id); } } catch (err) { console.error('Assign error', err); } };
-
-  const handleBook = async () => { if (!selectedConvId || !selectedConv) return; const supabase = getSupabase(); if (!supabase) return; try { const { error } = await supabase.from('events').insert({ organization_id: selectedConv.organization_id, title: 'Appointment with ' + selectedConv.profile?.display_name, event_type: 'appointment', start_time: new Date(Date.now() + 86400000).toISOString(), end_time: new Date(Date.now() + 90000000).toISOString(), status: 'scheduled' }); if (!error) { console.log('Appointment booked for tomorrow!'); } } catch(err) { console.error('Book error', err); } };
-
-  const handleSendReply = async () => {
-    if (!selectedConvId || !selectedConv || !replyText.trim()) return;
-    
+  const handleAssign = async () => {
+    if (!selectedConvId) return;
     const supabase = getSupabase();
     if (!supabase) return;
-
     try {
-      // 1. Insert message
-      await supabase.from('social_messages').insert({
-        organization_id: selectedConv.organization_id,
-        conversation_id: selectedConvId,
-        platform_message_id: `man_${crypto.randomUUID()}`,
-        direction: 'outbound',
-        message_type: 'text',
-        content: replyText,
-        is_ai_generated: false,
-        sent_at: new Date().toISOString()
+      const { data, error } = await supabase.functions.invoke('assign-social-lead', {
+        body: { conversation_id: selectedConvId }
       });
-
-      // 2. Clear input
-      setReplyText('');
-
-      // Note: A robust system would also dispatch this to the Meta API via an Edge Function
-      // For Phase 2, we just persist it locally as if sent.
-
+      if (error) throw error;
+      console.log('Assigned to new lead: ' + data.id);
     } catch (err) {
-      console.error('Failed to send reply:', err);
+      console.error('Assign error', err);
+    }
+  };
+
+  const handleBook = async () => {
+    if (!selectedConvId || !selectedConv) return;
+    const supabase = getSupabase();
+    if (!supabase) return;
+    try {
+      const { error } = await supabase.functions.invoke('auto-book-appointment', {
+        body: { 
+          conversationId: selectedConvId, 
+          selectedStartTime: new Date(Date.now() + 86400000).toISOString() 
+        }
+      });
+      if (error) throw error;
+      console.log('Appointment booked for tomorrow!');
+    } catch(err) {
+      console.error('Book error', err);
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!selectedConvId || !replyText.trim()) return;
+    const supabase = getSupabase();
+    if (!supabase) return;
+    try {
+      const { error } = await supabase.functions.invoke('send-social-message', {
+        body: { conversation_id: selectedConvId, content: replyText }
+      });
+      if (error) throw error;
+      setReplyText('');
+    } catch (err) {
+      console.error('Send error', err);
     }
   };
 
