@@ -107,12 +107,6 @@ export default function EstimatePage() {
 
   const handleSendProposal = (_channel: 'sms' | 'email') => {
     setProposalStatus('sent')
-    setTimeout(() => {
-      setProposalStatus('viewed')
-      setTimeout(() => {
-        setProposalStatus('signed')
-      }, 3000)
-    }, 3000)
   }
 
   const [referralSent, setReferralSent] = useState(false)
@@ -683,6 +677,7 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
     </div>
   )
 }
+
 
 
 

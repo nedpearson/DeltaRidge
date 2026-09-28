@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
 
@@ -27,26 +26,29 @@ export function useLeadEconomics() {
         return
       }
 
-      // Read real stats from activities and office_handoffs
       const { data: activities } = await supabase.from('activities').select('type')
       const { data: leads } = await supabase.from('leads').select('status')
       const { data: handoffs } = await supabase.from('office_handoffs').select('status, contract_value')
+      const { data: callOutcomes } = await supabase.from('call_outcomes').select('outcome')
 
       const assigned = leads?.length || 0
       let attempted = 0
-      let conversations = 0
       let appointments = 0
       let inspections = 0
       
       activities?.forEach(act => {
-        if (act.type === 'knock') attempted++
-        if (act.type === 'knock' || act.type === 'call') conversations++ // Rough approximation for demo
+        if (act.type === 'knock' || act.type === 'call') attempted++
         if (act.type === 'appointment') appointments++
         if (act.type === 'inspection') inspections++
       })
 
-      // We'll approximate interested from lead status
-      const interested = leads?.filter(l => ['need_visit', 'appointment', 'inspected'].includes(l.status)).length || 0
+      let conversations = 0
+      let interested = 0
+
+      callOutcomes?.forEach(co => {
+        if (co.outcome === 'spoke' || co.outcome === 'interested') conversations++
+        if (co.outcome === 'interested') interested++
+      })
 
       let proposals = 0
       let won = 0
@@ -63,7 +65,7 @@ export function useLeadEconomics() {
       setData({
         assigned,
         attempted,
-        conversations: Math.floor(attempted * 0.4), // mock for real conversations vs just knocks
+        conversations,
         interested,
         appointments,
         inspections,
@@ -81,7 +83,3 @@ export function useLeadEconomics() {
 
   return { data, loading }
 }
-
-
-
-

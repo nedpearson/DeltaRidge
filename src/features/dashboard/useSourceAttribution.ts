@@ -22,78 +22,71 @@ export function useSourceAttribution() {
         return
       }
 
-      // 1. Fetch leads and handoffs to figure out "source" roughly. 
-      // Right now, leads don't explicitly have a `source` column, but they have `reasons` array.
-      // Let's approximate based on reasons array containing "Neighbor" or "Intelligence" etc.
-      // If we don't have enough data, we'll return a server-backed array that dynamically computes based on what is available.
-      
-      const { data: leads } = await supabase.from('leads').select('id, reasons')
+      // Query real tables
+      const { data: sources } = await supabase.from('lead_sources').select('id, name')
+      const { data: leads } = await supabase.from('leads').select('id, lead_source_id')
       const { data: handoffs } = await supabase.from('office_handoffs').select('lead_id, status, contract_value')
+      
+      const sourceMap = new Map<string, { opps: number, appts: number, won: number, rev: number, name: string }>()
+      
+      sources?.forEach(s => {
+        sourceMap.set(s.id, { opps: 0, appts: 0, won: 0, rev: 0, name: s.name })
+      })
 
-      let intelligenceOpp = 0, intelligenceAppt = 0, intelligenceWon = 0, intelligenceRev = 0
-      let referralOpp = 0, referralAppt = 0, referralWon = 0, referralRev = 0
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  let totalOpp = 0, totalAppt = 0, totalWon = 0, totalRev = 0
+      const fallbackSourceId = 'unattributed'
+      sourceMap.set(fallbackSourceId, { opps: 0, appts: 0, won: 0, rev: 0, name: 'Other / Unattributed' })
 
       leads?.forEach(l => {
-        totalOpp++
-        const reasonsStr = (l.reasons || []).join(' ').toLowerCase()
-        const isReferral = reasonsStr.includes('neighbor') || reasonsStr.includes('referral')
+        const sid = l.lead_source_id || fallbackSourceId
+        if (!sourceMap.has(sid)) {
+           sourceMap.set(sid, { opps: 0, appts: 0, won: 0, rev: 0, name: 'Unknown' })
+        }
         
-        if (isReferral) referralOpp++
-        else intelligenceOpp++ // Defaulting to intelligence for now since it's the primary engine
-
+        const stats = sourceMap.get(sid)!
+        stats.opps++
+        
         const myHandoffs = handoffs?.filter(h => h.lead_id === l.id) || []
-        const hasAppt = myHandoffs.length > 0 // We'll mock this: if they have a handoff they probably had an appt
+        const hasAppt = myHandoffs.length > 0 
         const hasWon = myHandoffs.some(h => h.status === 'won')
         const rev = myHandoffs.filter(h => h.status === 'won').reduce((sum, h) => sum + (h.contract_value || 0), 0)
 
-        if (hasAppt) totalAppt++
-        if (hasWon) totalWon++
-        totalRev += rev
-
-        if (isReferral) {
-          if (hasAppt) referralAppt++
-          if (hasWon) referralWon++
-          referralRev += rev
-        } else {
-          if (hasAppt) intelligenceAppt++
-          if (hasWon) intelligenceWon++
-          intelligenceRev += rev
-        }
+        if (hasAppt) stats.appts++
+        if (hasWon) stats.won++
+        stats.rev += rev
       })
 
       const formatGp = (rev: number) => `$${(rev * 0.35).toLocaleString()}`
       const formatGpPerOpp = (rev: number, opps: number) => opps === 0 ? '$0' : `$${Math.round((rev * 0.35) / opps).toLocaleString()}`
       const formatCloseRate = (won: number, appt: number) => appt === 0 ? '0%' : `${Math.round((won / appt) * 100)}%`
 
-      setData([
-        {
+      const result = Array.from(sourceMap.values())
+        .filter(s => s.opps > 0 || s.rev > 0)
+        .map(s => ({
+          name: s.name,
+          appts: s.appts,
+          closeRate: formatCloseRate(s.won, s.appts),
+          revenue: `$${s.rev.toLocaleString()}`,
+          gp: formatGp(s.rev),
+          gpPerOpp: formatGpPerOpp(s.rev, s.opps)
+        }))
+        .sort((a, b) => {
+          const revA = parseFloat(a.revenue.replace(/[^0-9.-]+/g, ''))
+          const revB = parseFloat(b.revenue.replace(/[^0-9.-]+/g, ''))
+          return revB - revA
+        })
+
+      if (result.length === 0) {
+        result.push({
           name: 'Delta Ridge Intelligence',
-          appts: intelligenceAppt,
-          closeRate: formatCloseRate(intelligenceWon, intelligenceAppt),
-          revenue: `$${intelligenceRev.toLocaleString()}`,
-          gp: formatGp(intelligenceRev),
-          gpPerOpp: formatGpPerOpp(intelligenceRev, intelligenceOpp)
-        },
-        {
-          name: 'Referrals & Neighbors',
-          appts: referralAppt,
-          closeRate: formatCloseRate(referralWon, referralAppt),
-          revenue: `$${referralRev.toLocaleString()}`,
-          gp: formatGp(referralRev),
-          gpPerOpp: formatGpPerOpp(referralRev, referralOpp)
-        },
-        {
-          name: 'Other Campaigns',
           appts: 0,
           closeRate: '0%',
           revenue: '$0',
           gp: '$0',
           gpPerOpp: '$0'
-        }
-      ])
-      
+        })
+      }
+
+      setData(result)
       setLoading(false)
     }
 
@@ -102,4 +95,3 @@ export function useSourceAttribution() {
 
   return { data, loading }
 }
-
