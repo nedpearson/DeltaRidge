@@ -128,7 +128,7 @@ export default function MapPage() {
         {filteredLeads.length > 0 && <FitToMarkers leads={filteredLeads} />}
 
         {filteredLeads.map(lead => (
-          <Marker
+          <Marker eventHandlers={{ click: () => navigate('/lead/' + lead.id) }}
             key={lead.id}
             position={[lead.latitude, lead.longitude]}
             icon={lead.status === 'won' ? JobPin : LeadPin}
