@@ -50,7 +50,7 @@ as $$
     left join customers c on l.customer_id = c.id
     left join properties p on l.property_id = p.id
     cross join q
-    where l.app.has_org_access(organization_id)
+    where app.has_org_access(l.organization_id)
       and (
         c.first_name ilike q.wild 
         or c.last_name ilike q.wild 
