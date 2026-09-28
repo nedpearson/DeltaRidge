@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { PenTool, Image as ImageIcon, Video, Sparkles, Wand2, ShieldAlert, CheckCircle } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
 import { useSession } from '@/features/auth/session';
+import { useQuery } from '@tanstack/react-query';
 
 export default function CreativeStudioView() {
   const session = useSession();
@@ -42,6 +43,24 @@ export default function CreativeStudioView() {
 
   
   const [generatedImage, setGeneratedImage] = useState<{ url: string } | null>(null);
+
+  const { data: competitorIntel = [], isLoading: isLoadingCompetitors, error: competitorError } = useQuery({
+    queryKey: ['competitor_ad_intelligence'],
+    queryFn: async () => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error('Supabase not configured');
+      const { data, error } = await supabase
+        .from('competitor_ad_intelligence')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const isDisconnected = competitorError !== null;
+
 
   const handleGenerate = async () => {
     const supabase = getSupabase();
@@ -383,37 +402,45 @@ export default function CreativeStudioView() {
               </div>
               
               <h4 className="font-semibold text-sm mb-4">RECENT INTELLIGENCE LOGS</h4>
-              <div className="grid gap-4">
-                <div className="p-4 border border-status-critical/30 bg-status-critical/10 rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-semibold text-status-critical text-sm">Big Box Roofing Corp</span>
-                    <span className="text-xs text-status-critical font-medium">THREAT DETECTED</span>
-                  </div>
-                  <p className="text-sm text-text-primary whitespace-pre-wrap italic mb-3">
-                    "Get a brand new roof with ZERO down! We waive your deductible! Call today."
-                  </p>
-                  <div className="flex gap-2">
-                    <span className="px-2 py-1 bg-bg-card border border-status-critical/30 rounded text-xs text-status-critical">Violation: Waiving Deductible</span>
-                    <span className="px-2 py-1 bg-brand-primary text-brand-primary rounded text-xs">Counter-campaign drafted in Calendar</span>
-                  </div>
+              
+              {isDisconnected ? (
+                <div className="p-12 text-center border border-border-subtle rounded-lg bg-bg-app">
+                  <ShieldAlert className="w-12 h-12 text-text-secondary mx-auto mb-4 opacity-50" />
+                  <h5 className="font-medium text-text-primary mb-2">Provider Access Unavailable</h5>
+                  <p className="text-sm text-text-secondary">Please connect your Meta Ad Library credentials to enable Competitor Watch.</p>
                 </div>
-                
-                <div className="p-4 border border-border-subtle bg-bg-app rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-semibold text-text-primary text-sm">Storm Chasers LLC</span>
-                    <span className="text-xs text-text-secondary font-medium">Clear</span>
-                  </div>
-                  <p className="text-sm text-text-primary whitespace-pre-wrap italic mb-3">
-                    "We are doing free inspections in Ascension Parish all week."
-                  </p>
-                  <div className="flex gap-2">
-                    <span className="px-2 py-1 bg-bg-card border border-border-subtle rounded text-xs text-text-secondary">Standard Offer</span>
-                  </div>
+              ) : isLoadingCompetitors ? (
+                <div className="p-12 text-center text-text-secondary">Loading intelligence logs...</div>
+              ) : competitorIntel.length === 0 ? (
+                <div className="p-12 text-center text-text-secondary border border-border-subtle rounded-lg bg-bg-app">No threats detected.</div>
+              ) : (
+                <div className="grid gap-4">
+                  {competitorIntel.map((log: any) => (
+                    <div key={log.id} className={`p-4 border rounded-lg ${log.threat_level === 'high' ? 'border-status-critical/30 bg-status-critical/10' : 'border-border-subtle bg-bg-app'}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className={`font-semibold text-sm ${log.threat_level === 'high' ? 'text-status-critical' : 'text-text-primary'}`}>{log.competitor_name}</span>
+                        <span className={`text-xs font-medium ${log.threat_level === 'high' ? 'text-status-critical' : 'text-text-secondary'}`}>
+                          {log.threat_level === 'high' ? 'THREAT DETECTED' : 'Clear'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-text-primary whitespace-pre-wrap italic mb-3">
+                        "{log.ad_content}"
+                      </p>
+                      <div className="flex gap-2">
+                        <span className={`px-2 py-1 bg-bg-card border rounded text-xs ${log.threat_level === 'high' ? 'border-status-critical/30 text-status-critical' : 'border-border-subtle text-text-secondary'}`}>
+                          {log.threat_level === 'high' ? `Violation: ${log.notes || 'Unknown'}` : 'Standard Offer'}
+                        </span>
+                        {log.threat_level === 'high' && (
+                          <span className="px-2 py-1 bg-brand-primary text-brand-primary rounded text-xs">Counter-campaign drafted in Calendar</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
           </div>
-        )}
+        )}}
       </div>
     </div>
   );
