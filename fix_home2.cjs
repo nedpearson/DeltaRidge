@@ -1,0 +1,5 @@
+const fs = require('fs')
+let content = fs.readFileSync('src/pages/HomePage.tsx', 'utf8')
+content = content.replace(/className=\{\t/g, 'className={	')
+content = content.replace(/ext-\[14px\] font-bold \}/g, "ext-[14px] font-bold }")
+fs.writeFileSync('src/pages/HomePage.tsx', content)

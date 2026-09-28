@@ -340,10 +340,10 @@ export default function CreativeStudioView() {
                           const supabase = getSupabase();
                           if (!supabase) return;
                           
-                          const ext = file.name.split('.').pop();
+                          // const ext = file.name.split('.').pop();
                           const path = "${orgId}/-.";
                           
-                          const { data: uploadData, error: uploadError } = await supabase.storage
+                          const { error: uploadError } = await supabase.storage
                             .from('creative-assets')
                             .upload(path, file);
                             

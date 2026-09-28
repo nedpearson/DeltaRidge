@@ -73,7 +73,7 @@ export default function ContentCalendarView() {
           <button
             key={f.id}
             onClick={() => setFilter(f.id as any)}
-            className={px-4 py-2 rounded-full text-sm font-medium }
+            className={`px-4 py-2 rounded-full text-sm font-medium ${filter === f.id ? "bg-brand-primary text-brand-950" : "bg-bg-elevated text-text-secondary hover:bg-bg-card"}`}
           >
             {f.label}
           </button>
