@@ -44,11 +44,10 @@ serve(async (req) => {
         const MetaApiClient = (await import('../_shared/meta-api.ts')).MetaApiClient;
         const metaApi = new MetaApiClient(post.account.encrypted_access_token);
         
-        // Mock dispatch to Graph API to create a post
-        await metaApi.sendMessage(
-           post.account.platform_account_id, 
-           'PAGE_POST', // specialized constant for posting to page instead of DM
-           post.content
+        // Dispatch to Graph API to create a post on the page's feed
+        const result = await metaApi.publishPost(
+           post.account.platform_account_id,
+           post.asset_text || ""
         );
 
         // Update post status to published
@@ -57,7 +56,7 @@ serve(async (req) => {
           .update({
             status: 'published',
             published_at: new Date().toISOString(),
-            platform_post_id: `ext_${crypto.randomUUID()}`
+            platform_post_id: result.id
           })
           .eq('id', post.id)
 

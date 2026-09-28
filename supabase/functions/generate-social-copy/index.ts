@@ -81,49 +81,34 @@ ${policies || "Never promise that insurance will cover a claim. Only offer free 
     const userPrompt = `Please write a post about the following topic: ${topic}`
 
     // 3. Call OpenAI API
-    // If we don't have a key (e.g. running locally without env), we return a simulated response.
-    let generatedCopy = ""
-
-    if (OPENAI_API_KEY) {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ],
-          temperature: 0.7,
-          max_tokens: 500
-        })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`)
-      }
-
-      const aiData = await response.json()
-      generatedCopy = aiData.choices[0].message.content
-    } else {
-      // Simulated response for development
-      console.log("No OPENAI_API_KEY found, simulating response...")
-      generatedCopy = `(Simulated AI Copy for ${platform})\n\nDid you know that ${topic}?\n\nHere at Delta Ridge, we see this all the time in Ascension Parish. ${founderStory.slice(0, 50)}... That's why we take this seriously.\n\nDon't wait until a small issue becomes a massive leak. Let us give you a free, honest assessment. No pressure, just facts.\n\n👇 Click the link in our bio to schedule your free inspection today.`
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured.")
     }
 
-    // 4. Log the generation in a content calendar / history table (Simulated here)
-    await supabase.from("content_calendar").insert({
-      organization_id: organizationId,
-      platform: platform.toLowerCase(),
-      content_type: 'post',
-      asset_text: generatedCopy,
-      status: 'draft',
-      scheduled_for: new Date(Date.now() + 86400000).toISOString() // Scheduled for tomorrow by default
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
     })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`)
+    }
+
+    const aiData = await response.json()
+    const generatedCopy = aiData.choices[0].message.content
 
     return new Response(JSON.stringify({ success: true, copy: generatedCopy }), {
       headers: { 

@@ -42,6 +42,31 @@ export class MetaApiClient {
       body: JSON.stringify(payload)
     });
   }
+  
+  /**
+   * Publishes a post to a Facebook Page feed.
+   */
+  async publishPost(
+    pageId: string,
+    message: string,
+    link?: string
+  ): Promise<any> {
+    const url = `${this.baseUrl}/${pageId}/feed?access_token=${this.accessToken}`;
+    
+    const payload: any = {
+      message
+    };
+    
+    if (link) {
+      payload.link = link;
+    }
+
+    return this.fetchWithRetry(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  }
 
   /**
    * Internal fetch wrapper with exponential backoff for rate limits.

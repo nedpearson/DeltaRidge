@@ -28,32 +28,32 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing prompt or organizationId" }), { status: 400 })
     }
 
-    let imageUrl = "https://images.unsplash.com/photo-1600607688066-890987f18a86?q=80&w=1000&auto=format&fit=crop";
-
-    if (OPENAI_API_KEY) {
-      const response = await fetch("https://api.openai.com/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: prompt,
-          n: 1,
-          size: "1024x1024"
-        })
-      });
-
-      if (response.ok) {
-        const json = await response.json();
-        imageUrl = json.data[0].url;
-      } else {
-        console.error("OpenAI Error", await response.text());
-      }
-    } else {
-      console.warn("NO OPENAI_API_KEY. Using mock image.");
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured.");
     }
+
+    const response = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt: prompt,
+        n: 1,
+        size: "1024x1024"
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("OpenAI Error", errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
+    }
+
+    const json = await response.json();
+    const imageUrl = json.data[0].url;
 
     // Save to creative_assets
     const { data: asset, error } = await supabase.from('creative_assets').insert({
