@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-let OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || "";
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || ""
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -81,22 +81,14 @@ ${policies || "Never promise that insurance will cover a claim. Only offer free 
     const userPrompt = `Please write a post about the following topic: ${topic}`
 
     // 3. Call OpenAI API
-    // If we don't have a key (e.g. running locally without env), we return a simulated response.
-    let generatedCopy = ""
-
     if (!OPENAI_API_KEY) {
-      const { data } = await supabase.from('system_secrets').select('secret_value').eq('id', 'OPENAI_API_KEY').single();
-      if (data) OPENAI_API_KEY = data.secret_value;
-    }
-
-    if (!OPENAI_API_KEY) {
-      throw new Error("Missing OPENAI_API_KEY. Cannot execute real network request.");
+      throw new Error("OPENAI_API_KEY is not configured.")
     }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": Bearer ,
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
@@ -112,21 +104,11 @@ ${policies || "Never promise that insurance will cover a claim. Only offer free 
 
     if (!response.ok) {
       const error = await response.json()
-      throw new Error("OpenAI API error: " + (error.error?.message || response.statusText))
+      throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`)
     }
 
     const aiData = await response.json()
-    generatedCopy = aiData.choices[0].message.content
-
-    // 4. Log the generation in a content calendar / history table (Simulated here)
-    await supabase.from("content_calendar").insert({
-      organization_id: organizationId,
-      platform: platform.toLowerCase(),
-      content_type: 'post',
-      asset_text: generatedCopy,
-      status: 'draft',
-      scheduled_for: new Date(Date.now() + 86400000).toISOString() // Scheduled for tomorrow by default
-    })
+    const generatedCopy = aiData.choices[0].message.content
 
     return new Response(JSON.stringify({ success: true, copy: generatedCopy }), {
       headers: { 
@@ -147,6 +129,3 @@ ${policies || "Never promise that insurance will cover a claim. Only offer free 
     })
   }
 })
-
-
-

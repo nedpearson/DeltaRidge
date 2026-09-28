@@ -13,6 +13,8 @@ export default function CreativeStudioView() {
   const [platform, setPlatform] = useState('Facebook / Meta');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResult, setGeneratedResult] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   
 
@@ -68,14 +70,17 @@ export default function CreativeStudioView() {
     
     setIsGenerating(true);
     setGeneratedResult(null);
+    setCopyError(null);
     try {
       const { data, error } = await supabase.functions.invoke('generate-social-copy', {
         body: { topic, pillar, platform, organizationId: orgId }
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       if (data?.copy) setGeneratedResult(data.copy);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setCopyError(err.message || "Failed to generate copy");
     } finally {
       setIsGenerating(false);
     }
@@ -87,14 +92,17 @@ export default function CreativeStudioView() {
     
     setIsGeneratingImage(true);
     setGeneratedImage(null);
+    setImageError(null);
     try {
       const { data, error } = await supabase.functions.invoke('generate-social-image', {
         body: { prompt: imagePrompt, organizationId: orgId }
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       if (data?.asset) setGeneratedImage(data.asset);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setImageError(err.message || "Failed to generate image");
     } finally {
       setIsGeneratingImage(false);
     }
@@ -191,6 +199,7 @@ export default function CreativeStudioView() {
                     </select>
                   </div>
                 </div>
+                {copyError && <div className="text-status-critical text-sm mt-2">{copyError}</div>}
                 <button 
                   onClick={handleGenerate}
                   disabled={isGenerating || !topic}
@@ -271,6 +280,7 @@ export default function CreativeStudioView() {
                     className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm focus:outline-none focus:border-brand-500" 
                   />
                 </div>
+                {imageError && <div className="text-status-critical text-sm mt-2">{imageError}</div>}
                 <button 
                   onClick={handleGenerateImage}
                   disabled={isGeneratingImage || !imagePrompt}

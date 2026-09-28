@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-let OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || "";
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || ""
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -29,37 +29,31 @@ serve(async (req) => {
     }
 
     if (!OPENAI_API_KEY) {
-      const { data } = await supabase.from('system_secrets').select('secret_value').eq('id', 'OPENAI_API_KEY').single();
-      if (data) OPENAI_API_KEY = data.secret_value;
+      throw new Error("OPENAI_API_KEY is not configured.");
     }
 
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not configured. Cannot execute real DALL-E network request.");
+    const response = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt: prompt,
+        n: 1,
+        size: "1024x1024"
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("OpenAI Error", errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
     }
 
-    let imageUrl = "";
-    if (OPENAI_API_KEY) {
-      const response = await fetch("https://api.openai.com/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: prompt,
-          n: 1,
-          size: "1024x1024"
-        })
-      });
-
-      if (response.ok) {
-        const json = await response.json();
-        imageUrl = json.data[0].url;
-      } else {
-        console.error("OpenAI Error", await response.text());
-      }
-    }
+    const json = await response.json();
+    const imageUrl = json.data[0].url;
 
     // Save to creative_assets
     const { data: asset, error } = await supabase.from('creative_assets').insert({
@@ -82,5 +76,3 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { "Access-Control-Allow-Origin": "*" } })
   }
 })
-
-

@@ -44,10 +44,10 @@ serve(async (req) => {
         const MetaApiClient = (await import('../_shared/meta-api.ts')).MetaApiClient;
         const metaApi = new MetaApiClient(post.account.encrypted_access_token);
         
-        // Real dispatch to Graph API to create a post
-        await metaApi.createPagePost(
-           post.account.platform_account_id, 
-           post.content
+        // Dispatch to Graph API to create a post on the page's feed
+        const result = await metaApi.publishPost(
+           post.account.platform_account_id,
+           post.asset_text || ""
         );
 
         // Update post status to published
@@ -56,7 +56,7 @@ serve(async (req) => {
           .update({
             status: 'published',
             published_at: new Date().toISOString(),
-            platform_post_id: `ext_${crypto.randomUUID()}`
+            platform_post_id: result.id
           })
           .eq('id', post.id)
 
@@ -78,4 +78,3 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 })
-
