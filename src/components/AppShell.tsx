@@ -7,6 +7,7 @@ import { UniversalSearch } from './UniversalSearch'
 import NotificationCenter from './NotificationCenter'
 import { AIAssistant } from './AIAssistant'
 import { Bot } from 'lucide-react'
+import { useSession } from '@/features/auth/session'
 
 export const NAV = [
   { to: '/', label: 'Today', icon: 'home' },
@@ -29,6 +30,10 @@ function Icon({ name }: { name: string }) {
 }
 
 export function OnlinePill() {
+  const { session } = useSession()
+  const orgId = session?.membership?.organizationId || null
+  const userId = session?.user?.id || null
+
   const [online, setOnline] = useState(navigator.onLine)
   const [pending, setPending] = useState(0)
 
@@ -47,7 +52,7 @@ export function OnlinePill() {
     }
   }, [])
 
-  const label = !online ? 'Offline — saved on device' : pending > 0 ? `${pending} waiting to sync` : 'Saved on device'
+  const label = !online ? 'Offline - saved on device' : pending > 0 ? `${pending} waiting to sync` : 'Saved on device'
   const [isSyncing, setIsSyncing] = useState(false)
 
   const handleSync = async () => {
@@ -55,7 +60,7 @@ export function OnlinePill() {
     setIsSyncing(true)
     if ('vibrate' in navigator) navigator.vibrate(20)
     try {
-      await syncOutbox(null, null)
+      await syncOutbox(orgId, userId)
       const newCount = await outboxCount()
       setPending(newCount)
       if (newCount === 0 && 'vibrate' in navigator) navigator.vibrate([20, 50, 20])
