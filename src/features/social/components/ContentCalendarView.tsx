@@ -6,7 +6,8 @@ import { Calendar as CalendarIcon, CheckCircle, Clock, BarChart2 } from 'lucide-
 
 export default function ContentCalendarView() {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');|const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');|const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');|const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');
+  const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<'all' | 'draft' | 'awaiting_approval' | 'scheduled' | 'published' | 'failed'>('all');
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['content_calendar'],
@@ -63,7 +64,7 @@ export default function ContentCalendarView() {
         {['all', 'draft', 'awaiting_approval', 'scheduled', 'published', 'failed'].map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f as any)}|const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');|const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');|onClick={() => setFilter(f as any)}
+            onClick={() => setFilter(f as any)}
             className={`px-4 py-2 rounded-full text-sm font-medium capitalize ${
               filter === f 
                 ? 'bg-brand-primary text-brand-primary ring-1 ring-brand-500' 
@@ -106,8 +107,8 @@ export default function ContentCalendarView() {
                       {post.content_pillar}
                     </span>
                     {post.status === 'published' && <span className="flex items-center gap-1 text-green-600 text-xs font-medium"><CheckCircle className="w-3 h-3" /> Published</span>}
-                    {post.status ===const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');&& <span className="flex items-center gap-1 text-brand-primary text-xs font-medium"><Clock className="w-3 h-3" /> Scheduled</span>}
-                    {post.status ===const [filter, setFilter] = useState<'all' |onClick={() => setFilter(f as any)}| 'awaiting_approval' |onClick={() => setFilter(f as any)}| 'published' | 'failed'>('all');&& <span className="flex items-center gap-1 text-status-warning text-xs font-medium"><Clock className="w-3 h-3" /> Draft</span>}
+                    {post.status === 'scheduled' && <span className="flex items-center gap-1 text-brand-primary text-xs font-medium"><Clock className="w-3 h-3" /> Scheduled</span>}
+                    {post.status === 'draft' && <span className="flex items-center gap-1 text-status-warning text-xs font-medium"><Clock className="w-3 h-3" /> Draft</span>}
                   </div>
                   <div className="text-sm font-medium text-text-secondary">
                     {new Date(post.scheduled_for || post.created_at).toLocaleDateString()}
@@ -166,6 +167,7 @@ export default function ContentCalendarView() {
     </div>
   );
 }
+
 
 
 

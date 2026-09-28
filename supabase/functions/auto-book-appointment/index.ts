@@ -27,12 +27,10 @@ serve(async (req) => {
     // 1. Fetch conversation and check config
     const { data: conversation, error: convError } = await supabase
       .from("social_conversations")
-      .select(\
-        organization_id, 
+      .select(`\n        organization_id, 
         social_profile_id,
         lead_id,
-        profile:social_profiles(customer_id)
-      \)
+        profile:social_profiles(customer_id)\n      `)
       .eq("id", conversationId)
       .single()
 
@@ -128,7 +126,7 @@ serve(async (req) => {
       scheduled_start: start,
       scheduled_end: end,
       status: 'scheduled',
-      notes: \Auto-booked via Social AI Assistant from conversation \\
+      notes: "Auto-booked via Social AI Assistant from conversation "
     }).select('id').single()
 
     if (apptError) throw apptError
@@ -150,3 +148,5 @@ serve(async (req) => {
     })
   }
 })
+
+

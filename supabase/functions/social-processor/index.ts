@@ -44,7 +44,7 @@ serve(async (req) => {
         await supabase.from("social_webhooks").update({ processing_status: "success" }).eq("id", event.id)
         processedCount++
       } catch (err: any) {
-        console.error(\Error processing webhook \:\, err)
+        console.error("Error processing webhook:", err)
         // Mark as failed and increment retry_count
         await supabase.rpc('increment_webhook_retry', { webhook_id: event.id, error_msg: err.message })
       }
@@ -87,7 +87,7 @@ async function processMetaMessaging(event: any) {
         .eq("platform", "meta")
         .maybeSingle()
 
-      if (!account) throw new Error(\Unknown recipient ID: \\)
+      if (!account) throw new Error("Unknown recipient ID")
 
       // 2. Identity Resolution (Find or Create Profile)
       const { data: profile } = await resolveSocialProfile(
@@ -188,11 +188,11 @@ async function triggerAiConcierge(conversationId: string) {
   if (!SUPABASE_URL) return;
 
   try {
-    await fetch(\\/functions/v1/ai-concierge\, {
+    await fetch(`${SUPABASE_URL}/functions/v1/ai-concierge`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': \Bearer \\
+        'Authorization': 'Bearer ',
       },
       body: JSON.stringify({ conversationId })
     });
@@ -253,3 +253,12 @@ async function processTwilioMessaging(event: any) {
 
   await triggerAiConcierge(conversation.id);
 }
+
+
+
+
+
+
+
+
+

@@ -61,13 +61,13 @@ export default function SocialDashboardView() {
 
         const myHandoffs = handoffs?.filter(h => h.lead_id === l.id) || []
         
-        let wonHere = false
+        // let wonHere = false
         myHandoffs.forEach(h => {
           if (h.status === 'proposal_sent' || h.status === 'won') {
              proposalsSent++
           }
           if (h.status === 'won') {
-            wonHere = true
+            // wonHere = true
             jobsWon++
             closedWonRevenue += (h.contract_value || 0)
             if (cid && campaignMap.has(cid)) {
@@ -219,3 +219,6 @@ export default function SocialDashboardView() {
     </div>
   );
 }
+
+
+

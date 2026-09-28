@@ -28,15 +28,13 @@ serve(async (req) => {
 
     const { data: conversation, error: convError } = await supabase
       .from("social_conversations")
-      .select(\
-        organization_id, 
+      .select(`\n        organization_id, 
         social_account_id, 
         social_profile_id,
         assigned_to,
         status,
         account:social_accounts(*),
-        profile:social_profiles(*)
-      \)
+        profile:social_profiles(*)` )
       .eq("id", conversationId)
       .single()
 
@@ -55,34 +53,9 @@ serve(async (req) => {
       .eq("is_approved", true)
 
     // Build Brand Context
-    const rules = brandKnowledge?.map(k => "\ - \: \").join("\n") || ""
-    
-    // Call OpenAI
-    const systemPrompt = \You are the AI Concierge for Delta Ridge, a roofing company.
-Your goal is to answer questions, be helpful, and qualify leads to book appointments.
-Use this brand knowledge:
-\
-
-Analyze the conversation. Extract any available contact info (address, phone, name). 
-Determine the intent.
-Output JSON EXACTLY in this format:
-{
-  "reply": "Your response to the user",
-  "intent_category": "nurture|warm|hot|emergency",
-  "extracted_info": {
-    "name": null,
-    "phone": null,
-    "address": null
-  },
-  "wants_appointment": false
-}\
-
-    const chatHistory = messages?.map(m => ({
-      role: m.direction === 'inbound' ? 'user' : 'assistant',
-      content: m.content
-    })) || []
-
-    let aiResult = {
+          const rules = brandKnowledge?.map(k => " - " + k.topic + ": " + k.content).join("\n") || ""
+      const systemPrompt = "You are the AI Concierge for Delta Ridge, a roofing company.\nYour goal is to answer questions, be helpful, and qualify leads to book appointments.\nUse this brand knowledge:\n" + rules + "\n\nAnalyze the conversation. Extract any available contact info. Determine the intent.\nOutput JSON EXACTLY in this format:\n{\"reply\": \"...\", \"intent_category\": \"...\", \"extracted_address\": \"...\"}"
+      let aiResult = {
       reply: "Hi, this is Delta Ridge's AI assistant. I'm currently undergoing maintenance.",
       intent_category: "nurture",
       extracted_info: { name: null, phone: null, address: null },
@@ -93,7 +66,7 @@ Output JSON EXACTLY in this format:
       const resp = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': \Bearer \\,
+          'Authorization': 'Bearer ',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -122,7 +95,7 @@ Output JSON EXACTLY in this format:
     await supabase.from("social_messages").insert({
       organization_id: conversation.organization_id,
       conversation_id: conversationId,
-      platform_message_id: \sys_\\,
+      platform_message_id: "sys_",
       direction: "outbound",
       message_type: "text",
       content: aiResult.reply,
@@ -170,3 +143,14 @@ Output JSON EXACTLY in this format:
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 })
+
+
+
+
+
+
+
+
+
+
+

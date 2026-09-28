@@ -69,7 +69,7 @@ serve(async (req) => {
         );
 
         if (!result || result.error || !result.id) {
-           throw new Error(Invalid response from Meta API: );
+           throw new Error("Invalid response from Meta API");
         }
 
         // Update post status to published
@@ -83,7 +83,7 @@ serve(async (req) => {
           .eq('id', post.id)
           
         if (updateError) {
-           throw new Error(Failed to update post status after publish: );
+           throw new Error("Failed to update post status after publish");
         }
 
         publishedCount++
@@ -104,3 +104,5 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 })
+
+
