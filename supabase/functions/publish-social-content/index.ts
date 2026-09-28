@@ -36,8 +36,26 @@ serve(async (req) => {
     // 2. Publish each post
     for (const post of postsToPublish) {
       try {
+        const orgId = post.organization_id;
+
+        const { data: config } = await supabase
+          .from('social_autonomy_config')
+          .select('master_kill_switch')
+          .eq('organization_id', orgId)
+          .single()
+
+        if (config?.master_kill_switch) {
+          console.log(`Skipping publish for post ${post.id}: master kill switch is active`);
+          continue;
+        }
+
         if (!post.account || !post.account.encrypted_access_token) {
            throw new Error("Missing social account credentials")
+        }
+
+        if (post.account.is_active === false) {
+           console.log(`Skipping publish for post ${post.id}: channel is paused`);
+           continue;
         }
         
         // Dynamic import of MetaApiClient (or other platforms)
@@ -47,7 +65,7 @@ serve(async (req) => {
         // Dispatch to Graph API to create a post on the page's feed
         const result = await metaApi.publishPost(
            post.account.platform_account_id,
-           post.asset_text || ""
+           post.content || post.asset_text || ""
         );
 
         // Update post status to published

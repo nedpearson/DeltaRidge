@@ -10,7 +10,7 @@ export class MetaApiClient {
     text: string, 
     isOutsideWindow = false
   ): Promise<any> {
-    const url = `${this.baseUrl}/${pageId}/messages?access_token=${this.accessToken}`;
+    const url = \/\/messages?access_token=\;
     
     const payload: any = {
       recipient: { id: recipientId },
@@ -39,7 +39,7 @@ export class MetaApiClient {
     message: string,
     link?: string
   ): Promise<any> {
-    const url = `${this.baseUrl}/${pageId}/feed?access_token=${this.accessToken}`;
+    const url = \/\/feed?access_token=\;
     
     const payload: any = {
       message
@@ -57,13 +57,29 @@ export class MetaApiClient {
   }
 
   async createPagePost(pageId: string, message: string): Promise<any> {
-    const url = `${this.baseUrl}/${pageId}/feed`;
+    const url = \/\/feed\;
     
     const payload = {
       message,
       access_token: this.accessToken
     };
 
+    return this.fetchWithRetry(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async createCampaign(pageId: string, objective: string, dailyBudget: number, name: string): Promise<any> {
+    const url = \/\/campaigns?access_token=\;
+    const payload = {
+      name,
+      objective,
+      status: 'ACTIVE',
+      daily_budget: dailyBudget * 100, // cents
+      special_ad_categories: []
+    };
     return this.fetchWithRetry(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,12 +96,12 @@ export class MetaApiClient {
 
       if (response.status === 429 || (data.error && data.error.code === 4)) {
         const backoff = Math.pow(2, i) * 1000;
-        console.warn(`Meta API rate limit hit. Retrying in ${backoff}ms...`);
+        console.warn(\Meta API rate limit hit. Retrying in \ms...\);
         await new Promise(res => setTimeout(res, backoff));
         continue;
       }
 
-      throw new Error(`Meta API Error: ${data.error?.message || response.statusText}`);
+      throw new Error(\Meta API Error: \);
     }
     throw new Error('Meta API failed after max retries.');
   }
