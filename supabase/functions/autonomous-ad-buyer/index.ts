@@ -25,26 +25,51 @@ serve(async (req) => {
     let promotedCount = 0
 
     for (const post of eligiblePosts || []) {
+      const orgId = post.organization_id;
+
+      // 1b. Check master kill switch
+      const { data: config } = await supabase
+        .from('social_autonomy_config')
+        .select('master_kill_switch')
+        .eq('organization_id', orgId)
+        .single()
+
+      if (config?.master_kill_switch) {
+        console.log(`Skipping post ${post.id}: master kill switch is active`);
+        continue;
+      }
+
+      if (!post.account || post.account.is_active === false) {
+        console.log(`Skipping post ${post.id}: account is paused or missing`);
+        continue;
+      }
+
       // 2. Check if the organic post generated > $10,000 in attributed revenue
       const revenue = post.performance_metrics?.attributed_revenue || 0
       
       if (revenue > 10000) {
         // 3. Promote it: Call Meta Ads API to convert the post to a sponsored ad
-        // (Simulated Meta API call)
         console.log(`Promoting post ${post.id} with revenue ${revenue}`)
 
-        const MetaApiClient = (await import('../_shared/meta-api.ts')).MetaApiClient;
-        if (post.account?.encrypted_access_token) {
-           const metaApi = new MetaApiClient(post.account.encrypted_access_token);
-           // metaApi.createCampaign({ objective: 'LEAD_GENERATION', budget: 50, post_id: post.platform_post_id });
+        let providerCampaignId = "";
+        try {
+          const { MetaApiClient } = await import('../_shared/meta-api.ts');
+          if (post.account?.encrypted_access_token) {
+             const metaApi = new MetaApiClient(post.account.encrypted_access_token);
+             const response = await metaApi.createCampaign(post.account.platform_account_id, 'LEAD_GENERATION', 50, `PROMO_POST_${post.id}`);
+             providerCampaignId = response.id;
+          }
+        } catch (e) {
+          console.error(`Failed to launch ad for post ${post.id}:`, e);
+          continue; // Don't mark as sponsored if provider failed
         }
 
-        // 4. Update the DB to mark it as sponsored so we don't promote it again
+        // 4. Update the DB to mark it as sponsored only after provider confirms
         await supabase
           .from('content_calendar')
           .update({
             post_type: 'sponsored',
-            notes: `Autonomously promoted to $50/day ad due to high organic ROI ($${revenue}).`
+            notes: `Autonomously promoted to $50/day ad due to high organic ROI ($${revenue}). Provider Campaign ID: ${providerCampaignId}`
           })
           .eq('id', post.id)
 

@@ -49,11 +49,11 @@ export default function AutonomyConfigView() {
   if (!config) return <div className="p-8 text-center text-red-500">Failed to load configuration.</div>;
 
   const toggles = [
-    { key: 'auto_reply_inbound', label: 'Auto-Reply to Inbound', desc: 'AI answers DMs and comments automatically.' },
+    { key: 'auto_respond_basic', label: 'Auto-Reply to Inbound', desc: 'AI answers DMs and comments automatically.' },
     { key: 'auto_book_appointments', label: 'Auto-Book Appointments', desc: 'AI can schedule inspections directly onto the rep calendar.' },
-    { key: 'auto_launch_storm_ads', label: 'Auto-Launch Storm Campaigns', desc: 'Automatically buy Meta ads when severe hail hits.' },
-    { key: 'auto_adjust_budgets', label: 'Autonomous Attribution & Budgets', desc: 'AI adjusts ad budgets based on CRM closed-won revenue.' },
-    { key: 'auto_request_reviews', label: 'Automated Review Requests', desc: 'Send review requests 24h after a completed job.' },
+    { key: 'auto_launch_storm_campaigns', label: 'Auto-Launch Storm Campaigns', desc: 'Automatically buy Meta ads when severe hail hits.' },
+    { key: 'auto_post_approved', label: 'Autonomous Attribution & Budgets', desc: 'AI adjusts ad budgets based on CRM closed-won revenue.' },
+    { key: 'require_approval_negative_reviews', label: 'Automated Review Requests', desc: 'Send review requests 24h after a completed job.' },
   ];
 
   return (
@@ -105,7 +105,7 @@ export default function AutonomyConfigView() {
                 <h4 className="text-sm font-medium text-warning-highlight">Financial Guardrails</h4>
                 <p className="text-xs text-text-secondary mt-1">
                   Maximum daily budget the AI can allocate to a new storm campaign without human approval is 
-                  <span className="font-semibold text-text ml-1">${config.max_daily_budget}.00</span>
+                  <span className="font-semibold text-text ml-1">${config.max_daily_ad_spend}.00</span>
                 </p>
               </div>
             </div>
@@ -144,3 +144,4 @@ export default function AutonomyConfigView() {
     </div>
   );
 }
+

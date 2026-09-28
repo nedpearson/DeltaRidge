@@ -14,29 +14,48 @@ serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 })
 
   try {
-    // 1. Mock checking weather for all active organizations
-    // In reality, this queries an API like NOAA or HailTrace for the org's service bounding box
-    const hasRecentStorm = true; // Mock true for demonstration
-    const stormType = "1.5 inch hail";
-    const affectedArea = "Ascension Parish";
-
-    if (!hasRecentStorm) {
-      return new Response(JSON.stringify({ message: "No severe weather detected." }), { status: 200 })
-    }
-
-    // Get active organizations (Mocking getting Delta Ridge)
     const orgId = "00000000-0000-0000-0000-000000000000";
 
-    // 2. Generate a post using AI based on the weather event
-    const systemPrompt = `You are a helpful roofing assistant. A severe weather event (${stormType}) just hit ${affectedArea}. Write a short, empathetic, helpful Facebook post offering free roof inspections. Do not be overly salesy. Warn them about hidden damage.`;
+    // 1. Enforce master kill switch
+    const { data: config } = await supabase
+      .from('social_autonomy_config')
+      .select('master_kill_switch')
+      .eq('organization_id', orgId)
+      .single()
+
+    if (config?.master_kill_switch) {
+      return new Response("Execution halted by master kill switch.", { status: 403 })
+    }
+
+    // 2. Fetch real weather events from our database (which is ingested from providers)
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: recentStorms, error: stormError } = await supabase
+      .from('storm_events')
+      .select('*')
+      .gt('occurred_at', twentyFourHoursAgo)
+      .order('occurred_at', { ascending: false })
+      .limit(1)
+      
+    if (stormError) throw stormError;
+
+    if (!recentStorms || recentStorms.length === 0) {
+      return new Response(JSON.stringify({ message: "No severe weather detected recently." }), { status: 200 })
+    }
     
-    let draftedContent = `Checking on everyone in ${affectedArea} after last night's ${stormType}. Hail this size often causes hidden bruising on asphalt shingles that leads to leaks months down the line. If you suspect damage, our team at Delta Ridge is doing free drone inspections all week. Stay safe!`;
+    const storm = recentStorms[0];
+    const stormType = ${storm.hail_size_inches || 0} inch hail;
+    const affectedArea = storm.city || storm.county_parish || "the local area";
+
+    // 3. Generate a post using AI based on the weather event
+    const systemPrompt = "You are a helpful roofing assistant. A severe weather event () just hit . Write a short, empathetic, helpful Facebook post offering free roof inspections. Do not be overly salesy. Warn them about hidden damage.";
+    
+    let draftedContent = "Checking on everyone in  after last night's . Hail this size often causes hidden bruising on asphalt shingles that leads to leaks months down the line. If you suspect damage, our team at Delta Ridge is doing free drone inspections all week. Stay safe!";
 
     if (OPENAI_API_KEY) {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${OPENAI_API_KEY}`,
+          "Authorization": "Bearer ",
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -52,7 +71,7 @@ serve(async (req) => {
       }
     }
 
-    // 3. Insert into content_calendar as a Draft for manager review
+    // 4. Insert into content_calendar as a Draft for manager review
     const { data: insertedPost, error: insertError } = await supabase.from('content_calendar').insert({
       organization_id: orgId,
       content: draftedContent,
@@ -64,8 +83,6 @@ serve(async (req) => {
     }).select().single()
 
     if (insertError) throw insertError
-
-    // Optionally: Dispatch a notification to the manager here (Push or Email)
 
     return new Response(JSON.stringify({ success: true, event: stormType, drafted_post_id: insertedPost.id }), {
       headers: { "Content-Type": "application/json" },
