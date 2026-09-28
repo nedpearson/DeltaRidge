@@ -28,17 +28,25 @@ serve(async (req) => {
 
     const { data: conversation, error: convError } = await supabase
       .from("social_conversations")
-      .select(`
+      .select(\
         organization_id, 
         social_account_id, 
         social_profile_id,
+        assigned_to,
+        status,
         account:social_accounts(*),
         profile:social_profiles(*)
-      `)
+      \)
       .eq("id", conversationId)
       .single()
 
     if (convError) throw convError
+
+    // Honor human ownership
+    if (conversation.assigned_to) {
+      console.log("Conversation owned by human. AI skipping.")
+      return new Response(JSON.stringify({ success: true, reason: "human_owned" }), { status: 200 })
+    }
 
     const { data: brandKnowledge } = await supabase
       .from("brand_knowledge")
@@ -47,27 +55,27 @@ serve(async (req) => {
       .eq("is_approved", true)
 
     // Build Brand Context
-    const rules = brandKnowledge?.map(k => `${k.category.toUpperCase()} - ${k.topic}: ${k.content}`).join("\n") || ""
+    const rules = brandKnowledge?.map(k => "\ - \: \").join("\n") || ""
     
     // Call OpenAI
-    const systemPrompt = `You are the AI Concierge for Delta Ridge, a roofing company.
+    const systemPrompt = \You are the AI Concierge for Delta Ridge, a roofing company.
 Your goal is to answer questions, be helpful, and qualify leads to book appointments.
 Use this brand knowledge:
-${rules}
+\
 
 Analyze the conversation. Extract any available contact info (address, phone, name). 
 Determine the intent.
 Output JSON EXACTLY in this format:
 {
   "reply": "Your response to the user",
-  "intent_category": "general|support|hot_lead",
+  "intent_category": "nurture|warm|hot|emergency",
   "extracted_info": {
     "name": null,
     "phone": null,
     "address": null
   },
   "wants_appointment": false
-}`
+}\
 
     const chatHistory = messages?.map(m => ({
       role: m.direction === 'inbound' ? 'user' : 'assistant',
@@ -76,7 +84,7 @@ Output JSON EXACTLY in this format:
 
     let aiResult = {
       reply: "Hi, this is Delta Ridge's AI assistant. I'm currently undergoing maintenance.",
-      intent_category: "general",
+      intent_category: "nurture",
       extracted_info: { name: null, phone: null, address: null },
       wants_appointment: false
     }
@@ -85,7 +93,7 @@ Output JSON EXACTLY in this format:
       const resp = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Authorization': \Bearer \\,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -114,7 +122,7 @@ Output JSON EXACTLY in this format:
     await supabase.from("social_messages").insert({
       organization_id: conversation.organization_id,
       conversation_id: conversationId,
-      platform_message_id: `sys_${crypto.randomUUID()}`,
+      platform_message_id: \sys_\\,
       direction: "outbound",
       message_type: "text",
       content: aiResult.reply,
@@ -131,32 +139,11 @@ Output JSON EXACTLY in this format:
     if (aiResult.extracted_info.name || aiResult.extracted_info.phone || aiResult.extracted_info.address) {
       const updates: any = {}
       if (aiResult.extracted_info.name && !conversation.profile.display_name) updates.display_name = aiResult.extracted_info.name
-      if (aiResult.extracted_info.phone) updates.phone = aiResult.extracted_info.phone // If we add phone to profiles
+      if (aiResult.extracted_info.phone) updates.phone = aiResult.extracted_info.phone
       if (aiResult.extracted_info.address) updates.address = aiResult.extracted_info.address
 
       if (Object.keys(updates).length > 0) {
         await supabase.from("social_profiles").update(updates).eq("id", conversation.social_profile_id)
-      }
-      
-      // If we have an address or phone and they want an appointment, create a CRM Lead
-      if (aiResult.wants_appointment && (aiResult.extracted_info.address || aiResult.extracted_info.phone)) {
-         const { data: existingLead } = await supabase.from('leads').select('id').eq('contact_phone', aiResult.extracted_info.phone).maybeSingle()
-         
-         if (!existingLead) {
-            await supabase.from('leads').insert({
-               organization_id: conversation.organization_id,
-               address_line_1: aiResult.extracted_info.address || 'Unknown Address from Social',
-               contact_name: aiResult.extracted_info.name || conversation.profile.display_name,
-               contact_phone: aiResult.extracted_info.phone,
-               status: 'appointment_set',
-               source: 'social_inbox',
-               property_type: 'residential',
-               roof_material: 'asphalt_shingle',
-               latitude: 0,
-               longitude: 0,
-               sync_state: 'synced'
-            })
-         }
       }
     }
 

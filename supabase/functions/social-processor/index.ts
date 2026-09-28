@@ -36,13 +36,15 @@ serve(async (req) => {
 
         if (event.event_type === "messaging_event" && event.platform === "meta") {
           await processMetaMessaging(event)
+        } else if (event.event_type === "sms_event" && event.platform === "twilio") {
+          await processTwilioMessaging(event)
         }
 
         // Mark as success
         await supabase.from("social_webhooks").update({ processing_status: "success" }).eq("id", event.id)
         processedCount++
       } catch (err: any) {
-        console.error(`Error processing webhook ${event.id}:`, err)
+        console.error(\Error processing webhook \:\, err)
         // Mark as failed and increment retry_count
         await supabase.rpc('increment_webhook_retry', { webhook_id: event.id, error_msg: err.message })
       }
@@ -85,7 +87,7 @@ async function processMetaMessaging(event: any) {
         .eq("platform", "meta")
         .maybeSingle()
 
-      if (!account) throw new Error(`Unknown recipient ID: ${recipientId}`)
+      if (!account) throw new Error(\Unknown recipient ID: \\)
 
       // 2. Identity Resolution (Find or Create Profile)
       const { data: profile } = await resolveSocialProfile(
@@ -118,8 +120,7 @@ async function processMetaMessaging(event: any) {
         throw msgError
       }
 
-      // 5. Trigger AI Concierge (In a full implementation, this calls OpenAI and sends reply)
-      // For now, we simulate queuing it for the AI Concierge by calling a hypothetical internal endpoint or RPC
+      // 5. Trigger AI Concierge
       await triggerAiConcierge(conversation.id)
     }
   }
@@ -181,10 +182,23 @@ async function getOrCreateConversation(orgId: string, accountId: string, profile
 }
 
 async function triggerAiConcierge(conversationId: string) {
-  // In production, this would invoke OpenAI with the conversation history and the Brand Brain,
-  // then push the response back via the Graph API, and record an "outbound" message.
-  // We'll leave this as a stub that the next phase will implement.
-  console.log(`Triggering AI Concierge for conversation ${conversationId}`)
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+  
+  if (!SUPABASE_URL) return;
+
+  try {
+    await fetch(\\/functions/v1/ai-concierge\, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': \Bearer \\
+      },
+      body: JSON.stringify({ conversationId })
+    });
+  } catch (err) {
+    console.error("Failed to trigger AI Concierge", err);
+  }
 }
 
 // Handles Twilio SMS
@@ -205,7 +219,7 @@ async function processTwilioMessaging(event: any) {
     .eq("platform", "twilio")
     .maybeSingle()
 
-  if (!account) throw new Error("Unknown recipient ID: " + payload.recipient_id);
+  if (!account) throw new Error("Unknown recipient ID: " + recipientId);
 
   // 2. Identity Resolution
   const { data: profile } = await resolveSocialProfile(
@@ -239,5 +253,3 @@ async function processTwilioMessaging(event: any) {
 
   await triggerAiConcierge(conversation.id);
 }
-
-

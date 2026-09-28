@@ -6,9 +6,30 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
 const META_VERIFY_TOKEN = Deno.env.get("META_VERIFY_TOKEN") || "delta_ridge_secure_token"
+const META_APP_SECRET = Deno.env.get("META_APP_SECRET") || ""
 
 // Initialize Supabase Admin Client
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+async function verifyMetaSignature(req: Request, rawBody: string, appSecret: string): Promise<boolean> {
+  const signature = req.headers.get('x-hub-signature-256');
+  if (!signature) return false;
+
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(appSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const mac = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody));
+  const hashArray = Array.from(new Uint8Array(mac));
+  const expectedSig = 'sha256=' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  return signature === expectedSig;
+}
 
 serve(async (req) => {
   const url = new URL(req.url)
@@ -40,6 +61,7 @@ serve(async (req) => {
     try {
       const contentType = req.headers.get("content-type") || ""
       let payload: any = {}
+      let rawText = ""
       
       if (contentType.includes("application/x-www-form-urlencoded")) {
         const formData = await req.formData()
@@ -47,21 +69,43 @@ serve(async (req) => {
           payload[key] = value
         }
       } else {
-        payload = await req.json()
+        rawText = await req.text()
+        if (platform === "meta" && META_APP_SECRET) {
+          const isValid = await verifyMetaSignature(req, rawText, META_APP_SECRET)
+          if (!isValid) {
+            return new Response("Invalid signature", { status: 401 })
+          }
+        }
+        payload = JSON.parse(rawText)
       }
       
-      // Determine Organization ID (For Delta Ridge, we can assume a single org or look it up based on platform account if multi-tenant)
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .select('id')
-        .limit(1)
-        .single()
+      // Determine Organization ID from provider account
+      let recipientId: string | undefined;
+      if (platform === 'meta' && payload.entry?.[0]?.messaging?.[0]?.recipient?.id) {
+          recipientId = payload.entry[0].messaging[0].recipient.id;
+      } else if (platform === 'meta' && payload.entry?.[0]?.id) {
+          recipientId = payload.entry[0].id;
+      } else if (platform === 'twilio' && payload.To) {
+          recipientId = payload.To;
+      }
+
+      let organizationId;
+      if (recipientId) {
+        const { data: account } = await supabase
+          .from('social_accounts')
+          .select('organization_id')
+          .eq('platform_account_id', recipientId)
+          .eq('platform', platform)
+          .maybeSingle();
+          
+        if (account) {
+          organizationId = account.organization_id;
+        }
+      }
         
-      if (orgError) {
-        throw new Error("Failed to resolve organization: " + payload)
+      if (!organizationId) {
+        throw new Error("Failed to resolve organization for provider account")
       }
-      
-      const organizationId = orgData.id
 
       // Insert into our ingestion queue
       const { error: insertError } = await supabase
@@ -79,7 +123,6 @@ serve(async (req) => {
       }
 
       // Return 200 OK immediately so platforms don't timeout
-      // Twilio expects TwiML XML if responding to an SMS webhook, but empty string is fine.
       if (platform === 'twilio') {
         return new Response("<Response></Response>", {
           headers: { "Content-Type": "text/xml" },
@@ -115,11 +158,7 @@ function getEventType(platform: string, payload: any): string {
     return 'sms_event'
   }
   if (platform === 'google_business') {
-    // Google might send specific review or message types
     return 'business_event'
   }
   return 'unknown_event'
 }
-
-
-

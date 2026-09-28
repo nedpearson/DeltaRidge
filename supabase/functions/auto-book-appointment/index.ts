@@ -27,12 +27,12 @@ serve(async (req) => {
     // 1. Fetch conversation and check config
     const { data: conversation, error: convError } = await supabase
       .from("social_conversations")
-      .select(`
+      .select(\
         organization_id, 
         social_profile_id,
         lead_id,
         profile:social_profiles(customer_id)
-      `)
+      \)
       .eq("id", conversationId)
       .single()
 
@@ -49,13 +49,11 @@ serve(async (req) => {
     }
 
     // 2. Resolve Property
-    // In a real scenario we'd use the mapping API, but here we check the DB
     const { data: property, error: propError } = await supabase.rpc('resolve_property_from_address', {
       org_id: conversation.organization_id,
       address_query: propertyAddress
     })
     
-    // If RPC doesn't exist or returns null, we create a stub property for this lead
     let propertyId = property?.[0]?.id
     if (!propertyId) {
       const { data: newProp } = await supabase.from('properties').insert({
@@ -68,14 +66,38 @@ serve(async (req) => {
 
     if (!propertyId) throw new Error("Failed to resolve property")
 
-    // 3. Find Rep Availability (Geographic Routing Logic Placeholder)
-    // We fetch the rep with the lowest number of appointments that day in that zip code
-    const { data: rep } = await supabase
-      .from('users')
-      .select('id')
-      // placeholder for actual geographic routing view
-      .limit(1)
-      .single()
+    // 3. Find Rep Availability and Prevent Double Booking
+    const start = selectedStartTime;
+    const end = selectedEndTime || new Date(new Date(selectedStartTime).getTime() + 60 * 60 * 1000).toISOString();
+
+    const { data: orgUsers } = await supabase
+      .from('organization_members')
+      .select('user_id')
+      .eq('organization_id', conversation.organization_id)
+      .eq('is_active', true);
+      
+    if (!orgUsers || orgUsers.length === 0) {
+      throw new Error("No reps available in organization");
+    }
+    const userIds = orgUsers.map(u => u.user_id);
+
+    const { data: overlapping } = await supabase
+      .from('appointments')
+      .select('assigned_to')
+      .eq('organization_id', conversation.organization_id)
+      .not('assigned_to', 'is', null)
+      .in('status', ['scheduled', 'confirmed'])
+      .lt('scheduled_start', end)
+      .gt('scheduled_end', start);
+
+    const busyRepIds = new Set((overlapping || []).map(a => a.assigned_to));
+    const availableRepIds = userIds.filter(id => !busyRepIds.has(id));
+
+    if (availableRepIds.length === 0) {
+      throw new Error("No reps available at this time (double booking prevented)");
+    }
+
+    const assignedRepId = availableRepIds[0];
 
     // 4. Create Lead if it doesn't exist
     let leadId = conversation.lead_id
@@ -84,8 +106,8 @@ serve(async (req) => {
         organization_id: conversation.organization_id,
         property_id: propertyId,
         customer_id: conversation.profile?.customer_id,
-        status: 'new',
-        source: 'social_auto_booking'
+        status: 'appointment',
+        assigned_to: assignedRepId,
       }).select('id').single()
       
       leadId = newLead?.id
@@ -102,11 +124,11 @@ serve(async (req) => {
       lead_id: leadId,
       property_id: propertyId,
       customer_id: conversation.profile?.customer_id,
-      assigned_to: rep?.id || null,
-      scheduled_start: selectedStartTime,
-      scheduled_end: selectedEndTime || new Date(new Date(selectedStartTime).getTime() + 60 * 60 * 1000).toISOString(),
-      status: 'confirmed',
-      notes: `Auto-booked via Social AI Assistant from conversation ${conversationId}`
+      assigned_to: assignedRepId,
+      scheduled_start: start,
+      scheduled_end: end,
+      status: 'scheduled',
+      notes: \Auto-booked via Social AI Assistant from conversation \\
     }).select('id').single()
 
     if (apptError) throw apptError
@@ -114,7 +136,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       success: true, 
       appointmentId: appointment.id,
-      assignedRepId: rep?.id
+      assignedRepId: assignedRepId
     }), {
       headers: { "Content-Type": "application/json" },
       status: 200,
