@@ -186,3 +186,56 @@ async function triggerAiConcierge(conversationId: string) {
   // We'll leave this as a stub that the next phase will implement.
   console.log(`Triggering AI Concierge for conversation ${conversationId}`)
 }
+
+// Handles Twilio SMS
+async function processTwilioMessaging(event: any) {
+  const payload = event.payload;
+  const senderId = payload.From;
+  const recipientId = payload.To;
+  const text = payload.Body;
+  const messageId = payload.MessageSid;
+
+  if (!text) return;
+
+  // 1. Resolve Social Account
+  const { data: account } = await supabase
+    .from("social_accounts")
+    .select("id, organization_id")
+    .eq("platform_account_id", recipientId)
+    .eq("platform", "twilio")
+    .maybeSingle()
+
+  if (!account) throw new Error(Unknown recipient ID: \);
+
+  // 2. Identity Resolution
+  const { data: profile } = await resolveSocialProfile(
+    account.organization_id,
+    "twilio",
+    senderId,
+    senderId // Use phone number as default display name
+  );
+
+  // 3. Find or Create Conversation
+  const { data: conversation } = await getOrCreateConversation(
+    account.organization_id,
+    account.id,
+    profile.id
+  );
+
+  // 4. Save Inbound Message
+  const { error: msgError } = await supabase.from("social_messages").insert({
+    organization_id: account.organization_id,
+    conversation_id: conversation.id,
+    platform_message_id: messageId,
+    direction: "inbound",
+    message_type: "text",
+    content: text,
+    sent_at: new Date().toISOString()
+  });
+
+  if (msgError && msgError.code !== '23505') {
+    throw msgError;
+  }
+
+  await triggerAiConcierge(conversation.id);
+}

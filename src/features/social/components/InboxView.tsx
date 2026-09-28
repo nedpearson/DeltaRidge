@@ -49,6 +49,10 @@ export default function InboxView() {
 
   const selectedConv = conversations.find(c => c.id === selectedConvId);
 
+  const handleAssign = async () => { if (!selectedConvId || !selectedConv) return; const supabase = getSupabase(); if (!supabase) return; try { const { data: leadData, error: leadErr } = await supabase.from('leads').insert({ organization_id: selectedConv.organization_id, first_name: selectedConv.profile?.display_name?.split(' ')[0] || 'Unknown', last_name: selectedConv.profile?.display_name?.split(' ').slice(1).join(' ') || 'User', lead_source: 'Social', status: 'New' }).select().single(); if (leadData) { await supabase.from('social_conversations').update({ lead_id: leadData.id }).eq('id', selectedConvId); alert('Assigned to new lead: ' + leadData.id); } } catch (err) { console.error('Assign error', err); } };
+
+  const handleBook = async () => { if (!selectedConvId || !selectedConv) return; const supabase = getSupabase(); if (!supabase) return; try { const { data: eventData, error } = await supabase.from('events').insert({ organization_id: selectedConv.organization_id, title: 'Appointment with ' + selectedConv.profile?.display_name, event_type: 'appointment', start_time: new Date(Date.now() + 86400000).toISOString(), end_time: new Date(Date.now() + 90000000).toISOString(), status: 'scheduled' }); if (!error) { alert('Appointment booked for tomorrow!'); } } catch(err) { console.error('Book error', err); } };
+
   const handleSendReply = async () => {
     if (!selectedConvId || !selectedConv || !replyText.trim()) return;
     
