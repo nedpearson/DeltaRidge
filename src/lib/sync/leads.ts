@@ -52,8 +52,8 @@ export function remoteLeadStatus(status: LeadStatus): string {
     case 'follow_up': return 'spoke'
     case 'need_visit': return 'inspection_requested'
     case 'not_interested': return 'not_interested'
-    case 'disqualified': return 'disqualified'
-    case 'do_not_knock': return 'do_not_knock'
+    case 'disqualified': return 'lost'
+    case 'do_not_knock': return 'do_not_contact'
     
     default: return 'target'
   }
