@@ -31,8 +31,8 @@ function Icon({ name }: { name: string }) {
 }
 
 export function OnlinePill() {
-  const { session } = useSession()
-  const orgId = session?.membership?.organizationId || null
+  const { session, membership } = useSession()
+  const orgId = membership?.organizationId || null
   const userId = session?.user?.id || null
 
   const [online, setOnline] = useState(navigator.onLine)
