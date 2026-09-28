@@ -31,9 +31,8 @@ export default function HomePage() {
   const rawEmail = session?.user?.email?.split('@')[0] || 'Rep'
   const repName = rawEmail.charAt(0).toUpperCase() + rawEmail.slice(1)
 
-  // Determine single highest priority for the NEXT section
   const nextTarget = today?.nextAppointment 
-    ? { type: 'appointment', label: 'Upcoming Appointment', title: today.nextAppointment.time, subtitle: today.nextAppointment.address, id: null } // We don't have lead ID from appointment yet in mock
+    ? { type: 'appointment', label: 'Upcoming Appointment', title: today.nextAppointment.time, subtitle: today.nextAppointment.address, id: today.nextAppointment.leadId } 
     : today?.nextBestAction 
       ? { type: 'lead', label: 'Highest Priority Opportunity', title: today.nextBestAction.address, subtitle: today.nextBestAction.reason || 'Recommended target', id: today.nextBestAction.id }
       : null;
@@ -44,7 +43,6 @@ export default function HomePage() {
         <h1 className="text-2xl font-bold font-display tracking-tight text-text-primary">Good Morning, {repName}</h1>
       </div>
 
-      {/* NEXT SECTION */}
       <div>
         <SectionTitle>NEXT</SectionTitle>
         {loading ? (
@@ -63,8 +61,8 @@ export default function HomePage() {
               
               <div className="mt-2 flex gap-2">
                 <Button variant="primary" className="flex-1 text-[13px] py-2.5 font-bold" onClick={() => navigate('/mission')}>GO</Button>
-                {nextTarget.type === 'lead' && nextTarget.id && (
-                  <Button variant="secondary" className="flex-1 text-[13px] py-2.5" onClick={() => navigate(`/lead/${nextTarget.id}`)}>OPEN</Button>
+                {nextTarget.id && (
+                  <Button variant="secondary" className="flex-1 text-[13px] py-2.5" onClick={() => navigate('/lead/' + nextTarget.id)}>OPEN</Button>
                 )}
               </div>
             </div>
@@ -76,7 +74,6 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* YOUR DAY SECTION */}
       <div>
         <SectionTitle>YOUR DAY</SectionTitle>
         <div className="mt-2">
@@ -94,7 +91,7 @@ export default function HomePage() {
               </div>
               <div className="flex justify-between items-center p-3">
                 <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Follow-ups</span>
-                <span className={`text-[14px] font-bold ${today?.followUpsDue ? 'text-status-warning' : 'text-text-primary'}`}>
+                <span className={	ext-[14px] font-bold }>
                   {today?.followUpsDue || 0} due
                 </span>
               </div>
@@ -103,7 +100,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ATTENTION SECTION (Only shows if there are actionable exceptions) */}
       {(today?.followUpsDue || !backend.configured) && (
         <div>
           <SectionTitle>ATTENTION</SectionTitle>
@@ -132,7 +128,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* PACE LEADERBOARD SECTION */}
       <div>
         <SectionTitle>PACE LEADERBOARD</SectionTitle>
         <Card className="mt-2 p-4 border-l-4 border-l-gold-500 bg-gradient-to-br from-bg-card to-bg-elevated">
@@ -159,30 +154,32 @@ export default function HomePage() {
         </Card>
       </div>
 
-      {/* NEARBY SECTION */}
       <div className="mt-6">
         <SectionTitle>NEARBY OPPORTUNITIES</SectionTitle>
         <Card className="mt-2 bg-bg-card p-0 shadow-sm ring-1 ring-border-subtle divide-y divide-border-subtle overflow-hidden">
-          {/* Top 3 mock nearby placeholders */}
-          {[1, 2, 3].map(i => (
-            <div key={i} className="flex gap-3 items-center p-3 cursor-pointer hover:bg-bg-elevated transition-colors" onClick={() => navigate('/map')}>
-              <div className="bg-bg-elevated p-2 rounded-lg shrink-0">
-                <MapPin className="w-4 h-4 text-brand-cyan" />
+          {loading ? (
+             <div className="p-4 text-center text-sm text-text-secondary">Loading opportunities...</div>
+          ) : today?.nearbyOpportunities && today.nearbyOpportunities.length > 0 ? (
+            today.nearbyOpportunities.map(opp => (
+              <div key={opp.id} className="flex gap-3 items-center p-3 cursor-pointer hover:bg-bg-elevated transition-colors" onClick={() => navigate('/lead/' + opp.id)}>
+                <div className="bg-bg-elevated p-2 rounded-lg shrink-0">
+                  <MapPin className="w-4 h-4 text-brand-cyan" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-[13px] font-bold text-text-primary truncate">{opp.address}</h4>
+                  <p className="text-[11px] text-text-secondary truncate">{opp.reason}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-text-muted shrink-0" />
               </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-[13px] font-bold text-text-primary truncate">1{i}2 Oak Ridge Drive</h4>
-                <p className="text-[11px] text-text-secondary truncate">0.{i} miles • Hail Match</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-text-muted shrink-0" />
+            ))
+          ) : (
+            <div className="p-4 text-center text-sm text-text-secondary">
+              No immediate opportunities assigned nearby.
             </div>
-          ))}
+          )}
         </Card>
       </div>
 
     </div>
   )
 }
-
-
-
-

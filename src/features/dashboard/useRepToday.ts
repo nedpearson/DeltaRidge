@@ -20,6 +20,11 @@ export interface RepTodayData {
     stormEvidence: string | null
     reason: string
   } | null
+  nearbyOpportunities: {
+    id: string
+    address: string
+    reason: string
+  }[]
 }
 
 export function useRepToday() {
@@ -41,8 +46,7 @@ export function useRepToday() {
       }
 
       // -------------------------------------------------------------------
-      // 1. Next Appointment — from canonical appointment time, not activity creation time.
-      //    Must be: future, not cancelled, assigned to this rep.
+      // 1. Next Appointment
       // -------------------------------------------------------------------
       const nowIso = new Date().toISOString()
       const { data: appts } = await supabase
@@ -74,7 +78,7 @@ export function useRepToday() {
       }
 
       // -------------------------------------------------------------------
-      // 2. Active assignments — the source of truth for "my work"
+      // 2. Active assignments
       // -------------------------------------------------------------------
       const { data: myAssignments } = await supabase
         .from('lead_assignments')
@@ -85,7 +89,7 @@ export function useRepToday() {
       const assignedLeadIds = myAssignments?.map(a => a.lead_id) || []
 
       // -------------------------------------------------------------------
-      // 3. Follow-ups due — only from my assignments
+      // 3. Follow-ups due
       // -------------------------------------------------------------------
       let followUps = 0
       if (assignedLeadIds.length > 0) {
@@ -98,7 +102,7 @@ export function useRepToday() {
       }
 
       // -------------------------------------------------------------------
-      // 4. Recommended doors — from my active assignment set with explicit count
+      // 4. Recommended doors
       // -------------------------------------------------------------------
       let doors = 0
       interface AssignedLead { id: string; address: string; score: number }
@@ -116,10 +120,11 @@ export function useRepToday() {
       }
 
       // -------------------------------------------------------------------
-      // 5. Next Best Action — ONLY from my assignments.
-      //    Never fall back to a random global lead without GPS/territory constraint.
+      // 5. Next Best Action & Nearby
       // -------------------------------------------------------------------
       let nextBestAction: RepTodayData['nextBestAction'] = null
+      let nearbyOpportunities: RepTodayData['nearbyOpportunities'] = []
+
       if (myAssignedLeads.length > 0) {
         const best = myAssignedLeads[0]
         if (best) {
@@ -127,13 +132,22 @@ export function useRepToday() {
           nextBestAction = {
             id: best.id,
             address: best.address,
-            distanceMiles: null, // Requires device GPS to compute — left null until GPS available
+            distanceMiles: null,
             score: best.score,
             roofAge: null,
             stormEvidence: null,
             reason: assignmentReason || 'Highest-scored assigned lead'
           }
         }
+        
+        nearbyOpportunities = myAssignedLeads.slice(0, 3).map(lead => {
+          const r = myAssignments?.find(a => a.lead_id === lead.id)?.reason
+          return {
+             id: lead.id,
+             address: lead.address,
+             reason: r || 'Target Lead'
+          }
+        })
       }
 
       setData({
@@ -141,7 +155,8 @@ export function useRepToday() {
         followUpsDue: followUps,
         activeCampaign: null,
         recommendedDoors: doors,
-        nextBestAction
+        nextBestAction,
+        nearbyOpportunities
       })
       setLoading(false)
     }
