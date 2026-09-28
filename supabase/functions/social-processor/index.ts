@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any, no-console */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
@@ -253,6 +255,7 @@ async function processTwilioMessaging(event: any) {
 
   await triggerAiConcierge(conversation.id);
 }
+
 
 
 

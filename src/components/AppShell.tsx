@@ -14,8 +14,7 @@ export const NAV = [
   { to: '/map', label: 'Map', icon: 'map' },
   { to: '/inspections', label: 'Jobs', icon: 'clipboard' },
     { to: '/more', label: 'More', icon: 'menu' },
-  { to: '/settings', label: 'Settings', icon: 'tag' },
-] as const
+  ] as const
 
 function Icon({ name }: { name: string }) {
   const common = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
@@ -196,5 +195,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
     </div>
   )
 }
+
 
 

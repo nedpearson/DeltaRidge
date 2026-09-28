@@ -10,7 +10,7 @@ export class MetaApiClient {
     text: string, 
     isOutsideWindow = false
   ): Promise<any> {
-    const url = \/\/messages?access_token=\;
+    const url = `${this.baseUrl}/${pageId}/messages?access_token=${this.accessToken}`;
     
     const payload: any = {
       recipient: { id: recipientId },
@@ -39,7 +39,7 @@ export class MetaApiClient {
     message: string,
     link?: string
   ): Promise<any> {
-    const url = \/\/feed?access_token=\;
+    const url = `${this.baseUrl}/${pageId}/feed?access_token=${this.accessToken}`;
     
     const payload: any = {
       message
@@ -57,7 +57,7 @@ export class MetaApiClient {
   }
 
   async createPagePost(pageId: string, message: string): Promise<any> {
-    const url = \/\/feed\;
+    const url = `${this.baseUrl}/${pageId}/feed`;
     
     const payload = {
       message,
@@ -72,7 +72,7 @@ export class MetaApiClient {
   }
 
   async createCampaign(pageId: string, objective: string, dailyBudget: number, name: string): Promise<any> {
-    const url = \/\/campaigns?access_token=\;
+    const url = `${this.baseUrl}/${pageId}/campaigns?access_token=${this.accessToken}`;
     const payload = {
       name,
       objective,
@@ -96,13 +96,16 @@ export class MetaApiClient {
 
       if (response.status === 429 || (data.error && data.error.code === 4)) {
         const backoff = Math.pow(2, i) * 1000;
-        console.warn(\Meta API rate limit hit. Retrying in \ms...\);
+        console.warn(`Meta API rate limit hit. Retrying in ${backoff}ms...`);
         await new Promise(res => setTimeout(res, backoff));
         continue;
       }
 
-      throw new Error(\Meta API Error: \);
+      throw new Error(`Meta API Error: ${JSON.stringify(data.error)}`);
     }
     throw new Error('Meta API failed after max retries.');
   }
 }
+
+
+

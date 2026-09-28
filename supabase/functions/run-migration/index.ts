@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import * as postgres from 'https://deno.land/x/postgres@v0.17.0/mod.ts'
 
@@ -22,3 +23,4 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: String(error) }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 })
+

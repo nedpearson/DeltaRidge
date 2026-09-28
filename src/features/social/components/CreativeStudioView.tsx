@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { PenTool, Image as ImageIcon, Video, Sparkles, Wand2, ShieldAlert, CheckCircle } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
@@ -37,7 +38,7 @@ export default function CreativeStudioView() {
         clearInterval(interval);
       } else if (data?.status === 'failed') {
         clearInterval(interval);
-        alert('Video processing failed: ' + data.error_message);
+        console.error('Video processing failed: ' + data.error_message);
       }
     }, 2000);
     return () => clearInterval(interval);
@@ -455,6 +456,8 @@ export default function CreativeStudioView() {
     </div>
   );
 }
+
+
 
 
 

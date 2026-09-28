@@ -43,13 +43,13 @@ serve(async (req) => {
     }
     
     const storm = recentStorms[0];
-    const stormType = ${storm.hail_size_inches || 0} inch hail;
+    const stormType = `${storm.hail_size_inches || 0} inch hail`;
     const affectedArea = storm.city || storm.county_parish || "the local area";
 
     // 3. Generate a post using AI based on the weather event
-    const systemPrompt = "You are a helpful roofing assistant. A severe weather event () just hit . Write a short, empathetic, helpful Facebook post offering free roof inspections. Do not be overly salesy. Warn them about hidden damage.";
+    const systemPrompt = `You are a helpful roofing assistant. A severe weather event (${stormType}) just hit ${affectedArea}. Write a short, empathetic, helpful Facebook post offering free roof inspections. Do not be overly salesy. Warn them about hidden damage.`;
     
-    let draftedContent = "Checking on everyone in  after last night's . Hail this size often causes hidden bruising on asphalt shingles that leads to leaks months down the line. If you suspect damage, our team at Delta Ridge is doing free drone inspections all week. Stay safe!";
+    let draftedContent = `Checking on everyone in ${affectedArea} after last night's ${stormType}. Hail this size often causes hidden bruising on asphalt shingles that leads to leaks months down the line. If you suspect damage, our team at Delta Ridge is doing free drone inspections all week. Stay safe!`;
 
     if (OPENAI_API_KEY) {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -94,3 +94,5 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 })
+
+

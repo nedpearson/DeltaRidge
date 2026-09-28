@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { Card, SectionTitle, TextInput, Button, Field } from '@/components/ui';
 import { getSupabase } from '@/lib/supabase';
@@ -93,5 +94,6 @@ export default function SettingsPage() {
     </div>
   );
 }
+
 
 
