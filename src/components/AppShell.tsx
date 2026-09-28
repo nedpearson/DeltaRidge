@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { outboxCount } from '@/lib/db'
 import { syncOutbox } from '@/lib/sync/index'
+import { retryStalledOutbox } from '@/lib/sync-store'
 import { UniversalSearch } from './UniversalSearch'
 import NotificationCenter from './NotificationCenter'
 import { AIAssistant } from './AIAssistant'
@@ -60,6 +61,7 @@ export function OnlinePill() {
     setIsSyncing(true)
     if ('vibrate' in navigator) navigator.vibrate(20)
     try {
+      await retryStalledOutbox()
       await syncOutbox(orgId, userId)
       const newCount = await outboxCount()
       setPending(newCount)
