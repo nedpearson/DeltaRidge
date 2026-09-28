@@ -1,21 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/**
- * Meta Graph API Client
- * 
- * Handles sending messages via Instagram Direct and Facebook Messenger.
- * Enforces production-ready constraints: exponential backoff, rate limit handling,
- * and 24-hour standard messaging window compliance.
- */
-
 export class MetaApiClient {
   private readonly baseUrl = 'https://graph.facebook.com/v20.0';
 
   constructor(private readonly accessToken: string) {}
 
-  /**
-   * Sends a text message to a user via the Graph API.
-   * Handles the 24-hour messaging window rule by default (MESSAGE_TAG).
-   */
   async sendMessage(
     pageId: string, 
     recipientId: string, 
@@ -31,7 +19,7 @@ export class MetaApiClient {
 
     if (isOutsideWindow) {
       payload.messaging_type = 'MESSAGE_TAG';
-      payload.tag = 'HUMAN_AGENT'; // Only applicable if page is approved for it
+      payload.tag = 'HUMAN_AGENT';
     } else {
       payload.messaging_type = 'RESPONSE';
     }
@@ -43,9 +31,21 @@ export class MetaApiClient {
     });
   }
 
-  /**
-   * Internal fetch wrapper with exponential backoff for rate limits.
-   */
+  async createPagePost(pageId: string, message: string): Promise<any> {
+    const url = `${this.baseUrl}/${pageId}/feed`;
+    
+    const payload = {
+      message,
+      access_token: this.accessToken
+    };
+
+    return this.fetchWithRetry(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  }
+
   private async fetchWithRetry(url: string, options: RequestInit, retries = 3): Promise<any> {
     for (let i = 0; i < retries; i++) {
       const response = await fetch(url, options);
@@ -53,7 +53,6 @@ export class MetaApiClient {
 
       if (response.ok) return data;
 
-      // Rate limit hit
       if (response.status === 429 || (data.error && data.error.code === 4)) {
         const backoff = Math.pow(2, i) * 1000;
         console.warn(`Meta API rate limit hit. Retrying in ${backoff}ms...`);
@@ -61,10 +60,8 @@ export class MetaApiClient {
         continue;
       }
 
-      // If it's another error (e.g. invalid token, user blocked page), throw immediately
       throw new Error(`Meta API Error: ${data.error?.message || response.statusText}`);
     }
-
     throw new Error('Meta API failed after max retries.');
   }
 }

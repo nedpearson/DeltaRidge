@@ -44,10 +44,9 @@ serve(async (req) => {
         const MetaApiClient = (await import('../_shared/meta-api.ts')).MetaApiClient;
         const metaApi = new MetaApiClient(post.account.encrypted_access_token);
         
-        // Mock dispatch to Graph API to create a post
-        await metaApi.sendMessage(
+        // Real dispatch to Graph API to create a post
+        await metaApi.createPagePost(
            post.account.platform_account_id, 
-           'PAGE_POST', // specialized constant for posting to page instead of DM
            post.content
         );
 
@@ -79,3 +78,4 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 })
+

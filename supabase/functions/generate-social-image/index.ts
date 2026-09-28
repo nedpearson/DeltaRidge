@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || ""
+let OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || "";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -28,8 +28,16 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing prompt or organizationId" }), { status: 400 })
     }
 
-    let imageUrl = "https://images.unsplash.com/photo-1600607688066-890987f18a86?q=80&w=1000&auto=format&fit=crop";
+    if (!OPENAI_API_KEY) {
+      const { data } = await supabase.from('system_secrets').select('secret_value').eq('id', 'OPENAI_API_KEY').single();
+      if (data) OPENAI_API_KEY = data.secret_value;
+    }
 
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured. Cannot execute real DALL-E network request.");
+    }
+
+    let imageUrl = "";
     if (OPENAI_API_KEY) {
       const response = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
@@ -51,8 +59,6 @@ serve(async (req) => {
       } else {
         console.error("OpenAI Error", await response.text());
       }
-    } else {
-      console.warn("NO OPENAI_API_KEY. Using mock image.");
     }
 
     // Save to creative_assets
@@ -76,3 +82,5 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { "Access-Control-Allow-Origin": "*" } })
   }
 })
+
+

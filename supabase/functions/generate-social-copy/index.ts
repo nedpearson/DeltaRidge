@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || ""
+let OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") || "";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -84,36 +84,39 @@ ${policies || "Never promise that insurance will cover a claim. Only offer free 
     // If we don't have a key (e.g. running locally without env), we return a simulated response.
     let generatedCopy = ""
 
-    if (OPENAI_API_KEY) {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ],
-          temperature: 0.7,
-          max_tokens: 500
-        })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`)
-      }
-
-      const aiData = await response.json()
-      generatedCopy = aiData.choices[0].message.content
-    } else {
-      // Simulated response for development
-      console.log("No OPENAI_API_KEY found, simulating response...")
-      generatedCopy = `(Simulated AI Copy for ${platform})\n\nDid you know that ${topic}?\n\nHere at Delta Ridge, we see this all the time in Ascension Parish. ${founderStory.slice(0, 50)}... That's why we take this seriously.\n\nDon't wait until a small issue becomes a massive leak. Let us give you a free, honest assessment. No pressure, just facts.\n\n👇 Click the link in our bio to schedule your free inspection today.`
+    if (!OPENAI_API_KEY) {
+      const { data } = await supabase.from('system_secrets').select('secret_value').eq('id', 'OPENAI_API_KEY').single();
+      if (data) OPENAI_API_KEY = data.secret_value;
     }
+
+    if (!OPENAI_API_KEY) {
+      throw new Error("Missing OPENAI_API_KEY. Cannot execute real network request.");
+    }
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": Bearer ,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error("OpenAI API error: " + (error.error?.message || response.statusText))
+    }
+
+    const aiData = await response.json()
+    generatedCopy = aiData.choices[0].message.content
 
     // 4. Log the generation in a content calendar / history table (Simulated here)
     await supabase.from("content_calendar").insert({
@@ -144,3 +147,6 @@ ${policies || "Never promise that insurance will cover a claim. Only offer free 
     })
   }
 })
+
+
+

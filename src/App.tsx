@@ -17,6 +17,7 @@ import LeadPage from '@/pages/LeadPage'
 import EvidencePackagePage from '@/pages/EvidencePackagePage'
 import EstimatePage from '@/pages/EstimatePage'
 import MapPage from '@/pages/MapPage'
+import SettingsPage from '@/pages/SettingsPage'
 import MorePage from '@/pages/MorePage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
@@ -84,6 +85,7 @@ export default function App() {
                   <Route path="/studio" element={<CreativeStudioPage />} />
                   <Route path="/calendar" element={<ContentCalendarPage />} />
                   <Route path="/social-metrics" element={<SocialDashboardPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/inspections" element={<InspectionsPage />} />
                   <Route path="/new" element={<NewInspectionPage />} />
                   <Route path="/inspection/:id" element={<InspectionPage />} />
@@ -101,6 +103,9 @@ export default function App() {
     </QueryClientProvider>
   )
 }
+
+
+
 
 
 

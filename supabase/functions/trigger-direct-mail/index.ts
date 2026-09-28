@@ -2,7 +2,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const LOB_API_KEY = Deno.env.get('LOB_API_KEY')
+let LOB_API_KEY = Deno.env.get('LOB_API_KEY')
 const LOB_API_URL = 'https://api.lob.com/v1/postcards'
 
 serve(async (req) => {
@@ -36,19 +36,15 @@ serve(async (req) => {
       })
     }
 
-    // ---------------------------------------------------------------
-    // DRY RUN: LOB_API_KEY is not configured.
-    // Return status: 'DRY_RUN', success: false.
-    // The caller MUST NOT treat this as a real dispatch.
-    // ---------------------------------------------------------------
     if (!LOB_API_KEY) {
-      console.warn('[DRY_RUN] LOB_API_KEY not set. No postcards were sent.')
-      return new Response(JSON.stringify({
-        status: 'DRY_RUN',
-        success: false,
-        dispatched: 0,
-        message: 'LOB_API_KEY is not configured. No postcards were sent. This is a simulation only.'
-      }), { headers: { 'Content-Type': 'application/json' } })
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabase = createClient(supabaseUrl, serviceKey);
+      const { data } = await supabase.from('system_secrets').select('secret_value').eq('id', 'LOB_API_KEY').single();
+      if (data) LOB_API_KEY = data.secret_value;
+    }
+
+    if (!LOB_API_KEY) {
+      throw new Error("LOB_API_KEY is not configured. Cannot execute real network request.");
     }
 
     // ---------------------------------------------------------------
@@ -163,3 +159,5 @@ serve(async (req) => {
     })
   }
 })
+
+

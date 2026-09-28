@@ -13,7 +13,8 @@ export const NAV = [
   { to: '/leads', label: 'Leads', icon: 'target' },
   { to: '/map', label: 'Map', icon: 'map' },
   { to: '/inspections', label: 'Jobs', icon: 'clipboard' },
-  { to: '/more', label: 'More', icon: 'menu' },
+    { to: '/more', label: 'More', icon: 'menu' },
+  { to: '/settings', label: 'Settings', icon: 'tag' },
 ] as const
 
 function Icon({ name }: { name: string }) {
@@ -195,4 +196,5 @@ export default function AppShell({ children }: { children: ReactNode }) {
     </div>
   )
 }
+
 
