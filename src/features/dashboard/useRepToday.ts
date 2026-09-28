@@ -61,13 +61,16 @@ export function useRepToday() {
       let nextAppointment: RepTodayData['nextAppointment'] = null
       if (appts && appts.length > 0 && appts[0]) {
         const appt = appts[0]
-        const appointmentTime = (appt as Record<string, unknown>).scheduled_start
-        const leadJoin = appt.leads as Record<string, unknown>
-        const leadAddress = Array.isArray(leadJoin) && leadJoin[0]
-          ? (leadJoin[0] as Record<string, unknown>).address as string
-          : typeof leadJoin === 'object' && leadJoin !== null
-            ? (leadJoin as Record<string, unknown>).address as string
-            : 'Address unavailable'
+                const apptRecord = appt as Record<string, unknown>;
+        const appointmentTime = String(apptRecord.scheduled_start);
+        const leadJoin = apptRecord.leads as Record<string, unknown> | Record<string, unknown>[];
+        
+        let leadAddress = 'Address unavailable';
+        if (Array.isArray(leadJoin) && leadJoin.length > 0) {
+          leadAddress = String(leadJoin[0]?.address || 'Address unavailable');
+        } else if (typeof leadJoin === 'object' && leadJoin !== null && !Array.isArray(leadJoin)) {
+          leadAddress = String(leadJoin.address || 'Address unavailable');
+        }
         
         nextAppointment = {
           time: new Date(appointmentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
