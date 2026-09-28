@@ -14,7 +14,7 @@ alter table public.competitor_ad_intelligence enable row level security;
 
 create policy "Users can view their organization's competitor intelligence"
 on public.competitor_ad_intelligence for select
-using (organization_id = (auth.jwt()->>'org_id')::uuid);
+using (app.has_org_access(organization_id));
 
 -- Create cron job for competitor intelligence
 create extension if not exists pg_net;

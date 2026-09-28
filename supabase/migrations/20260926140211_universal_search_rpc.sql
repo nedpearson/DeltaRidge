@@ -15,7 +15,7 @@ as $$
       coalesce(first_name || ' ' || last_name, 'Unknown Contact') as title,
       coalesce(email, primary_phone, 'No contact info') as subtitle
     from customers, q
-    where organization_id = (select auth.jwt()->>'org_id')::uuid
+    where app.has_org_access(organization_id)
       and (
         first_name ilike q.wild 
         or last_name ilike q.wild 
@@ -32,7 +32,7 @@ as $$
       address_line1 as title,
       coalesce(city || ', ' || state || ' ' || postal_code, city, '') as subtitle
     from properties, q
-    where organization_id = (select auth.jwt()->>'org_id')::uuid
+    where app.has_org_access(organization_id)
       and (
         address_line1 ilike q.wild
         or city ilike q.wild
@@ -50,7 +50,7 @@ as $$
     left join customers c on l.customer_id = c.id
     left join properties p on l.property_id = p.id
     cross join q
-    where l.organization_id = (select auth.jwt()->>'org_id')::uuid
+    where l.app.has_org_access(organization_id)
       and (
         c.first_name ilike q.wild 
         or c.last_name ilike q.wild 

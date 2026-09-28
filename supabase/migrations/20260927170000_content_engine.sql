@@ -15,11 +15,11 @@ alter table content_engine_jobs enable row level security;
 
 create policy "Users can view org jobs"
 on content_engine_jobs for select
-using (organization_id in (select organization_id from user_organizations where user_id = auth.uid()));
+using (app.has_org_access(organization_id));
 
 create policy "Users can insert org jobs"
 on content_engine_jobs for insert
-with check (organization_id in (select organization_id from user_organizations where user_id = auth.uid()));
+with check (app.has_org_access(organization_id));
 
 create policy "Service role has full access"
 on content_engine_jobs for all

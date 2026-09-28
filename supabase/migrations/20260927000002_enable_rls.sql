@@ -16,29 +16,29 @@ alter table public.social_autonomy_config enable row level security;
 -- Policy: Select
 create policy "Users can view their organization's social profiles"
 on public.social_profiles for select
-using (organization_id = (auth.jwt()->>'org_id')::uuid);
+using (app.has_org_access(organization_id));
 
 create policy "Users can view their organization's social messages"
 on public.social_messages for select
-using (organization_id = (auth.jwt()->>'org_id')::uuid);
+using (app.has_org_access(organization_id));
 
 create policy "Users can view their organization's content calendar"
 on public.content_calendar for select
-using (organization_id = (auth.jwt()->>'org_id')::uuid);
+using (app.has_org_access(organization_id));
 
 create policy "Users can view their organization's creative assets"
 on public.creative_assets for select
-using (organization_id = (auth.jwt()->>'org_id')::uuid);
+using (app.has_org_access(organization_id));
 
 create policy "Users can view their organization's brand knowledge"
 on public.brand_knowledge for select
-using (organization_id = (auth.jwt()->>'org_id')::uuid);
+using (app.has_org_access(organization_id));
 
 -- Policy: Insert/Update/Delete (Same structure)
 create policy "Users can insert their organization's content calendar"
 on public.content_calendar for insert
-with check (organization_id = (auth.jwt()->>'org_id')::uuid);
+with check (app.has_org_access(organization_id));
 
 create policy "Users can update their organization's content calendar"
 on public.content_calendar for update
-using (organization_id = (auth.jwt()->>'org_id')::uuid);
+using (app.has_org_access(organization_id));
