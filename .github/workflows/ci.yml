@@ -53,7 +53,7 @@ jobs:
     - name: Start Supabase Local
       run: npx supabase start
     - name: Run Playwright tests
-      run: npx playwright test --project="Google Chrome"
+      run: npm run build && npx playwright test --project="Google Chrome"
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
