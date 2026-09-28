@@ -26,12 +26,12 @@ serve(async (req) => {
     const { data: appointment, error: apptError } = await supabase
       .from("appointments")
       .select(
-        id, scheduled_start,
+        `id, scheduled_start,
         lead:leads(
           id, source, lead_source_id,
           property:properties(id, raw_address, normalized_address)
         ),
-        customer:customers(id, first_name, last_name, primary_phone, email)
+        customer:customers(id, first_name, last_name, primary_phone, email)`
       )
       .eq("id", appointmentId)
       .single()
@@ -43,9 +43,9 @@ serve(async (req) => {
     const { data: conversations } = await supabase
       .from("social_conversations")
       .select(
-        id, intent_category,
+        `id, intent_category,
         account:social_accounts(platform),
-        messages:social_messages(content, direction, sent_at)
+        messages:social_messages(content, direction, sent_at)`
       )
       .eq("lead_id", appointment.lead?.id)
       .order("created_at", { ascending: false })
@@ -54,8 +54,8 @@ serve(async (req) => {
     let systemPromptData = ""
     if (conversations && conversations.length > 0) {
       const conv = conversations[0]
-      const msgs = conv.messages?.map(m => []: ).join("\n") || ""
-      socialSummary = Platform: \nIntent: \n\nChat History:\n
+      const msgs = conv.messages?.map((m: any) => `[${m.direction}]: ${m.content}`).join("\n") || ""
+      socialSummary = `Platform: ${conv.account?.platform}\nIntent: ${conv.intent_category}\n\nChat History:\n${msgs}`
       systemPromptData += socialSummary
     } else {
       systemPromptData += "No social history."
@@ -67,14 +67,14 @@ serve(async (req) => {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": Bearer ,
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
           model: "gpt-4o",
           messages: [{
              role: "system", 
-             content: Generate a concise Intelligence Brief for a roofing sales rep based on this lead data:\n\n\n\nDo not invent facts, leaks, storm sizes, or objections that are not present in the data.
+             content: `Generate a concise Intelligence Brief for a roofing sales rep based on this lead data:\n${JSON.stringify(appointment)}\n${systemPromptData}\n\nDo not invent facts, leaks, storm sizes, or objections that are not present in the data.`
           }],
           temperature: 0.1,
         })
@@ -87,20 +87,20 @@ serve(async (req) => {
         intelligenceBrief = "Failed to generate brief via AI."
       }
     } else {
-       intelligenceBrief = 
+       intelligenceBrief = `
 EXECUTIVE SUMMARY:
 Homeowner  booked via .
 No AI analysis available (OpenAI Key missing).
 
 CONVERSATIONAL HIGHLIGHTS:
 
-       .trim()
+       `.trim()
     }
 
     const { error: updateError } = await supabase
       .from("appointments")
       .update({
-        notes: --- INTELLIGENCE BRIEF ---\n\n\n--- ORIGINAL NOTES ---\n
+        notes: "--- INTELLIGENCE BRIEF ---\\n" + intelligenceBrief + "\\n\\n--- ORIGINAL NOTES ---\\n"
       })
       .eq("id", appointmentId)
 

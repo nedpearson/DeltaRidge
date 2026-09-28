@@ -8,8 +8,8 @@ test.describe('Golden Flows', () => {
     await expect(page.locator('h1').filter({ hasText: 'MISSION:' })).toBeVisible();
 
     // Get current door address
-    const initialAddressElement = page.locator('p.text-3xl.font-display.font-bold').first();
-    const initialAddress = await initialAddressElement.textContent();
+    // const initialAddressElement = page.locator('p.text-3xl.font-display.font-bold').first();
+    // const initialAddress = await initialAddressElement.textContent();
 
     // Tap "Not Home"
     const notHomeBtn = page.getByRole('button', { name: 'Not Home' });

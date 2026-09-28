@@ -1,8 +1,0 @@
-const fs = require('fs');
-const path = 'c:/dev/github/business/DeltaRidge/src/pages/LeadPage.tsx';
-let content = fs.readFileSync(path, 'utf8');
-
-content = content.replace("lead.status === 'won'", "lead.status === 'inspected'");
-
-fs.writeFileSync(path, content);
-console.log('Fixed build error in LeadPage.tsx');

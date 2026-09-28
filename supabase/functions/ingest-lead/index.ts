@@ -37,7 +37,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     // 1. Resolve Property
-    const { data: propData, error: propError } = await supabase.rpc('resolve_property_from_address', {
+    const { data: propData } = await supabase.rpc('resolve_property_from_address', {
       org_id: orgId,
       address_query: address
     })
@@ -141,8 +141,8 @@ serve(async (req) => {
       headers: { 'Content-Type': 'application/json' } 
     })
 
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { 
+  } catch (error: unknown) {
+    return new Response(JSON.stringify({ error: (error instanceof Error ? error.message : String(error)) }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     })

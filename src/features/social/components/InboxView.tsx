@@ -58,7 +58,7 @@ export default function InboxView() {
         body: { conversation_id: selectedConvId }
       });
       if (error) throw error;
-      console.log('Assigned to new lead: ' + data.id);
+      console.warn('Assigned to new lead: ' + data.id);
     } catch (err) {
       console.error('Assign error', err);
     }
@@ -76,7 +76,7 @@ export default function InboxView() {
         }
       });
       if (error) throw error;
-      console.log('Appointment booked for tomorrow!');
+      console.warn('Appointment booked for tomorrow!');
     } catch(err) {
       console.error('Book error', err);
     }

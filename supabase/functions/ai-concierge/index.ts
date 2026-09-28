@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable prefer-const */
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
@@ -44,7 +44,7 @@ serve(async (req) => {
 
     // Honor human ownership
     if (conversation.assigned_to) {
-      console.log("Conversation owned by human. AI skipping.")
+      console.warn("Conversation owned by human. AI skipping.")
       return new Response(JSON.stringify({ success: true, reason: "human_owned" }), { status: 200 })
     }
 

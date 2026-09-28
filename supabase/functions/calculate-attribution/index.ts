@@ -74,7 +74,7 @@ serve(async (req) => {
       .maybeSingle()
 
     if (!campaign) {
-      console.warn(Campaign mapping for source  not found in DB.);
+      console.warn(`Campaign mapping for source ${source.name} not found in DB.`);
       return new Response("Campaign not found", { status: 200 })
     }
 

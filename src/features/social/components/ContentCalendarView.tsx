@@ -26,12 +26,12 @@ export default function ContentCalendarView() {
         .order('scheduled_for', { ascending: true });
         
       if (error) throw error;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      
       return data as any[];
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string, status: string }) => {
       const supabase = getSupabase();

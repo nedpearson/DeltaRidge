@@ -82,7 +82,7 @@ serve(async (req) => {
     return new Response(JSON.stringify(msg), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     })
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 400 })
+  } catch (error: unknown) {
+    return new Response(JSON.stringify({ error: (error instanceof Error ? error.message : String(error)) }), { status: 400 })
   }
 })

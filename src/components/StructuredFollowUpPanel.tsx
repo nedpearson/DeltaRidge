@@ -65,7 +65,7 @@ export function LostReasonIntelligence() {
   const lostReasons = ['price', 'competitor', 'timing', 'insurance', 'no_damage', 'financing', 'duplicate'];
   const objections = ['too_expensive', 'spouse_decision', 'already_has_roofer', 'wants_insurance_first', 'not_enough_damage', 'distrust'];
 
-  const toggle = (list: string[], setList: any, item: string) => {
+  const toggle = (list: string[], setList: (val: string[]) => void, item: string) => {
     if (list.includes(item)) setList(list.filter(i => i !== item));
     else setList([...list, item]);
   }

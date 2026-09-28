@@ -2,7 +2,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-let LOB_API_KEY = Deno.env.get('LOB_API_KEY')
+const LOB_API_KEY = Deno.env.get('LOB_API_KEY')
 const LOB_API_URL = 'https://api.lob.com/v1/postcards'
 
 serve(async (req) => {

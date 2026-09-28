@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
-import * as crypto from "https://deno.land/std@0.177.0/crypto/crypto.ts"
+// import * as crypto from "https://deno.land/std@0.177.0/crypto/crypto.ts"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
@@ -21,8 +21,8 @@ serve(async (req) => {
     const { data: postsToPublish, error: fetchError } = await supabase
       .from('content_calendar')
       .select(
-        *,
-        account:social_accounts(*)
+        `*,
+        account:social_accounts(*)`
       )
       .in('status', ['scheduled', 'queued'])
       .lte('scheduled_for', now)
@@ -39,7 +39,7 @@ serve(async (req) => {
     // 2. Publish each post
     for (const post of postsToPublish) {
       // Create idempotency key
-      const idempotencyKey = post.id + '-' + (post.retry_count || 0)
+      // const idempotencyKey = post.id + '-' + (post.retry_count || 0)
       
       try {
         const orgId = post.organization_id;
@@ -51,7 +51,7 @@ serve(async (req) => {
           .single()
 
         if (config?.master_kill_switch) {
-          console.log(Skipping publish for post  + post.id + : master kill switch is active);
+          console.warn(`Skipping publish for post ${post.id}: master kill switch is active`);
           continue;
         }
 
@@ -60,7 +60,7 @@ serve(async (req) => {
         }
 
         if (post.account.is_active === false) {
-           console.log(Skipping publish for post  + post.id + : channel is paused);
+           console.warn(`Skipping publish for post ${post.id}: channel is paused`);
            continue;
         }
 
@@ -111,7 +111,7 @@ serve(async (req) => {
 
         publishedCount++
       } catch (err: any) {
-        console.error(Failed to publish post  + post.id + :, err)
+        console.error(`Failed to publish post ${post.id}:`, err)
         // Mark as failed
         await supabase.from('content_calendar').update({ status: 'failed', failure_reason: err.message }).eq('id', post.id)
       }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Card, SectionTitle } from '@/components/ui'
 import { BookOpen, Sparkles } from 'lucide-react'
 
-export function SalesPlaybookPanel({}) {
+export function SalesPlaybookPanel() {
   const [isOpen, setIsOpen] = useState(false);
 
   if (!isOpen) {

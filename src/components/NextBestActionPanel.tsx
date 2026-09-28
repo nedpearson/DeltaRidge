@@ -54,7 +54,7 @@ export default function NextBestActionPanel({ lead }: { lead: ManagedLead }) {
              {recommendation.reason}
           </div>
           <div className="mt-3 flex gap-2">
-            <Button variant="primary" className="py-2 px-4 text-[12px] font-bold" onClick={() => console.log(recommendation.action)}>Execute</Button>
+            <Button variant="primary" className="py-2 px-4 text-[12px] font-bold" onClick={() => console.warn(recommendation.action)}>Execute</Button>
             <Button variant="ghost" className="py-2 px-3 text-[12px]">Snooze</Button>
           </div>
         </div>

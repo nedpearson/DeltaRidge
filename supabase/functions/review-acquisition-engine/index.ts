@@ -30,20 +30,20 @@ serve(async (req) => {
     const propertyType = 'roof';
 
     // 3. Use AI to generate a highly personalized review draft
-    let suggestedReview = The team at Delta Ridge did an amazing job replacing my roof. Highly recommend!;
+    let suggestedReview = "The team at Delta Ridge did an amazing job replacing my roof. Highly recommend!";
 
     if (OPENAI_API_KEY) {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": Bearer ,
+                    "Authorization": `Bearer ${OPENAI_API_KEY}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
           model: "gpt-4o",
           messages: [{
              role: "system", 
-             content: You are a helpful assistant writing a suggested 5-star Google review for a homeowner to copy/paste. Make it sound natural and mention their specific project details: . Do not exceed 2 sentences.
+             content: `You are a helpful assistant writing a suggested 5-star Google review for a homeowner to copy/paste. Make it sound natural and mention their specific project details: ${propertyType}. Do not exceed 2 sentences.`
           }],
           temperature: 0.7,
         })
@@ -55,7 +55,7 @@ serve(async (req) => {
       }
     }
 
-    const messageContent = Hi! It was great working on your project. If you have a minute, we'd love a Google Review. Here's a link: \n\nIf it helps, here's a quick template you can copy and paste:\n\n"";
+    const messageContent = `Hi! It was great working on your project. If you have a minute, we'd love a Google Review. Here's a link: ${reviewLink}\n\nIf it helps, here's a quick template you can copy and paste:\n\n"${suggestedReview}"`;
 
     // Rather than inserting into social_messages with non-existent columns,
     // we log an activity against the lead, and a ledger entry.

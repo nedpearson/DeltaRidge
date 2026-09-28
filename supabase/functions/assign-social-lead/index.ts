@@ -29,7 +29,7 @@ serve(async (req) => {
     await requireOrgMember(req, conv.organization_id)
 
     // 2. Resolve Property
-    const { data: property, error: propError } = await supabaseClient.rpc('resolve_property_from_address', {
+    const { data: property } = await supabaseClient.rpc('resolve_property_from_address', {
       org_id: conv.organization_id,
       address_query: property_address
     })
@@ -78,7 +78,7 @@ serve(async (req) => {
     return new Response(JSON.stringify(lead), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     })
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 400 })
+  } catch (error: unknown) {
+    return new Response(JSON.stringify({ error: (error instanceof Error ? error.message : String(error)) }), { status: 400 })
   }
 })

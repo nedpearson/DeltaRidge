@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable prefer-const */
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
@@ -52,7 +52,7 @@ serve(async (req) => {
 
     // 2. Perform actual Processing
     Promise.resolve().then(async () => {
-      console.log("Processing video for job " + job.id);
+      console.warn("Processing video for job " + job.id);
       
       // Real transcription call to OpenAI Whisper API
       // Since downloading the file and passing as multipart/form-data to whisper from Deno
@@ -80,7 +80,7 @@ serve(async (req) => {
            const whisperData = await whisperRes.json();
            transcribedText = whisperData.text || transcribedText;
         } else {
-           console.log("Whisper API failed, using fallback. Status:", whisperRes.status);
+           console.warn("Whisper API failed, using fallback. Status:", whisperRes.status);
         }
       } catch (e) {
         console.error("Transcription error, using fallback", e);
@@ -137,7 +137,7 @@ serve(async (req) => {
         results: slices
       }).eq('id', job.id)
 
-      console.log("Job completed " + job.id);
+      console.warn("Job completed " + job.id);
     }).catch(async (e) => {
       console.error('Job failed', e);
       await supabase.from('content_engine_jobs').update({

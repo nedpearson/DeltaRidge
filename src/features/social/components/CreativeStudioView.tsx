@@ -331,7 +331,7 @@ export default function CreativeStudioView() {
                           if (!file) return;
                           
                           if (file.size > 50 * 1024 * 1024) {
-                            alert('Video must be smaller than 50MB');
+                            console.error('Video must be smaller than 50MB');
                             return;
                           }
                           
@@ -352,7 +352,7 @@ export default function CreativeStudioView() {
                           if (uploadError) {
                             console.error('Upload error:', uploadError);
                             setVideoFile(null);
-                            alert('Upload failed');
+                            console.error('Upload failed');
                             return;
                           }
                           

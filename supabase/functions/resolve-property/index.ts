@@ -38,10 +38,10 @@ serve(async (req) => {
     }
 
     // 2. Geocode and normalize using an external service (BatchData or similar)
-    let lat = null
-    let lng = null
+    const lat = null
+    const lng = null
     let geocoder = null
-    let confidence = null
+    const confidence = null
     
     if (BATCHDATA_API_KEY) {
       // Very basic implementation. In production, we'd parse the address properly.
@@ -71,7 +71,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ success: true, propertyId: newProp.id }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     })
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 400 })
+  } catch (error: unknown) {
+    return new Response(JSON.stringify({ error: (error instanceof Error ? error.message : String(error)) }), { status: 400 })
   }
 })
