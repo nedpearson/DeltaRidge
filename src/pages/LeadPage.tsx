@@ -525,7 +525,7 @@ export default function LeadPage() {
           {due ?? 'Nothing scheduled'} · knocked {lead.knockCount}x
         </p>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="mt-4 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
           <a
             href={`https://www.google.com/maps/dir/?api=1&destination=${lead.latitude},${lead.longitude}`}
             target="_blank"
@@ -585,7 +585,7 @@ export default function LeadPage() {
           </div>
         )}
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
           {callBlock.allowed && callWindow.allowed && lead.contactPhone ? (
             <a href={`tel:${lead.contactPhone}`} className="contents">
               <Button variant="secondary" onClick={() => void logAttempt('call_placed')}>
@@ -651,7 +651,7 @@ export default function LeadPage() {
               A number they did not hand over is stored and shown, and the call and text buttons
               stay off for it. Confirm it with them and record it again to change that.
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
               <Button variant="secondary" onClick={() => setEditingNumber(false)}>
                 Cancel
               </Button>
@@ -773,7 +773,7 @@ export default function LeadPage() {
 
       <SectionTitle>WHAT HAPPENED</SectionTitle>
 
-      <Card id="outcome-section" className="grid grid-cols-2 gap-2">
+      <Card id="outcome-section" className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
         {QUICK.map((outcome) => (
           <Button key={outcome} variant="secondary" onClick={() => void record(outcome)}>
             {OUTCOME_LABEL[outcome]}
