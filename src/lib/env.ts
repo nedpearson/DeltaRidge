@@ -13,7 +13,6 @@ const envSchema = z.object({
   VITE_SUPABASE_URL: z.string().url('VITE_SUPABASE_URL must be a full URL'),
   VITE_SUPABASE_ANON_KEY: z.string().min(20, 'VITE_SUPABASE_ANON_KEY looks malformed'),
 
-  VITE_MAPBOX_PUBLIC_TOKEN: z.string().optional(),
   VITE_STORM_PROVIDER: z.enum(['noaa', 'hailtrace', 'none']).default('noaa'),
   /**
    * Radar-estimated hail, alongside ground reports rather than instead of them.
