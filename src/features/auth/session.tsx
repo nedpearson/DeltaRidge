@@ -21,8 +21,9 @@ interface SessionState {
   ready: boolean
   session: Session | null
   membership: Membership | null
+  membershipError: string | null
   profile: UserProfile | null
-  /** True when signed in but not yet a member of any organization. */
+  /** True only when the membership query succeeded and returned no row. */
   awaitingAccess: boolean
   signInWithEmail: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -43,33 +44,56 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const [membership, setMembership] = useState<Membership | null>(null)
+  const [membershipError, setMembershipError] = useState<string | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
 
   const loadMembership = useCallback(
     async (s: Session | null) => {
       if (!supabase || !s) {
         setMembership(null)
+        setMembershipError(null)
         setProfile(null)
         return
       }
       
-      // Load Membership
-      const { data, error } = await supabase
-        .from('organization_members')
-        .select('organization_id, role, organizations(name)')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle()
+      const readMembership = async () =>
+        supabase
+          .from('organization_members')
+          .select('organization_id, role, organizations(name)')
+          .eq('user_id', s.user.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle()
 
-      if (error || !data) {
+      let membershipResult = await readMembership()
+
+      // Existing auth users can pre-date an organization invite. Redeem only
+      // invites matching the authenticated user's own email, then retry once.
+      if (!membershipResult.error && !membershipResult.data) {
+        const { error: redeemError } = await supabase.rpc('redeem_my_pending_invites')
+        if (redeemError) {
+          setMembership(null)
+          setMembershipError(redeemError.message)
+        } else {
+          membershipResult = await readMembership()
+        }
+      }
+
+      if (membershipResult.error) {
         setMembership(null)
+        setMembershipError(membershipResult.error.message)
+      } else if (!membershipResult.data) {
+        setMembership(null)
+        setMembershipError(null)
       } else {
-        const org = data.organizations as unknown as { name?: string } | null
+        const org = membershipResult.data.organizations as unknown as { name?: string } | null
         setMembership({
-          organizationId: data.organization_id as string,
+          organizationId: membershipResult.data.organization_id as string,
           organizationName: org?.name ?? 'Delta Ridge',
-          role: data.role as Membership['role'],
+          role: membershipResult.data.role as Membership['role'],
         })
+        setMembershipError(null)
       }
 
       // Load Profile
@@ -134,6 +158,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     await supabase?.auth.signOut()
     setMembership(null)
+    setMembershipError(null)
     setProfile(null)
   }, [supabase])
 
@@ -172,14 +197,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       ready,
       session,
       membership,
+      membershipError,
       profile,
-      awaitingAccess: Boolean(session) && membership === null,
+      awaitingAccess: Boolean(session) && membership === null && membershipError === null,
       signInWithEmail,
       signOut,
       refreshMembership: () => loadMembership(session),
       updateProfile,
     }),
-    [ready, session, membership, profile, signInWithEmail, signOut, loadMembership, updateProfile],
+    [ready, session, membership, membershipError, profile, signInWithEmail, signOut, loadMembership, updateProfile],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

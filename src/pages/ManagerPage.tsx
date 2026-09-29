@@ -126,7 +126,7 @@ function Nothing({ title, body }: { title: string; body: string }) {
 }
 
 export default function ManagerPage() {
-  const { session, membership } = useSession()
+  const { session, membership, membershipError } = useSession()
   const [tab, setTab] = useState<Tab>('command_center')
   const [snapshot, setSnapshot] = useState<ManagerSnapshot>(EMPTY_SNAPSHOT)
   const [openRepDrawer, setOpenRepDrawer] = useState<string | null>(null)
@@ -303,14 +303,26 @@ export default function ManagerPage() {
         </Card>
       )}
 
-      {!canManage && (
+      {membershipError ? (
+        <Card className="bg-warning-surface ring-1 ring-warning-border">
+          <p className="text-[12px] leading-relaxed text-status-warning">
+            Your account is signed in, but organization access could not be verified: {membershipError}
+          </p>
+        </Card>
+      ) : !membership ? (
         <Card>
           <p className="text-[12px] leading-relaxed text-text-secondary">
-            You are signed in as a {membership?.role ?? 'member'}, so the server returns your own rows only.
+            You are signed in, but this account is not attached to an active Delta Ridge organization yet.
+          </p>
+        </Card>
+      ) : !canManage ? (
+        <Card>
+          <p className="text-[12px] leading-relaxed text-text-secondary">
+            You are signed in as a {membership.role}, so the server returns only the rows permitted to that role.
             That is enforced where the data lives, not by hiding anything here.
           </p>
         </Card>
-      )}
+      ) : null}
 
       <div className="flex gap-1.5 overflow-x-auto">
         {TABS.map((t) => (
