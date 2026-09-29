@@ -38,9 +38,9 @@ export default function HomePage() {
       : null;
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-5">
       <div className="mb-2">
-        <h1 className="text-2xl font-bold font-display tracking-tight text-text-primary">Good Morning, {repName}</h1>
+        <h1 className="text-[clamp(1.35rem,6vw,1.75rem)] font-bold font-display tracking-tight text-text-primary">Good Morning, {repName}</h1>
       </div>
 
 
@@ -54,16 +54,6 @@ export default function HomePage() {
         </Card>
       )}
 
-
-      {!session && (
-        <Card className="border border-brand-500/30 bg-brand-500/5 p-4 flex flex-col gap-3">
-          <div>
-            <h3 className="font-bold text-text-primary text-[14px]">You are not signed in</h3>
-            <p className="text-[12px] text-text-secondary mt-1">Your work is saved locally, but sign in to access your assigned leads and push data to the office.</p>
-          </div>
-          <Button variant="primary" onClick={() => navigate('/more')}>Sign In</Button>
-        </Card>
-      )}
 
       <div>
         <SectionTitle>NEXT</SectionTitle>
@@ -81,7 +71,7 @@ export default function HomePage() {
                 <p className="text-[13px] text-text-secondary font-medium mt-0.5">{nextTarget.subtitle}</p>
               </div>
               
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 grid grid-cols-2 gap-2">
                 <Button variant="primary" className="flex-1 text-[13px] py-2.5 font-bold" onClick={() => navigate('/mission')}>GO</Button>
                 {nextTarget.id && (
                   <Button variant="secondary" className="flex-1 text-[13px] py-2.5" onClick={() => navigate('/lead/' + nextTarget.id)}>OPEN</Button>
@@ -150,33 +140,8 @@ export default function HomePage() {
         </div>
       )}
 
-      <div>
-        <SectionTitle>PACE LEADERBOARD</SectionTitle>
-        <Card className="mt-2 p-4 border-l-4 border-l-gold-500 bg-gradient-to-br from-bg-card to-bg-elevated">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-gold-400">Your Daily Pace</p>
-              <p className="text-[28px] font-display font-bold leading-none mt-1 text-text-primary">64<span className="text-[16px] text-text-secondary">/100</span></p>
-              <p className="text-[11px] text-text-muted mt-1">Doors knocked today</p>
-            </div>
-            <div className="w-16 h-16 rounded-full border-4 border-bg-page flex items-center justify-center bg-gold-500/10 relative">
-              <svg className="absolute inset-0 w-full h-full transform -rotate-90">
-                <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="none" className="text-bg-page" />
-                <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="none" strokeDasharray="175" strokeDashoffset={175 - (175 * 0.64)} className="text-gold-500 transition-all duration-1000" />
-              </svg>
-              <span className="text-[13px] font-bold text-gold-400 z-10">64%</span>
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-border-subtle">
-            <div className="flex items-center justify-between text-[13px]">
-              <span className="text-text-secondary">Current Rank: <strong className="text-text-primary">#3</strong></span>
-              <span className="text-gold-400 text-[11px] font-bold uppercase">12 behind #1</span>
-            </div>
-          </div>
-        </Card>
-      </div>
 
-      <div className="mt-6">
+      <div>
         <SectionTitle>NEARBY OPPORTUNITIES</SectionTitle>
         <Card className="mt-2 bg-bg-card p-0 shadow-sm ring-1 ring-border-subtle divide-y divide-border-subtle overflow-hidden">
           {loading ? (
