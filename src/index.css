@@ -4,83 +4,81 @@
   --font-display: 'Oswald', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
 
-  /* Backgrounds */
-  --color-bg-app: #070F1D;
+  --color-bg-app: #07111F;
   --color-bg-page: #0B1728;
-  --color-bg-card: #122238;
-  --color-bg-elevated: #182C44;
-  
-  /* Borders */
-  --color-border-strong: #29425D;
-  --color-border-subtle: #1D344C;
-  
-  /* Primary brand/action */
-  --color-brand-primary: #4776E6;
-  --color-brand-hover: #5A87F0;
-  --color-brand-pressed: #3A63C9;
-  
-  /* LIVE / FIELD / GPS */
-  --color-route-surface: #12364A;
-  --color-route-surface-elevated: #174258;
-  --color-route-border: #24566C;
-  --color-route-live: #27C6E8;
-  --color-route-text: #F7FAFC;
-  --color-route-text-secondary: #AFC0D1;
-  
-  /* Premium / high-value */
-  --color-brand-gold: #D9A441;
-  --color-brand-gold-highlight: #E8BD63;
-  
-  /* WARNING / REVIEW */
+  --color-bg-card: #112238;
+  --color-bg-elevated: #182D46;
+
+  --color-border-strong: #2C4662;
+  --color-border-subtle: #1E354D;
+
+  --color-brand-primary: #3F72E5;
+  --color-brand-hover: #6E96F3;
+  --color-brand-pressed: #315DBF;
+
+  --color-route-surface: #10384B;
+  --color-route-surface-elevated: #17475D;
+  --color-route-border: #285F76;
+  --color-route-live: #2DCAE8;
+  --color-route-text: #F8FBFF;
+  --color-route-text-secondary: #B7C7D6;
+
+  --color-brand-gold: #D6A44A;
+  --color-brand-gold-highlight: #E6BD6A;
+
   --color-warning-base: #D58B32;
   --color-warning-highlight: #E7B85C;
   --color-warning-surface: rgba(213, 139, 50, 0.10);
   --color-warning-border: rgba(213, 139, 50, 0.35);
 
-  /* Semantic states */
-  --color-status-success: #34C990;
+  --color-status-success: #3ACB93;
   --color-status-warning: #D58B32;
-  --color-status-critical: #E75A64;
+  --color-status-critical: #E9656D;
   --color-status-ai: #9A83F5;
-  
-  /* Typography */
-  --color-text-primary: #F7FAFC;
-  --color-text-secondary: #C5D1DE;
-  --color-text-muted: #8FA3B8;
+
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #CAD5E1;
+  --color-text-muted: #91A5BA;
   --color-text-disabled: #64768B;
 
-  /* Retained Status Colors (adapted slightly for dark theme visibility or kept for logic) */
   --color-status-untouched: #64768B;
   --color-status-target: #D58B32;
   --color-status-attempted: #9A83F5;
-  --color-status-noanswer: #8FA3B8;
-  --color-status-spoke: #27C6E8;
-  --color-status-interested: #4776E6;
-  --color-status-appointment: #5A87F0;
+  --color-status-noanswer: #91A5BA;
+  --color-status-spoke: #2DCAE8;
+  --color-status-interested: #3F72E5;
+  --color-status-appointment: #6E96F3;
   --color-status-inspected: #9A83F5;
-  --color-status-proposal: #D9A441;
-  --color-status-sold: #34C990;
-  --color-status-lost: #E75A64;
-  --color-status-dnc: #1D344C;
+  --color-status-proposal: #D6A44A;
+  --color-status-sold: #3ACB93;
+  --color-status-lost: #E9656D;
+  --color-status-dnc: #1E354D;
 }
 
 @layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
   html {
+    min-width: 320px;
+    background: var(--color-bg-app);
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
     margin: 0;
-    background-color: var(--color-bg-app);
+    min-width: 320px;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    background: var(--color-bg-app);
     color: var(--color-text-primary);
     font-family: var(--font-sans);
-    padding: env(safe-area-inset-top) env(safe-area-inset-right)
-      env(safe-area-inset-bottom) env(safe-area-inset-left);
     overscroll-behavior-y: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  #root { min-height: 100dvh; min-width: 0; }
 
   h1, h2, h3, h4 {
     font-family: var(--font-display);
@@ -88,10 +86,9 @@
     text-transform: uppercase;
   }
 
-  ::selection {
-    background: var(--color-brand-primary);
-    color: var(--color-text-primary);
-  }
+  img, svg, video, canvas { max-width: 100%; }
+  input, select, textarea, button { font: inherit; }
+  input, select, textarea { min-width: 0; }
 
   button, a[role='button'], [data-field-target] {
     min-height: 44px;
@@ -99,24 +96,56 @@
     touch-action: manipulation;
   }
 
+  ::selection {
+    background: var(--color-brand-primary);
+    color: white;
+  }
+
+  @media (max-width: 639px) {
+    input, select, textarea { font-size: 16px; }
+    h1 { line-height: 1.08; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
+      scroll-behavior: auto !important;
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
   }
 }
 
+@layer components {
+  .app-shell { min-width: 0; overflow-x: clip; background: var(--color-bg-app); }
+  .app-main { min-width: 0; }
+  .app-main--edge { min-width: 0; }
+  .mobile-tabbar { padding-top: 2px; }
+
+  .mobile-scroll-row {
+    display: flex;
+    gap: 0.5rem;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .mobile-scroll-row::-webkit-scrollbar { display: none; }
+
+  .mobile-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+
+  @media (min-width: 640px) {
+    .mobile-action-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+}
+
 @layer utilities {
-  .text-glow {
-    text-shadow: 0 0 10px rgba(40, 124, 255, 0.5);
-  }
-  .text-glow-intel {
-    text-shadow: 0 0 10px rgba(32, 212, 245, 0.5);
-  }
-  .box-glow {
-    box-shadow: 0 0 15px rgba(40, 124, 255, 0.15);
-  }
+  .text-glow { text-shadow: 0 0 10px rgba(63, 114, 229, 0.45); }
+  .text-glow-intel { text-shadow: 0 0 10px rgba(45, 202, 232, 0.45); }
+  .box-glow { box-shadow: 0 0 15px rgba(63, 114, 229, 0.14); }
 }
 
 @layer base {
@@ -125,23 +154,18 @@
     --color-bg-page: #F3F4F6;
     --color-bg-card: #FFFFFF;
     --color-bg-elevated: #E5E7EB;
-    
     --color-border-strong: #000000;
     --color-border-subtle: #9CA3AF;
-    
     --color-brand-primary: #1D4ED8;
     --color-brand-hover: #1E40AF;
     --color-brand-pressed: #1E3A8A;
-    
     --color-text-primary: #000000;
     --color-text-secondary: #1F2937;
     --color-text-muted: #4B5563;
     --color-text-disabled: #9CA3AF;
-
     --color-status-success: #166534;
     --color-status-warning: #9A3412;
     --color-status-critical: #991B1B;
-    
     --color-brand-gold: #B45309;
     --color-brand-gold-highlight: #92400E;
   }
