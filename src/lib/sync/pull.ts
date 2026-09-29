@@ -63,16 +63,21 @@ export function localLeadStatus(remote: string): LeadStatus {
     case 'no_answer':
       return 'attempted'
     case 'spoke':
+      return 'reached'
     case 'interested':
-      return 'follow_up'
+      return 'interested'
     case 'inspection_requested':
-      return 'need_visit'
+      return 'inspection_requested'
     case 'appointment':
       return 'appointment'
     case 'inspected':
-    case 'proposal_pending':
-    case 'sold':
       return 'inspected'
+    case 'proposal_pending':
+      return 'estimate_proposal'
+    case 'sold':
+      return 'won'
+    case 'existing_customer':
+      return 'customer'
     // 'lost' is what the office writes both for a rejection and for a door that
     // was never a prospect. The door sheet cannot tell them apart from here, so
     // it shows the weaker of the two rather than telling a rep somebody turned
