@@ -32,6 +32,7 @@ const BrandBrainPage = lazy(() => import('@/pages/BrandBrainPage'))
 const CreativeStudioPage = lazy(() => import('@/pages/CreativeStudioPage'))
 const ContentCalendarPage = lazy(() => import('@/pages/ContentCalendarPage'))
 const SocialDashboardPage = lazy(() => import('@/pages/SocialDashboardPage'))
+const AutonomyConfigView = lazy(() => import('@/features/social/components/AutonomyConfigView'))
 
 import { SessionProvider, useSession } from '@/features/auth/session'
 import { useSync } from '@/features/auth/useSync'
@@ -101,6 +102,7 @@ export default function App() {
                       <Route path="/studio" element={<CreativeStudioPage />} />
                       <Route path="/calendar" element={<ContentCalendarPage />} />
                       <Route path="/social-metrics" element={<SocialDashboardPage />} />
+                      <Route path="/autonomy" element={<AutonomyConfigView />} />
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="/inspections" element={<InspectionsPage />} />
                       <Route path="/new" element={<NewInspectionPage />} />
