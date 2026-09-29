@@ -19,8 +19,6 @@ describe('localLeadStatus', () => {
       'reached',
       'interested',
       'inspection_requested',
-      'follow_up',
-      'need_visit',
       'appointment',
       'inspected',
       'not_interested',
@@ -29,6 +27,11 @@ describe('localLeadStatus', () => {
     for (const status of settable) {
       expect(localLeadStatus(remoteLeadStatus(status)), status).toBe(status)
     }
+  })
+
+  it('normalizes legacy local aliases into the current canonical field vocabulary', () => {
+    expect(localLeadStatus(remoteLeadStatus('follow_up'))).toBe('reached')
+    expect(localLeadStatus(remoteLeadStatus('need_visit'))).toBe('inspection_requested')
   })
 
   it('shows an office-only outcome as the nearest thing a door sheet can say', () => {
