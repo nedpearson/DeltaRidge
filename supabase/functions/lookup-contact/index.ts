@@ -224,8 +224,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { requireAuth } = await import('../_shared/auth.ts');
   try {
     await requireAuth(req);
-  } catch (err: any) {
-    return json({ error: err.message }, 401)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unauthorized'
+    return json({ error: message }, 401)
   }
 
   let body: Record<string, unknown>

@@ -52,7 +52,7 @@ export function useSourceAttribution() {
         let rev = 0;
         if (hasWon && l.roofr_links) {
            const links = Array.isArray(l.roofr_links) ? l.roofr_links : [l.roofr_links];
-           links.forEach((link: any) => {
+           links.forEach((link: { proposal_total_cents?: number | null }) => {
              if (link.proposal_total_cents) {
                rev += (link.proposal_total_cents / 100);
              }

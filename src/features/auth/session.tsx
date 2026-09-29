@@ -140,7 +140,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
     if (!supabase || !session) return { error: 'Not authenticated' }
     
-    const dbPayload: any = {}
+    const dbPayload: Record<string, unknown> = {}
     if (updates.fullName !== undefined) dbPayload.full_name = updates.fullName
     if (updates.phone !== undefined) dbPayload.phone = updates.phone
     if (updates.avatarUrl !== undefined) dbPayload.avatar_url = updates.avatarUrl

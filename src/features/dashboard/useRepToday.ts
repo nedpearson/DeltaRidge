@@ -126,7 +126,7 @@ export function useRepToday() {
           .order('opportunity_score', { ascending: false })
 
         doors = count ?? 0
-        myAssignedLeads = (leads ?? []).map((l: any) => {
+        myAssignedLeads = (leads ?? []).map((l: { id: string; opportunity_score?: number | null; properties?: { address_line1?: string | null } | { address_line1?: string | null }[] | null }) => {
           let addr = 'Address unknown';
           if (l.properties) {
             const props = Array.isArray(l.properties) ? l.properties[0] : l.properties;
