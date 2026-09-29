@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { readLeads } from '@/features/leads/lead-store'
 
@@ -46,23 +46,33 @@ function FitToMarkers({ leads }: { leads: MappableLead[] }) {
   return null
 }
 
-/** Centers map on the user's actual GPS position */
-function CenterOnDevice() {
+function FocusLead({ lead }: { lead: MappableLead | null }) {
   const map = useMap()
   useEffect(() => {
-    if (!navigator.geolocation) return
+    if (!lead) return
+    map.setView([lead.latitude, lead.longitude], 17)
+  }, [lead, map])
+  return null
+}
+
+/** Centers map on the user's actual GPS position when no explicit lead is focused. */
+function CenterOnDevice({ enabled }: { enabled: boolean }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!enabled || !navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         map.setView([pos.coords.latitude, pos.coords.longitude], 14)
       },
       () => { /* GPS denied or unavailable — keep default view */ }
     )
-  }, [map])
+  }, [enabled, map])
   return null
 }
 
 export default function MapPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [leads, setLeads] = useState<MappableLead[]>([])
   const [filter, setFilter] = useState<'all' | 'opportunities' | 'jobs'>('all')
   const [noCoordinateCount, setNoCoordinateCount] = useState(0)
@@ -90,6 +100,9 @@ export default function MapPage() {
     })
   }, [])
 
+  const focusId = searchParams.get('focus')
+  const focusLead = focusId ? leads.find((lead) => lead.id === focusId) ?? null : null
+
   const filteredLeads = leads.filter(l => {
     if (filter === 'all') return true
     if (filter === 'jobs') return l.status === 'won'
@@ -113,7 +126,7 @@ export default function MapPage() {
       )}
 
       <MapContainer
-        center={[33.0, -97.0]}
+        center={[30.4515, -91.1871]}
         zoom={10}
         className="w-full flex-1 z-0"
         zoomControl={false}
@@ -124,8 +137,9 @@ export default function MapPage() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <CenterOnDevice />
-        {filteredLeads.length > 0 && <FitToMarkers leads={filteredLeads} />}
+        <CenterOnDevice enabled={focusLead === null} />
+        <FocusLead lead={focusLead} />
+        {focusLead === null && filteredLeads.length > 0 && <FitToMarkers leads={filteredLeads} />}
 
         {filteredLeads.map(lead => (
           <Marker eventHandlers={{ click: () => navigate('/lead/' + lead.id) }}

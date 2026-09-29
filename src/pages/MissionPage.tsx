@@ -3,11 +3,15 @@ import { readLeads, saveOutcome } from '@/features/leads/lead-store'
 import { applyOutcome, type DoorOutcome, type ManagedLead } from '@/features/leads/pipeline'
 import { MapPin, User, X, Calendar, ChevronRight, Navigation } from 'lucide-react'
 import { useRepToday } from '@/features/dashboard/useRepToday'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 export default function MissionPage() {
+  const navigate = useNavigate()
   const { data: todayData } = useRepToday()
   const [leads, setLeads] = useState<ManagedLead[]>([])
+  const [loading, setLoading] = useState(true)
+  const [savingOutcome, setSavingOutcome] = useState(false)
+  const [outcomeError, setOutcomeError] = useState<string | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [outcomeFlow, setOutcomeFlow] = useState<'none' | 'spoke' | 'appointment'>('none')
   
@@ -24,26 +28,38 @@ export default function MissionPage() {
       const pending = allLeads.filter(l => l.status === 'new' || l.status === 'attempted' || l.status === 'follow_up')
       pending.sort((a, b) => b.score - a.score)
       setLeads(pending)
+      setLoading(false)
     }
-    void load()
+    void load().catch((err) => {
+      setOutcomeError(err instanceof Error ? err.message : 'Could not load the route.')
+      setLoading(false)
+    })
   }, [])
 
   const currentLead = leads[currentIndex]
 
   const handleOutcome = async (outcome: DoorOutcome, extra?: { contactName?: string; contactPhone?: string; appointmentAt?: string }) => {
     if (!currentLead) return
+    if (savingOutcome) return
+    setSavingOutcome(true)
+    setOutcomeError(null)
     const at = new Date().toISOString()
     const { lead: nextLead, event } = applyOutcome(currentLead, outcome, at, extra)
-    
-    // Optimistic UI
-    await saveOutcome(nextLead, event)
-    
-    // Advance
+
+    try {
+      await saveOutcome(nextLead, event)
+    } catch (err) {
+      setOutcomeError(err instanceof Error ? err.message : 'Could not save this outcome.')
+      setSavingOutcome(false)
+      return
+    }
+
     setOutcomeFlow('none')
     setSpokeName('')
     setSpokePhone('')
     setApptSlot('')
     setCurrentIndex(i => i + 1)
+    setSavingOutcome(false)
   }
 
   const handleQuickTap = (outcome: DoorOutcome) => {
@@ -64,11 +80,21 @@ export default function MissionPage() {
   }
 
   const handleApptSave = () => {
+    const parsed = Date.parse(apptSlot)
+    if (!apptSlot || !Number.isFinite(parsed)) return
     void handleOutcome('appointment_set', {
-      appointmentAt: apptSlot || new Date().toISOString(),
+      appointmentAt: new Date(parsed).toISOString(),
       contactName: spokeName,
       contactPhone: spokePhone
     })
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-app)] text-[var(--color-text-secondary)]">
+        Loading route…
+      </div>
+    )
   }
 
   if (!currentLead) {
@@ -102,9 +128,8 @@ export default function MissionPage() {
             <div className="mb-4">
               <p className="text-3xl font-display font-bold">{currentLead.address.split(',')[0]}</p>
               <p className="text-[var(--color-text-secondary)] text-sm flex items-center gap-1 mt-1">
-                <MapPin size={14} /> 
-                {/* Distance mock if no GPS */}
-                0.2 miles away
+                <MapPin size={14} />
+                {currentLead.address}
               </p>
             </div>
             
@@ -128,11 +153,14 @@ export default function MissionPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
-              <button className="col-span-2 bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-hover)] text-white font-bold py-4 rounded-lg shadow-lg flex items-center justify-center gap-2 text-lg">
+              <button
+                onClick={() => navigate(`/map?focus=${encodeURIComponent(currentLead.id)}`)}
+                className="col-span-2 bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-hover)] text-white font-bold py-4 rounded-lg shadow-lg flex items-center justify-center gap-2 text-lg"
+              >
                 <Navigation size={20} />
-                Navigate
+                Open on Map
               </button>
-              <Link to={`/leads/${currentLead.id}`} className="bg-[var(--color-bg-elevated)] hover:bg-[var(--color-border-strong)] text-white font-semibold py-3 rounded-lg border border-[var(--color-border-subtle)] flex items-center justify-center gap-2 text-base">
+              <Link to={`/lead/${currentLead.id}`} className="bg-[var(--color-bg-elevated)] hover:bg-[var(--color-border-strong)] text-white font-semibold py-3 rounded-lg border border-[var(--color-border-subtle)] flex items-center justify-center gap-2 text-base">
                 <User size={18} />
                 Lead 360
               </Link>
@@ -141,15 +169,18 @@ export default function MissionPage() {
               </button>
             </div>
 
+            {outcomeError && (
+              <p className="mb-3 rounded bg-red-500/10 px-3 py-2 text-sm text-red-300">{outcomeError}</p>
+            )}
             <div className="border-t border-[var(--color-border-subtle)] pt-4">
               <h3 className="text-sm font-semibold text-[var(--color-text-muted)] mb-3 uppercase tracking-wider text-center">Record Outcome</h3>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => handleQuickTap('no_answer')} className="bg-[var(--color-status-noanswer)]/20 text-[var(--color-status-noanswer)] border border-[var(--color-status-noanswer)]/30 font-medium py-3 rounded">Not Home</button>
-                <button onClick={() => handleQuickTap('spoke')} className="bg-[var(--color-status-spoke)]/20 text-[var(--color-status-spoke)] border border-[var(--color-status-spoke)]/30 font-medium py-3 rounded">Spoke</button>
-                <button onClick={() => handleQuickTap('interested')} className="bg-[var(--color-status-interested)]/20 text-[var(--color-status-interested)] border border-[var(--color-status-interested)]/30 font-medium py-3 rounded">Interested</button>
-                <button onClick={() => handleQuickTap('appointment_set')} className="bg-[var(--color-status-appointment)]/20 text-[var(--color-status-appointment)] border border-[var(--color-status-appointment)]/30 font-medium py-3 rounded">Appointment</button>
-                <button onClick={() => handleQuickTap('not_interested')} className="bg-[var(--color-status-lost)]/20 text-[var(--color-status-lost)] border border-[var(--color-status-lost)]/30 font-medium py-3 rounded">Not Interested</button>
-                <button onClick={() => handleQuickTap('do_not_knock')} className="bg-[var(--color-status-dnc)]/40 text-[var(--color-text-disabled)] border border-[var(--color-status-dnc)] border-solid border font-medium py-3 rounded">Do Not Contact</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('no_answer')} className="bg-[var(--color-status-noanswer)]/20 text-[var(--color-status-noanswer)] border border-[var(--color-status-noanswer)]/30 font-medium py-3 rounded">Not Home</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('spoke')} className="bg-[var(--color-status-spoke)]/20 text-[var(--color-status-spoke)] border border-[var(--color-status-spoke)]/30 font-medium py-3 rounded">Spoke</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('interested')} className="bg-[var(--color-status-interested)]/20 text-[var(--color-status-interested)] border border-[var(--color-status-interested)]/30 font-medium py-3 rounded">Interested</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('appointment_set')} className="bg-[var(--color-status-appointment)]/20 text-[var(--color-status-appointment)] border border-[var(--color-status-appointment)]/30 font-medium py-3 rounded">Appointment</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('not_interested')} className="bg-[var(--color-status-lost)]/20 text-[var(--color-status-lost)] border border-[var(--color-status-lost)]/30 font-medium py-3 rounded">Not Interested</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('do_not_knock')} className="bg-[var(--color-status-dnc)]/40 text-[var(--color-text-disabled)] border border-[var(--color-status-dnc)] border-solid border font-medium py-3 rounded">Do Not Contact</button>
               </div>
             </div>
           </div>
@@ -174,7 +205,7 @@ export default function MissionPage() {
             </label>
 
             <div className="mt-auto pt-4 flex gap-3">
-               <button onClick={handleSpokeSave} className="flex-1 bg-[var(--color-brand-primary)] text-white font-bold py-4 rounded-lg shadow flex justify-center items-center gap-2">
+               <button disabled={savingOutcome} onClick={handleSpokeSave} className="flex-1 disabled:opacity-50 bg-[var(--color-brand-primary)] text-white font-bold py-4 rounded-lg shadow flex justify-center items-center gap-2">
                  Save & Advance <ChevronRight size={18} />
                </button>
             </div>
@@ -189,19 +220,19 @@ export default function MissionPage() {
             <h2 className="text-xl font-bold mb-2 text-[var(--color-status-appointment)] flex items-center gap-2"><Calendar size={20} /> Fast Scheduler</h2>
             <p className="text-sm text-[var(--color-text-secondary)] mb-6">{currentLead.address}</p>
 
-            <div className="grid grid-cols-1 gap-3 mb-6">
-               <button onClick={() => setApptSlot('today')} className={`py-4 px-4 rounded border text-left flex justify-between items-center ${apptSlot === 'today' ? 'bg-[var(--color-brand-primary)]/20 border-[var(--color-brand-primary)]' : 'bg-[var(--color-bg-app)] border-[var(--color-border-subtle)]'}`}>
-                 <span className="font-semibold">Today</span>
-                 <span className="text-xs text-[var(--color-text-muted)]">Next available slot</span>
-               </button>
-               <button onClick={() => setApptSlot('tomorrow')} className={`py-4 px-4 rounded border text-left flex justify-between items-center ${apptSlot === 'tomorrow' ? 'bg-[var(--color-brand-primary)]/20 border-[var(--color-brand-primary)]' : 'bg-[var(--color-bg-app)] border-[var(--color-border-subtle)]'}`}>
-                 <span className="font-semibold">Tomorrow</span>
-                 <span className="text-xs text-[var(--color-text-muted)]">Morning</span>
-               </button>
-               <button onClick={() => setApptSlot('custom')} className={`py-4 px-4 rounded border text-left flex justify-between items-center ${apptSlot === 'custom' ? 'bg-[var(--color-brand-primary)]/20 border-[var(--color-brand-primary)]' : 'bg-[var(--color-bg-app)] border-[var(--color-border-subtle)]'}`}>
-                 <span className="font-semibold">Custom Time</span>
-                 <span className="text-xs text-[var(--color-text-muted)]">Select</span>
-               </button>
+            <div className="mb-6">
+              <label className="block">
+                <span className="text-xs text-[var(--color-text-muted)] uppercase">Appointment date & time</span>
+                <input
+                  type="datetime-local"
+                  value={apptSlot}
+                  onChange={(e) => setApptSlot(e.target.value)}
+                  className="w-full mt-1 bg-[var(--color-bg-app)] border border-[var(--color-border-subtle)] rounded p-3 text-white"
+                />
+              </label>
+              <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+                Choose the time agreed with the homeowner. This screen does not invent or imply office availability.
+              </p>
             </div>
 
             <div className="border-t border-[var(--color-border-subtle)] pt-4 mb-4">
@@ -215,7 +246,7 @@ export default function MissionPage() {
             </div>
 
             <div className="mt-auto flex gap-3">
-               <button onClick={handleApptSave} disabled={!apptSlot} className="flex-1 bg-[var(--color-brand-primary)] disabled:opacity-50 text-white font-bold py-4 rounded-lg shadow flex justify-center items-center gap-2">
+               <button onClick={handleApptSave} disabled={!apptSlot || savingOutcome} className="flex-1 bg-[var(--color-brand-primary)] disabled:opacity-50 text-white font-bold py-4 rounded-lg shadow flex justify-center items-center gap-2">
                  Schedule & Advance <ChevronRight size={18} />
                </button>
             </div>
