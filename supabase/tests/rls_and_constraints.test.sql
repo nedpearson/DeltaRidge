@@ -193,6 +193,37 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
+-- TEST 12c: an existing auth user can redeem only their own later invite.
+-- -----------------------------------------------------------------------------
+\echo '--- TEST 12c: existing-user invite recovery ---'
+insert into auth.users (id, email) values
+  ('cccc0000-0000-4000-8000-00000000000c', 'existing.user@example.com')
+on conflict (id) do nothing;
+
+insert into organization_invites (organization_id, email, role)
+values ('d17a0000-0000-4000-8000-000000000001', 'existing.user@example.com', 'manager');
+
+set role authenticated;
+set request.jwt.claim.sub = 'cccc0000-0000-4000-8000-00000000000c';
+select public.redeem_my_pending_invites();
+reset role;
+
+do $
+declare
+  recovered_role text;
+begin
+  select role::text into recovered_role
+    from organization_members
+   where user_id = 'cccc0000-0000-4000-8000-00000000000c'
+     and organization_id = 'd17a0000-0000-4000-8000-000000000001';
+  if recovered_role is distinct from 'manager' then
+    raise exception 'FAIL 12c: existing user did not recover manager membership';
+  end if;
+  raise notice 'PASS 12c: existing user safely recovered their own invite';
+end;
+$;
+
+-- -----------------------------------------------------------------------------
 -- TEST 13-15: idempotent field sync.
 --
 -- The field app pushes from a phone that regularly loses signal between the
