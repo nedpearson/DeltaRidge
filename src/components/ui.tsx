@@ -73,3 +73,96 @@ export function Empty({ title, body }: { title: string; body: string }) {
     </div>
   )
 }
+
+
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow?: string
+  title: ReactNode
+  description?: ReactNode
+  action?: ReactNode
+}) {
+  return (
+    <div className="flex min-w-0 items-start justify-between gap-3">
+      <div className="min-w-0">
+        {eyebrow && <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-brand-hover">{eyebrow}</p>}
+        <h1 className="break-words text-[clamp(1.45rem,6vw,2rem)] font-bold leading-[1.05] text-text-primary">{title}</h1>
+        {description && <div className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-text-secondary">{description}</div>}
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  )
+}
+
+export function SegmentedTabs<T extends string>({
+  items,
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  items: readonly { id: T; label: string; badge?: string | number }[]
+  value: T
+  onChange: (value: T) => void
+  ariaLabel: string
+}) {
+  return (
+    <div role="tablist" aria-label={ariaLabel} className="mobile-scroll-row rounded-2xl bg-bg-page p-1 ring-1 ring-border-subtle">
+      {items.map((item) => {
+        const active = value === item.id
+        return (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(item.id)}
+            className={
+              'shrink-0 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ' +
+              (active ? 'bg-bg-elevated text-text-primary ring-1 ring-border-strong' : 'text-text-muted')
+            }
+          >
+            <span>{item.label}</span>
+            {item.badge !== undefined && <span className="ml-1.5 text-[10px] text-text-muted">{item.badge}</span>}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+export function ActionRow({
+  icon,
+  title,
+  description,
+  trailing,
+  onClick,
+}: {
+  icon?: ReactNode
+  title: ReactNode
+  description?: ReactNode
+  trailing?: ReactNode
+  onClick?: () => void
+}) {
+  const body = (
+    <>
+      {icon && <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-bg-page text-brand-hover ring-1 ring-border-subtle">{icon}</div>}
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-text-primary">{title}</div>
+        {description && <div className="mt-0.5 text-xs leading-relaxed text-text-secondary">{description}</div>}
+      </div>
+      {trailing && <div className="shrink-0 text-text-muted">{trailing}</div>}
+    </>
+  )
+
+  return onClick ? (
+    <button type="button" onClick={onClick} className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left hover:bg-bg-elevated">
+      {body}
+    </button>
+  ) : (
+    <div className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-2.5">{body}</div>
+  )
+}

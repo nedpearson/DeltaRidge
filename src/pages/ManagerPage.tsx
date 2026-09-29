@@ -1,4 +1,3 @@
-import { AnalyticsDrilldownPanel } from '@/components/AnalyticsDrilldownPanel';
 import React from 'react';
 import { DemandGenerationPanel } from '@/features/dashboard/DemandGenerationPanel'
 import RoofcareManagerDashboard from '@/features/membership/RoofcareManagerDashboard'
@@ -6,7 +5,7 @@ import RevenueLeakagePanel from '@/features/dashboard/RevenueLeakagePanel'
 import { useManagerCommandCenter } from '@/features/dashboard/useManagerCommandCenter';
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { StormWarRoomPanel } from '@/components/StormWarRoomPanel'
-import { Button, Card, Empty, SectionTitle } from '@/components/ui'
+import { Button, Card, Empty, PageHeader, SectionTitle, SegmentedTabs } from '@/components/ui'
 import { useSession } from '@/features/auth/session'
 import { readCachedRun } from '@/features/leads/engine'
 import type { ScoredLead } from '@/features/leads/scoring'
@@ -287,7 +286,12 @@ export default function ManagerPage() {
 
   return (
     <div className="space-y-4">
-      <SectionTitle {...(loading ? { hint: 'loading…' } : {})}>MANAGER</SectionTitle>
+      <PageHeader
+        eyebrow="Management"
+        title="Command Center"
+        description={membership ? `${membership.organizationName} · ${membership.role}` : 'Organization access required'}
+        action={loading ? <span className="text-xs text-text-muted">Refreshing…</span> : undefined}
+      />
 
       {snapshot.error && (
         <Card className="bg-warning-surface ring-1 ring-warning-border border-l-4 border-l-warning-base">
@@ -324,19 +328,7 @@ export default function ManagerPage() {
         </Card>
       ) : null}
 
-      <div className="flex gap-1.5 overflow-x-auto">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
-              tab === t.id ? 'bg-brand-gold text-bg-app' : 'bg-bg-elevated text-text-secondary'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs items={TABS} value={tab} onChange={setTab} ariaLabel="Manager workspace sections" />
 
       {tab === 'command_center' && (
         <div className="space-y-8">
@@ -367,7 +359,7 @@ export default function ManagerPage() {
         </div>
       )}
 
-      {tab === 'demand' && (
+      {tab === 'demand' && orgId && (
         <div className="space-y-8">
           <div>
             <div className="mb-3"><SectionTitle>PROPERTY INTELLIGENCE</SectionTitle></div>
@@ -375,7 +367,7 @@ export default function ManagerPage() {
           </div>
           <div>
             <div className="mb-3"><SectionTitle>INBOUND WEBHOOKS & DIRECT MAIL</SectionTitle></div>
-            <DemandGenerationPanel organizationId={orgId || 'unknown-org'} />
+            <DemandGenerationPanel organizationId={orgId!} />
           </div>
           <div>
             <div className="mb-3"><SectionTitle>SOURCE ATTRIBUTION</SectionTitle></div>
@@ -524,7 +516,7 @@ export default function ManagerPage() {
         </div>
       )}
 
-      {tab === 'operations' && (
+      {tab === 'operations' && orgId && (
         <div className="space-y-8">
           <div>
             <div className="mb-3"><SectionTitle>ROOFR INTEGRATION</SectionTitle></div>
@@ -534,7 +526,7 @@ export default function ManagerPage() {
             <div className="mb-3"><SectionTitle>INTEGRATION HEALTH</SectionTitle></div>
             <IntegrationHealthPanel organizationId={orgId} />
           </div>
-          <div><div className="mb-3"><SectionTitle>DEMAND GENERATION</SectionTitle></div><DemandGenerationPanel organizationId={orgId || 'unknown-org'} /></div>
+          <div><div className="mb-3"><SectionTitle>DEMAND GENERATION</SectionTitle></div><DemandGenerationPanel organizationId={orgId!} /></div>
           <div>
             <div className="mb-3"><SectionTitle>AUTOMATION ENGINE</SectionTitle></div>
             <AutomationRulesPanel />
@@ -561,7 +553,7 @@ export default function ManagerPage() {
       )}
 
       {openRepDrawer && (
-        <div className="fixed inset-y-0 right-0 w-80 bg-bg-app border-l border-border-subtle shadow-xl p-4 z-50 overflow-y-auto transform transition-transform translate-x-0">
+        <div className="fixed inset-y-0 right-0 z-50 w-[min(24rem,100vw)] overflow-y-auto border-l border-border-subtle bg-bg-app p-4 shadow-xl">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-[15px] font-bold">Rep Details</h2>
             <button onClick={() => setOpenRepDrawer(null)} className="text-text-secondary hover:text-text-primary">✕</button>
@@ -591,7 +583,7 @@ export default function ManagerPage() {
       )}
 
       {openLeadDrawer && (
-        <div className="fixed inset-y-0 right-0 w-80 bg-bg-app border-l border-border-subtle shadow-xl p-4 z-50 overflow-y-auto transform transition-transform translate-x-0">
+        <div className="fixed inset-y-0 right-0 z-50 w-[min(24rem,100vw)] overflow-y-auto border-l border-border-subtle bg-bg-app p-4 shadow-xl">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-[15px] font-bold">Lead Details</h2>
             <button onClick={() => setOpenLeadDrawer(null)} className="text-text-secondary hover:text-text-primary">✕</button>
@@ -689,7 +681,7 @@ function TeamTab({
                 {expanded && (
                   <tr className="bg-bg-elevated/50">
                     <td colSpan={7} className="p-4 border-t border-border-subtle/50">
-                      <div className="grid grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
                         <div>
                           <p className="text-[11px] uppercase tracking-wide text-text-secondary mb-2">GPS Evidence</p>
                           <div className="text-[12px] text-text-primary bg-bg-app p-2 rounded border border-border-subtle">
@@ -1424,7 +1416,7 @@ function LeadEconomicsPanel() {
         <p className="text-[12px] leading-relaxed text-text-secondary mb-3">
           Funnel Metrics across all generated opportunities. (Server-backed)
         </p>
-        <div className="grid grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 mb-4">
           <Stat value={data.assigned.toString()} label="Assigned" />
           <Stat value={data.attempted.toString()} label="Attempted" />
           <Stat value={data.conversations.toString()} label="Conv" />
@@ -1465,7 +1457,7 @@ function SourceAttributionPanel() {
                 <p className="text-[13.5px] font-semibold text-text-primary">{src.name}</p>
                 <span className="text-[13px] font-bold text-status-success">{src.gpPerOpp} GP/OPP</span>
               </div>
-              <div className="grid grid-cols-4 gap-2 text-[11px] text-text-secondary">
+              <div className="grid grid-cols-2 gap-2 text-[11px] text-text-secondary sm:grid-cols-4">
                 <div><span className="block uppercase tracking-wider text-[10px]">Appts</span>{src.appts}</div>
                 <div><span className="block uppercase tracking-wider text-[10px]">Close Rate</span>{src.closeRate}</div>
                 <div><span className="block uppercase tracking-wider text-[10px]">Revenue</span>{src.revenue}</div>
@@ -1481,105 +1473,62 @@ function SourceAttributionPanel() {
 
 function TerritoryIntelligencePanel() {
   return (
-    <div className="space-y-3">
-      <Card>
-        <p className="text-[12px] leading-relaxed text-text-secondary mb-3">
-          Territory Intelligence Overlays. Toggle map layers to visualize opportunity data.
-        </p>
-        <div className="flex flex-col gap-2">
-          <Button variant="secondary" full className="justify-start">🔍 Untouched opportunities</Button>
-          <Button variant="secondary" full className="justify-start">🛑 Where yesterday's reps stopped</Button>
-          <Button variant="secondary" full className="justify-start">💎 Highest-value untouched neighborhood</Button>
-        </div>
-      </Card>
-    </div>
+    <Card>
+      <p className="text-[13px] font-semibold text-text-primary">Territory intelligence belongs on the working map.</p>
+      <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
+        Decorative layer controls have been removed. Use the map for canonical property coordinates and live lead status.
+      </p>
+      <a href="/map" className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-bg-elevated px-4 py-2 text-sm font-semibold text-text-primary ring-1 ring-border-strong">
+        Open territory map
+      </a>
+    </Card>
   )
 }
 
 function SalesFunnelPanel() {
-  const { data, loading } = useLeadEconomics();
+  const { data, loading } = useLeadEconomics()
 
   if (loading || !data) {
-    return <div className="text-[13px] text-text-secondary py-4 text-center">Loading funnel data...</div>;
+    return <div className="py-4 text-center text-[13px] text-text-secondary">Loading funnel data…</div>
   }
 
-  // Mocking the deeper funnel stages for UI demonstration per prompt requirements
   const funnel = [
-    { stage: 'Assigned', count: 1200, conversion: null, time: null },
-    { stage: 'Attempted', count: 950, conversion: 79, time: '2.5h' },
-    { stage: 'Reached', count: 400, conversion: 42, time: '14h' },
-    { stage: 'Appointment', count: 210, conversion: 52, time: '2d' },
-    { stage: 'Inspection', count: 180, conversion: 85, time: '1d' },
-    { stage: 'Proposal', count: 140, conversion: 77, time: '3h' },
-    { stage: 'Won', count: 42, conversion: 30, time: '7d' },
-  ];
+    { stage: 'Assigned', count: data.assigned },
+    { stage: 'Attempted', count: data.attempted },
+    { stage: 'Reached', count: data.conversations },
+    { stage: 'Interested', count: data.interested },
+    { stage: 'Appointment', count: data.appointments },
+    { stage: 'Inspection', count: data.inspections },
+    { stage: 'Proposal', count: data.proposals },
+    { stage: 'Won', count: data.won },
+  ]
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h3 className="text-[14px] font-bold text-text-primary">Conversion Flow</h3>
-            <p className="text-[11px] text-text-secondary mt-0.5">Median transition time and step conversion.</p>
-          </div>
-          <select className="bg-bg-app border border-border-subtle rounded px-2 py-1 text-[11px] text-text-primary">
-             <option>All Sources</option>
-             <option>Referrals</option>
-             <option>Door Knock</option>
-          </select>
-        </div>
-        
-        <div className="space-y-1">
-          {funnel.map((step) => (
-             <div key={step.stage} className="flex items-center gap-3">
-                <div className="w-32 shrink-0 text-right">
-                  <p className="text-[12px] font-bold text-text-primary">{step.stage}</p>
-                </div>
-                
-                <div className="flex-1 bg-bg-app rounded-r-full h-8 flex items-center relative overflow-hidden group cursor-pointer border border-border-subtle hover:border-brand-primary/50 transition-colors">
-                  <div className="bg-brand-primary/20 h-full absolute left-0 top-0" style={{ width: `${(step.count / (funnel[0]?.count || 1)) * 100}%` }} />
-                  <div className="relative z-10 px-3 flex justify-between w-full items-center">
-                    <span className="text-[12px] font-display font-bold text-brand-gold">{step.count}</span>
-                    {step.conversion && (
-                      <span className="text-[10px] text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity">Click to drill down into the {step.count} records</span>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="w-24 shrink-0 text-left">
-                  {step.conversion && (
-                    <div>
-                      <span className="text-[11px] font-bold text-status-success">{step.conversion}%</span>
-                      <span className="text-[10px] text-text-secondary ml-1">avg</span>
-                      <p className="text-[9px] text-text-muted mt-0.5 uppercase tracking-wider">{step.time} median</p>
-                    </div>
-                  )}
-                </div>
-             </div>
-          ))}
-        </div>
-      </Card>
-      
-      <Card className="border-l-4 border-l-brand-400 bg-bg-card shadow-sm">
-        <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">AI Coaching Insights</h3>
-        <ul className="space-y-3">
-          <li className="flex items-start gap-2">
-            <span className="mt-0.5 w-2 h-2 rounded-full bg-status-warning shrink-0" />
-            <div>
-              <p className="text-[13px] font-bold text-text-primary">Jake T. - Inspection Drop-off</p>
-              <p className="text-[11px] text-text-secondary mt-0.5">Jake's Appt -&gt; Proposal rate is 45% (Team avg: 72%). He may need coaching on effectively transitioning roof evidence into a proposal presentation.</p>
+    <Card>
+      <div className="mb-4">
+        <h3 className="text-sm font-bold text-text-primary">Measured Conversion Flow</h3>
+        <p className="mt-1 text-xs text-text-secondary">
+          Counts come from the server-backed lead economics pipeline. No inferred coaching or fabricated timing is shown.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {funnel.map((step, index) => {
+          const previous = index > 0 ? funnel[index - 1]!.count : null
+          const conversion = previous && previous > 0 ? Math.round((step.count / previous) * 100) : null
+          const max = Math.max(funnel[0]?.count ?? 0, 1)
+          return (
+            <div key={step.stage} className="grid grid-cols-[6.25rem_minmax(0,1fr)_3rem] items-center gap-2 sm:grid-cols-[8rem_minmax(0,1fr)_3.5rem]">
+              <p className="truncate text-right text-xs font-semibold text-text-primary">{step.stage}</p>
+              <div className="relative h-9 overflow-hidden rounded-xl bg-bg-page ring-1 ring-border-subtle">
+                <div className="absolute inset-y-0 left-0 bg-brand-primary/20" style={{ width: `${Math.max(2, (step.count / max) * 100)}%` }} />
+                <div className="relative flex h-full items-center px-3 text-xs font-bold text-text-primary">{step.count.toLocaleString()}</div>
+              </div>
+              <span className="text-right text-[11px] text-text-muted">{conversion === null ? '—' : `${conversion}%`}</span>
             </div>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="mt-0.5 w-2 h-2 rounded-full bg-status-success shrink-0" />
-            <div>
-              <p className="text-[13px] font-bold text-text-primary">Sarah M. - Closing Power</p>
-              <p className="text-[11px] text-text-secondary mt-0.5">Sarah's Proposal -&gt; Won rate is 85% this week. Consider asking her to share her closing script in the next sales meeting.</p>
-            </div>
-          </li>
-        </ul>
-      </Card>
-      <AnalyticsDrilldownPanel />
-    </div>
+          )
+        })}
+      </div>
+    </Card>
   )
 }

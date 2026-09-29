@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Button } from '@/components/ui'
+import { Button, PageHeader, SegmentedTabs } from '@/components/ui'
 import CapturePanel from '@/features/inspections/CapturePanel'
 import NotesPanel from '@/features/inspections/NotesPanel'
 import ReviewPanel from '@/features/inspections/ReviewPanel'
@@ -13,10 +13,10 @@ import {
 
 type Tab = 'capture' | 'notes' | 'review'
 
-const TABS: Array<[Tab, string]> = [
-  ['capture', 'Photos'],
-  ['notes', 'Notes'],
-  ['review', 'Review'],
+const TABS: Array<{ id: Tab; label: string }> = [
+  { id: 'capture', label: 'Photos' },
+  { id: 'notes', label: 'Notes' },
+  { id: 'review', label: 'Review' },
 ]
 
 export default function InspectionPage() {
@@ -110,48 +110,40 @@ export default function InspectionPage() {
   const usable = photos.filter((p) => !p.retakeRecommended).length
 
   return (
-    <div>
-      <div className="flex items-start justify-between gap-3">
-        <button onClick={() => navigate(-1)} className="-ml-2 !min-h-0 px-2 py-1 text-[13px] text-text-secondary">
-          ← Back
-        </button>
-        <div className="flex items-center gap-2">
-          {inspection.status === 'complete' && (
-            <span className="rounded-full bg-status-success/10 px-2.5 py-1 text-[11px] font-medium text-status-success ring-1 ring-emerald-500/25">
-              Completed
+    <div className="pb-24">
+      <button onClick={() => navigate(-1)} className="-ml-2 mb-2 px-2 py-1 text-[13px] text-text-secondary">
+        ← Back
+      </button>
+
+      <PageHeader
+        eyebrow="Inspection"
+        title={inspection.addressLine1}
+        description={
+          <>
+            {[inspection.city, inspection.parish && `${inspection.parish} Parish`].filter(Boolean).join(' · ')}
+            {usable > 0 && ` · ${usable} photo${usable === 1 ? '' : 's'}`}
+          </>
+        }
+        action={
+          inspection.status === 'complete' ? (
+            <span className="rounded-full bg-status-success/10 px-2.5 py-1 text-[11px] font-medium text-status-success ring-1 ring-status-success/25">
+              Complete
             </span>
-          )}
-          {/* Carries the findings and photos across, so the estimate is built
-              from what was recorded rather than from memory at the truck. */}
-          <Link
-            to={`/estimate/${inspection.id}`}
-            className="rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-medium text-sky-700 ring-1 ring-brand-primary"
-          >
-            Price this roof
-          </Link>
-        </div>
+          ) : undefined
+        }
+      />
+
+      <div className="mt-3">
+        <Link
+          to={`/estimate/${inspection.id}`}
+          className="inline-flex min-h-11 items-center rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white"
+        >
+          Price this roof
+        </Link>
       </div>
 
-      <h1 className="mt-1 font-display text-lg leading-tight tracking-wide">{inspection.addressLine1}</h1>
-      <p className="mt-0.5 text-[12px] text-text-secondary">
-        {[inspection.city, inspection.parish && `${inspection.parish} Parish`].filter(Boolean).join(' · ')}
-        {usable > 0 && ` · ${usable} photo${usable === 1 ? '' : 's'}`}
-      </p>
-
-      <div className="sticky top-[var(--app-header-height,0px)] z-10 -mx-4 mt-3 bg-bg-app px-4 py-2 backdrop-blur">
-        <div className="grid grid-cols-3 gap-1 rounded-xl bg-bg-card p-1">
-          {TABS.map(([value, label]) => (
-            <button
-              key={value}
-              onClick={() => setTab(value)}
-              className={`rounded-lg py-2 text-[13px] font-semibold transition-colors ${
-                tab === value ? 'bg-brand-primary text-text-primary' : 'text-text-secondary'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      <div className="sticky top-[var(--app-header-height,0px)] z-10 -mx-3 mt-4 bg-bg-app/95 px-3 py-2 backdrop-blur-xl sm:-mx-4 sm:px-4">
+        <SegmentedTabs items={TABS} value={tab} onChange={setTab} ariaLabel="Inspection sections" />
       </div>
 
       <div className="mt-3">
@@ -185,7 +177,7 @@ export default function InspectionPage() {
       </div>
 
       {/* CONTEXTUAL ACTION BAR (Mobile Only) */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-bg-app/95 backdrop-blur-md border-t border-border-subtle flex gap-3 z-40 sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 flex gap-3 border-t border-border-subtle bg-bg-app/95 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:hidden">
         <Button variant="primary" className="flex-1 font-bold tracking-wide" onClick={() => setTab('capture')}>
           CAPTURE NEXT
         </Button>
