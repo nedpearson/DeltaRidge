@@ -208,7 +208,7 @@ set request.jwt.claim.sub = 'cccc0000-0000-4000-8000-00000000000c';
 select public.redeem_my_pending_invites();
 reset role;
 
-do $
+do $invite_recovery$
 declare
   recovered_role text;
 begin
@@ -221,7 +221,7 @@ begin
   end if;
   raise notice 'PASS 12c: existing user safely recovered their own invite';
 end;
-$;
+$invite_recovery$;
 
 -- -----------------------------------------------------------------------------
 -- TEST 13-15: idempotent field sync.
