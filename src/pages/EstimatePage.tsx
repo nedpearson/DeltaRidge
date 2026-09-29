@@ -360,7 +360,7 @@ export default function EstimatePage() {
 
       <SectionTitle>MEASUREMENTS</SectionTitle>
       <Card>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {NUMERIC_FIELDS.map(([key, label, unit, help]) => (
             <Field
               key={key}
@@ -484,7 +484,7 @@ export default function EstimatePage() {
 
           <SectionTitle>DELIVER PROPOSAL</SectionTitle>
           <Card>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Button variant="secondary" onClick={() => handleSendProposal('sms')} disabled={proposalStatus !== 'idle'}>
                 {proposalStatus === 'idle' ? 'Send via SMS' : 'Sent'}
               </Button>
