@@ -51,7 +51,7 @@ export function useRepToday() {
       const nowIso = new Date().toISOString()
       const { data: appts } = await supabase
         .from('appointments')
-        .select('id, scheduled_start, lead_id, status, leads(address)')
+        .select('id, scheduled_start, lead_id, status, leads(properties(address_line1))')
         .eq('assigned_to', user.id)
         .gte('scheduled_start', nowIso)
         .not('status', 'in', '("cancelled","completed","no_show")')
@@ -66,10 +66,17 @@ export function useRepToday() {
         const leadJoin = apptRecord.leads as Record<string, unknown> | Record<string, unknown>[];
         
         let leadAddress = 'Address unavailable';
-        if (Array.isArray(leadJoin) && leadJoin.length > 0) {
-          leadAddress = String(leadJoin[0]?.address || 'Address unavailable');
-        } else if (typeof leadJoin === 'object' && leadJoin !== null && !Array.isArray(leadJoin)) {
-          leadAddress = String(leadJoin.address || 'Address unavailable');
+        if (typeof leadJoin === 'object' && leadJoin !== null) {
+          // Because of the select format: leads(properties(address_line1))
+          // leadJoin can be an array or object. Usually object since it's a many-to-one relation from leads to properties (wait, actually lead->property is a foreign key, so leads is object, properties is object)
+          const actualLead = Array.isArray(leadJoin) ? leadJoin[0] : leadJoin;
+          if (actualLead && actualLead.properties) {
+            const propsJoin = actualLead.properties as Record<string, unknown> | Record<string, unknown>[];
+            const actualProps = Array.isArray(propsJoin) ? propsJoin[0] : propsJoin;
+            if (actualProps && actualProps.address_line1) {
+              leadAddress = String(actualProps.address_line1);
+            }
+          }
         }
         
         nextAppointment = {
@@ -99,7 +106,7 @@ export function useRepToday() {
         const { count } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
-          .eq('status', 'follow_up')
+          .in('status', ['attempted', 'proposal_pending'])
           .in('id', assignedLeadIds)
         followUps = count ?? 0
       }
@@ -113,13 +120,20 @@ export function useRepToday() {
       if (assignedLeadIds.length > 0) {
         const { count, data: leads } = await supabase
           .from('leads')
-          .select('id, address, score', { count: 'exact' })
-          .in('status', ['new', 'open'])
+          .select('id, opportunity_score, properties(address_line1)', { count: 'exact' })
+          .in('status', ['untouched', 'target'])
           .in('id', assignedLeadIds)
-          .order('score', { ascending: false })
+          .order('opportunity_score', { ascending: false })
 
         doors = count ?? 0
-        myAssignedLeads = (leads ?? []) as AssignedLead[]
+        myAssignedLeads = (leads ?? []).map((l: any) => {
+          let addr = 'Address unknown';
+          if (l.properties) {
+            const props = Array.isArray(l.properties) ? l.properties[0] : l.properties;
+            if (props?.address_line1) addr = props.address_line1;
+          }
+          return { id: l.id, address: addr, score: l.opportunity_score || 0 };
+        })
       }
 
       // -------------------------------------------------------------------

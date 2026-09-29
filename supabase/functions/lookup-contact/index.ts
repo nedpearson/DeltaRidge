@@ -15,7 +15,7 @@ const REALESTATE_API_KEY = Deno.env.get('REALESTATE_API_KEY') || ''
 
 const cors = {
   'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
 }
 
 function json(body: unknown, status = 200): Response {
@@ -220,6 +220,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
 
+  // Auth enforcement
+  const { requireAuth } = await import('../_shared/auth.ts');
+  try {
+    await requireAuth(req);
+  } catch (err: any) {
+    return json({ error: err.message }, 401)
+  }
+
   let body: Record<string, unknown>
   try {
     body = (await req.json()) as Record<string, unknown>
@@ -286,19 +294,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // 4. Mock Fallback for Development/Demo
-    // If no API keys are provided, simulate a successful skip-trace lookup
-    // so the user can test the UI functionality.
     if (!BATCHDATA_API_KEY && !REALESTATE_API_KEY) {
       return json({
-        success: true,
-        residentName: String(body.ownerName || ownerFromBatch || 'Brad Vincent'),
-        phone: '(225) 555-0199',
-        phoneType: 'Wireless',
-        carrier: 'AT&T',
-        secondaryPhones: [],
-        source: 'third_party_lookup',
-        message: 'Mocked for demo mode.',
+        success: false,
+        message: 'API keys for skip-tracing are not configured.',
       })
     }
 

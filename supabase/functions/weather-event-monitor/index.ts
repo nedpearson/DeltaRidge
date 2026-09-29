@@ -11,20 +11,21 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 })
 
 serve(async (req) => {
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 })
+  const authHeader = req.headers.get('Authorization')
+  const expectedSecret = Deno.env.get('CRON_SECRET')
+  if (!expectedSecret || authHeader !== `Bearer ${expectedSecret}`) {
+    return new Response('Unauthorized', { status: 401 })
+  }
 
   try {
-    const orgId = "00000000-0000-0000-0000-000000000000";
-
-    // 1. Enforce master kill switch
-    const { data: config } = await supabase
+    // Fetch organizations that have not hit the master kill switch
+    const { data: configs } = await supabase
       .from('social_autonomy_config')
-      .select('master_kill_switch')
-      .eq('organization_id', orgId)
-      .single()
+      .select('organization_id')
+      .eq('master_kill_switch', false)
 
-    if (config?.master_kill_switch) {
-      return new Response("Execution halted by master kill switch.", { status: 403 })
+    if (!configs || configs.length === 0) {
+      return new Response("No active organizations found.", { status: 200 })
     }
 
     // 2. Fetch real weather events from our database (which is ingested from providers)
@@ -55,7 +56,7 @@ serve(async (req) => {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": "Bearer ",
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -71,20 +72,27 @@ serve(async (req) => {
       }
     }
 
-    // 4. Insert into content_calendar as a Draft for manager review
-    const { data: insertedPost, error: insertError } = await supabase.from('content_calendar').insert({
-      organization_id: orgId,
-      content: draftedContent,
-      post_type: 'organic',
-      content_pillar: 'storm preparedness',
-      status: 'draft',
-      // Schedule for 8 AM tomorrow automatically
-      scheduled_for: new Date(Date.now() + 86400000).toISOString()
-    }).select().single()
+    // 4. Insert into content_calendar as a Draft for manager review (for each active org)
+    let lastInsertedId = null;
+    for (const config of configs) {
+      const { data: insertedPost, error: insertError } = await supabase.from('content_calendar').insert({
+        organization_id: config.organization_id,
+        content: draftedContent,
+        post_type: 'organic',
+        content_pillar: 'storm preparedness',
+        status: 'draft',
+        // Schedule for 8 AM tomorrow automatically
+        scheduled_for: new Date(Date.now() + 86400000).toISOString()
+      }).select().single()
+      
+      if (insertError) {
+        console.error("Failed to insert drafted storm post for org:", config.organization_id, insertError);
+      } else {
+        lastInsertedId = insertedPost.id;
+      }
+    }
 
-    if (insertError) throw insertError
-
-    return new Response(JSON.stringify({ success: true, event: stormType, drafted_post_id: insertedPost.id }), {
+    return new Response(JSON.stringify({ success: true, event: stormType, drafted_post_id: lastInsertedId }), {
       headers: { "Content-Type": "application/json" },
       status: 200,
     })

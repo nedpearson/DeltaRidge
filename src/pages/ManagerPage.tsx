@@ -1282,26 +1282,24 @@ function CommandCenterTab({ onOpenRep }: { onOpenRep: (id: string) => void; }) {
         <Card className="bg-bg-card p-4 ring-1 ring-border-subtle shadow-sm">
           <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">TODAY</h3>
           <div className="grid grid-cols-3 gap-2">
-            <Stat value="4" label="Appts" />
-            <Stat value="12" label="Funnel Size" />
-            <Stat value="3" label="High Priority Unassigned" />
+            <Stat value={(data?.teamNow.reduce((acc, r) => acc + (r.appts || 0), 0) || 0).toString()} label="Appts" />
+            <Stat value={(data?.teamNow.reduce((acc, r) => acc + (r.doors || 0), 0) || 0).toString()} label="Doors Hit" />
+            <Stat value={data?.teamNow.length.toString() || "0"} label="Active Reps" />
           </div>
 
         <Card className="bg-bg-card p-4 ring-1 ring-border-subtle shadow-sm lg:col-span-2 border-l-4 border-l-status-error">
           <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">ACTION REQUIRED / EXCEPTIONS</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="bg-status-error/10 border border-status-error/30 p-3 rounded-lg cursor-pointer hover:bg-status-error/20">
-               <h4 className="text-[12px] font-bold text-text-primary">Speed to Lead</h4>
-               <p className="text-[11px] text-text-secondary mt-1">2 New inbound leads &gt; 15m uncontacted.</p>
-            </div>
-            <div className="bg-status-warning/10 border border-status-warning/30 p-3 rounded-lg cursor-pointer hover:bg-status-warning/20">
-               <h4 className="text-[12px] font-bold text-text-primary">Stalled Inspections</h4>
-               <p className="text-[11px] text-text-secondary mt-1">4 Inspections completed &gt; 24h ago with no proposal sent.</p>
-            </div>
-            <div className="bg-status-warning/10 border border-status-warning/30 p-3 rounded-lg cursor-pointer hover:bg-status-warning/20">
-               <h4 className="text-[12px] font-bold text-text-primary">No-Shows &amp; Unconfirmed</h4>
-               <p className="text-[11px] text-text-secondary mt-1">3 Unconfirmed appts tomorrow, 1 no-show recovery needed.</p>
-            </div>
+            {(!data?.attentionNeeded || data.attentionNeeded.length === 0) ? (
+              <p className="text-[12px] text-text-secondary">All clear.</p>
+            ) : (
+              data.attentionNeeded.map(a => (
+                <div key={a.id} className={`bg-status-${a.type === 'critical' ? 'error' : 'warning'}/10 border border-status-${a.type === 'critical' ? 'error' : 'warning'}/30 p-3 rounded-lg cursor-pointer hover:bg-status-${a.type === 'critical' ? 'error' : 'warning'}/20`}>
+                   <h4 className="text-[12px] font-bold text-text-primary">{a.title}</h4>
+                   <p className="text-[11px] text-text-secondary mt-1">{a.body}</p>
+                </div>
+              ))
+            )}
           </div>
         </Card>
 
@@ -1309,8 +1307,8 @@ function CommandCenterTab({ onOpenRep }: { onOpenRep: (id: string) => void; }) {
         {/* TERRITORY summary */}
         <Card className="bg-bg-card p-4 ring-1 ring-border-subtle shadow-sm">
           <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-3">TERRITORY</h3>
-          <p className="text-[13px] font-semibold">Northridge Estates</p>
-          <p className="text-[12px] text-text-secondary">Top area requiring deployment today. 45 untouched A-grade leads.</p>
+          <p className="text-[13px] font-semibold">Active Zones</p>
+          <p className="text-[12px] text-text-secondary">{data?.teamNow.length ? `${data.teamNow.length} reps deployed across active routes today.` : 'No active routes deployed today.'}</p>
         </Card>
       </div>
 

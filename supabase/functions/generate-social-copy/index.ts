@@ -23,7 +23,7 @@ serve(async (req) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
       }
     })
   }
@@ -128,7 +128,7 @@ ${policies || "Never promise that insurance will cover a claim. Only offer free 
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*"
       },
-      status: 500,
+      status: 200,
     })
   }
 })

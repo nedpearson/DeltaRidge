@@ -7,7 +7,6 @@ import { useQuery } from '@tanstack/react-query';
 
 export default function CreativeStudioView() {
   const session = useSession();
-  const orgId = session?.membership?.organizationId || '00000000-0000-0000-0000-000000000000';
   const [activeTab, setActiveTab] = useState<'copy' | 'image' | 'video' | 'competitor'>('copy');
   const [topic, setTopic] = useState('');
   const [pillar, setPillar] = useState('Education');
@@ -66,21 +65,33 @@ export default function CreativeStudioView() {
 
 
   const handleGenerate = async () => {
+    if (!session?.session) {
+      setCopyError("Sign in to generate copy. Your account must belong to an organization.");
+      return;
+    }
+    if (!session.membership?.organizationId) {
+      setCopyError("Your account is not linked to an organization. Contact your manager.");
+      return;
+    }
     const supabase = getSupabase();
-    if (!supabase) return;
+    if (!supabase) {
+      setCopyError("Supabase is not configured. Check system settings.");
+      return;
+    }
     
     setIsGenerating(true);
     setGeneratedResult(null);
     setCopyError(null);
     try {
       const { data, error } = await supabase.functions.invoke('generate-social-copy', {
-        body: { topic, pillar, platform, organizationId: orgId }
+        body: { topic, pillar, platform, organizationId: session.membership.organizationId }
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (data?.copy) setGeneratedResult(data.copy);
+      else throw new Error("No copy returned from the AI provider.");
     } catch (err: any) {
-      console.error(err);
+      console.error("Copy generation failed:", err);
       setCopyError(err.message || "Failed to generate copy");
     } finally {
       setIsGenerating(false);
@@ -88,21 +99,33 @@ export default function CreativeStudioView() {
   };
 
   const handleGenerateImage = async () => {
+    if (!session?.session) {
+      setImageError("Sign in to generate images.");
+      return;
+    }
+    if (!session.membership?.organizationId) {
+      setImageError("Your account is not linked to an organization.");
+      return;
+    }
     const supabase = getSupabase();
-    if (!supabase) return;
+    if (!supabase) {
+      setImageError("Supabase is not configured.");
+      return;
+    }
     
     setIsGeneratingImage(true);
     setGeneratedImage(null);
     setImageError(null);
     try {
       const { data, error } = await supabase.functions.invoke('generate-social-image', {
-        body: { prompt: imagePrompt, organizationId: orgId }
+        body: { prompt: imagePrompt, organizationId: session.membership.organizationId }
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (data?.asset) setGeneratedImage(data.asset);
+      else throw new Error("No image returned from the AI provider.");
     } catch (err: any) {
-      console.error(err);
+      console.error("Image generation failed:", err);
       setImageError(err.message || "Failed to generate image");
     } finally {
       setIsGeneratingImage(false);
@@ -172,12 +195,11 @@ export default function CreativeStudioView() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-1">Topic / Objective</label>
-                  <input 
-                    type="text" 
+                  <textarea 
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     placeholder="e.g. Educational post about spotting hail damage after yesterday's storm in Ascension Parish" 
-                    className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm focus:outline-none focus:border-brand-500" 
+                    className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm focus:outline-none focus:border-brand-500 bg-bg-app text-text-primary min-h-[80px] resize-y" 
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -200,11 +222,25 @@ export default function CreativeStudioView() {
                     </select>
                   </div>
                 </div>
-                {copyError && <div className="text-status-critical text-sm mt-2">{copyError}</div>}
+                {copyError && (
+                  <div className="flex items-center gap-2 text-status-error text-[13px] mt-2 font-medium bg-status-error/10 p-3 rounded-lg border-l-4 border-status-error">
+                    <ShieldAlert className="w-4 h-4 shrink-0" />
+                    <p>
+                      {copyError}
+                      {copyError === "Please enter a topic or objective for the post first." && " (Scroll up to the 'Topic / Objective' box at the top to type it in)."}
+                    </p>
+                  </div>
+                )}
                 <button 
-                  onClick={handleGenerate}
-                  disabled={isGenerating || !topic}
-                  className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded font-medium text-sm hover:bg-brand-primary disabled:opacity-50"
+                  onClick={() => {
+                    if (!topic.trim()) {
+                      setCopyError("Please enter a topic or objective for the post first.");
+                      return;
+                    }
+                    handleGenerate();
+                  }}
+                  disabled={isGenerating}
+                  className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded font-medium text-sm hover:bg-brand-primary/90 disabled:opacity-50 transition-colors"
                 >
                   <Wand2 className="w-4 h-4" /> {isGenerating ? 'Generating...' : 'Generate Copy'}
                 </button>
@@ -224,12 +260,13 @@ export default function CreativeStudioView() {
                     <div className="mt-4 flex gap-2">
                       <button 
                         onClick={async () => {
+                           const currentOrgId = session?.membership?.organizationId;
                            const supabase = getSupabase();
-                           if (!supabase) return;
-                           const { data: assetData, error: assetErr } = await supabase.from('creative_assets').insert({ organization_id: orgId, asset_type: 'copy', provenance: 'ai_generated', content: generatedResult }).select().single();
+                           if (!supabase || !currentOrgId) return;
+                           const { data: assetData, error: assetErr } = await supabase.from('creative_assets').insert({ organization_id: currentOrgId, asset_type: 'copy', provenance: 'ai_generated', content: generatedResult }).select().single();
                              if (!assetErr && assetData) {
                                await supabase.from('content_calendar').insert({
-                              organization_id: orgId,
+                              organization_id: currentOrgId,
                               creative_asset_id: assetData.id,
                               post_type: 'organic',
                               content_pillar: pillar.toLowerCase(),
@@ -273,19 +310,29 @@ export default function CreativeStudioView() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-1">Visual Concept</label>
-                  <input 
-                    type="text" 
+                  <textarea 
                     value={imagePrompt}
                     onChange={(e) => setImagePrompt(e.target.value)}
                     placeholder="e.g. A realistic photo of hail damage on an asphalt shingle roof, extreme close-up" 
-                    className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm focus:outline-none focus:border-brand-500" 
+                    className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm focus:outline-none focus:border-brand-500 bg-bg-app text-text-primary min-h-[80px] resize-y" 
                   />
                 </div>
-                {imageError && <div className="text-status-critical text-sm mt-2">{imageError}</div>}
+                {imageError && (
+                  <div className="flex items-center gap-2 text-status-error text-[13px] mt-2 font-medium bg-status-error/10 p-3 rounded-lg border-l-4 border-status-error">
+                    <ShieldAlert className="w-4 h-4 shrink-0" />
+                    <p>{imageError}</p>
+                  </div>
+                )}
                 <button 
-                  onClick={handleGenerateImage}
-                  disabled={isGeneratingImage || !imagePrompt}
-                  className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded font-medium text-sm hover:bg-brand-primary disabled:opacity-50"
+                  onClick={() => {
+                    if (!imagePrompt.trim()) {
+                      setImageError("Please enter an image description first.");
+                      return;
+                    }
+                    handleGenerateImage();
+                  }}
+                  disabled={isGeneratingImage}
+                  className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded font-medium text-sm hover:bg-brand-primary/90 disabled:opacity-50 transition-colors"
                 >
                   <Wand2 className="w-4 h-4" /> {isGeneratingImage ? 'Generating...' : 'Generate Image'}
                 </button>
@@ -338,10 +385,11 @@ export default function CreativeStudioView() {
                           setVideoFile(file);
                           setUploadProgress(10);
                           const supabase = getSupabase();
-                          if (!supabase) return;
+                          const vidOrgId = session?.membership?.organizationId;
+                          if (!supabase || !vidOrgId) return;
                           
-                          // const ext = file.name.split('.').pop();
-                          const path = "${orgId}/-.";
+                          const ext = file.name.split('.').pop();
+                          const path = `${vidOrgId}/${crypto.randomUUID()}.${ext}`;
                           
                           const { error: uploadError } = await supabase.storage
                             .from('creative-assets')
@@ -359,7 +407,7 @@ export default function CreativeStudioView() {
                           const { data: publicUrlData } = supabase.storage.from('creative-assets').getPublicUrl(path);
 
                           supabase.functions.invoke('process-video-engine', {
-                            body: { video_url: publicUrlData.publicUrl, organizationId: orgId }
+                            body: { video_url: publicUrlData.publicUrl, organizationId: vidOrgId }
                           }).then(({ data }) => {
                             if (data?.job_id) setVideoJobId(data.job_id);
                           });

@@ -30,86 +30,88 @@ serve(async (req) => {
       return new Response("Storm too small for autonomous campaign.", { status: 200 })
     }
 
-    // Delta Ridge is organization index 0 in the mock or we query it.
-    const orgId = "00000000-0000-0000-0000-000000000000"; 
-
-    // 2. Fetch autonomous settings and master kill switch
-    const { data: config } = await supabase
+    // 2. Fetch all autonomous settings globally
+    const { data: configs } = await supabase
       .from('social_autonomy_config')
-      .select('auto_launch_storm_campaigns, max_daily_ad_spend, master_kill_switch')
-      .eq('organization_id', orgId)
-      .single()
+      .select('organization_id, auto_launch_storm_campaigns, max_daily_ad_spend, master_kill_switch')
 
-    if (config?.master_kill_switch) {
-      return new Response("Execution halted by master kill switch.", { status: 403 })
+    if (!configs || configs.length === 0) {
+      return new Response("No autonomous configs found.", { status: 200 })
     }
 
-    if (!config?.auto_launch_storm_campaigns) {
-      return new Response("Auto-launch storm ads is disabled by management.", { status: 403 })
-    }
+    const results = []
 
-    // 3. Check for channel-specific pauses (social_accounts.is_active = false)
-    const { data: account } = await supabase
-      .from('social_accounts')
-      .select('encrypted_access_token, platform_account_id, is_active')
-      .eq('organization_id', orgId)
-      .eq('platform', 'meta')
-      .single()
+    for (const config of configs) {
+      const orgId = config.organization_id;
+      
+      if (config.master_kill_switch) {
+        continue;
+      }
 
-    if (!account) {
-      return new Response("No Meta account configured.", { status: 400 })
-    }
+      if (!config.auto_launch_storm_campaigns) {
+        continue;
+      }
 
-    if (account.is_active === false) {
-      return new Response("Meta channel is paused.", { status: 403 })
-    }
+      // 3. Check for channel-specific pauses (social_accounts.is_active = false)
+      const { data: account } = await supabase
+        .from('social_accounts')
+        .select('encrypted_access_token, platform_account_id, is_active')
+        .eq('organization_id', orgId)
+        .eq('platform', 'meta')
+        .maybeSingle()
 
-    // 4. Generate localized ad copy using the Brand Brain
-    const generatedCopy = `Did your home get hit by the ${storm.hail_size_inches}" hail storm last night? We are already seeing significant roof damage near you. Don't let a small leak turn into major interior damage. Delta Ridge is offering free, no-obligation roof inspections today. Book now.`
+      if (!account || !account.is_active) {
+        continue;
+      }
 
-    // 5. Dispatch to Meta Ads API
-    console.log(`Creating Meta Campaign for lat: ${storm.latitude}, lon: ${storm.longitude} with radius 5mi.`)
-    
-    const adBudget = Math.min(50.00, config.max_daily_ad_spend || 50.00)
-    const campaignName = `AUTO_STORM_${storm.occurred_at.split('T')[0]}_${storm.hail_size_inches}IN`;
+      // 4. Generate localized ad copy using the Brand Brain
+      const generatedCopy = `Did your home get hit by the ${storm.hail_size_inches}" hail storm last night? We are already seeing significant roof damage near you. Don't let a small leak turn into major interior damage. Delta Ridge is offering free, no-obligation roof inspections today. Book now.`
 
-    const { MetaApiClient } = await import('../_shared/meta-api.ts');
-    const metaApi = new MetaApiClient(account.encrypted_access_token);
+      // 5. Dispatch to Meta Ads API
+      console.log(`Creating Meta Campaign for lat: ${storm.latitude}, lon: ${storm.longitude} with radius 5mi for org ${orgId}.`)
+      
+      const adBudget = Math.min(50.00, config.max_daily_ad_spend || 50.00)
+      const campaignName = `AUTO_STORM_${storm.occurred_at.split('T')[0]}_${storm.hail_size_inches}IN`;
 
-    let providerCampaignId = "";
-    try {
-       const response = await metaApi.createCampaign(account.platform_account_id, 'LEAD_GENERATION', adBudget, campaignName);
-       providerCampaignId = response.id;
-    } catch (e: any) {
-       console.error("Provider failed to launch campaign:", e);
-       return new Response(JSON.stringify({ error: "Provider rejected campaign creation." }), { status: 502 });
-    }
+      const { MetaApiClient } = await import('../_shared/meta-api.ts');
+      const metaApi = new MetaApiClient(account.encrypted_access_token);
 
-    // 6. Log the campaign in the CRM ONLY after provider confirms
-    const { data: campaign } = await supabase.from('marketing_campaigns').insert({
-      organization_id: orgId,
-      platform: 'meta',
-      campaign_name: campaignName,
-      status: 'active',
-      budget_daily: adBudget,
-      utm_campaign: `storm_${storm.id.slice(0,8)}`,
-      utm_source: 'facebook_auto',
-      platform_campaign_id: providerCampaignId
-    }).select('id').single()
+      let providerCampaignId = "";
+      try {
+         const response = await metaApi.createCampaign(account.platform_account_id, 'LEAD_GENERATION', adBudget, campaignName);
+         providerCampaignId = response.id;
+      } catch (e: any) {
+         console.error("Provider failed to launch campaign:", e);
+         continue; // skip logging to CRM if provider fails
+      }
 
-    // 7. Log the financial decision
-    if (campaign) {
-      await supabase.from('automation_ledger').insert({
+      // 6. Log the campaign in the CRM ONLY after provider confirms
+      const { data: campaign } = await supabase.from('marketing_campaigns').insert({
         organization_id: orgId,
-        action_type: 'campaign_launch',
-        entity_type: 'campaign',
-        entity_id: campaign.id,
-        description: `Autonomously launched new $${adBudget}/day Meta ad campaign targeting ${storm.hail_size_inches}" hail swath at [${storm.latitude}, ${storm.longitude}]. Provider ID: ${providerCampaignId}`,
-        status: 'executed'
-      })
+        platform: 'meta',
+        campaign_name: campaignName,
+        status: 'active',
+        budget_daily: adBudget,
+        utm_campaign: `storm_${storm.id.slice(0,8)}`,
+        utm_source: 'facebook_auto',
+        platform_campaign_id: providerCampaignId
+      }).select('id').single()
+
+      // 7. Log the financial decision
+      if (campaign) {
+        await supabase.from('automation_ledger').insert({
+          organization_id: orgId,
+          action_type: 'campaign_launch',
+          entity_type: 'campaign',
+          entity_id: campaign.id,
+          description: `Autonomously launched new $${adBudget}/day Meta ad campaign targeting ${storm.hail_size_inches}" hail swath at [${storm.latitude}, ${storm.longitude}]. Provider ID: ${providerCampaignId}`,
+          status: 'executed'
+        })
+      }
+      results.push({ orgId, providerCampaignId })
     }
 
-    return new Response(JSON.stringify({ success: true, campaignLaunched: true, providerCampaignId }), {
+    return new Response(JSON.stringify({ success: true, campaignsLaunched: results.length, results }), {
       headers: { "Content-Type": "application/json" },
       status: 200,
     })

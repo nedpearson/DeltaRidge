@@ -4,7 +4,7 @@ import { requireAuth } from "../_shared/auth.ts"
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } })
+    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name' } })
   }
 
   try {
@@ -33,7 +33,7 @@ serve(async (req) => {
     const { data: orgMember } = await supabaseClient.from('organization_members')
       .select('id')
       .eq('organization_id', conv.organization_id)
-      .eq('user_id', user.id)
+      .eq('user_id', user.userId)
       .single()
       
     if (!orgMember) {

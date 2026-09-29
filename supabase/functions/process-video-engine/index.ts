@@ -16,7 +16,7 @@ serve(async (req) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
       }
     })
   }
@@ -25,6 +25,18 @@ serve(async (req) => {
 
   try {
     const { video_url, organizationId } = await req.json()
+
+    if (!video_url || !organizationId) {
+      return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400 })
+    }
+
+    // Require authentication and membership in the target organization
+    const { requireOrgMember } = await import('../_shared/auth.ts');
+    try {
+      await requireOrgMember(req, organizationId);
+    } catch (err: any) {
+      return new Response(JSON.stringify({ error: err.message }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+    }
 
     if (!video_url || !organizationId) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400 })

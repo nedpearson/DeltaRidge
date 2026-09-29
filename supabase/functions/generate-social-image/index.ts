@@ -15,7 +15,7 @@ serve(async (req) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
       }
     })
   }
@@ -76,6 +76,6 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error("Image generation failed:", error)
-    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { "Access-Control-Allow-Origin": "*" } })
+    return new Response(JSON.stringify({ error: error.message }), { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } })
   }
 })

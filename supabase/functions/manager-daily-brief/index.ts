@@ -8,7 +8,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 serve(async (req) => {
   // Verify authorization (crons usually send a secret header)
   const authHeader = req.headers.get('Authorization')
-  if (authHeader !== `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`) {
+  const expectedSecret = Deno.env.get('CRON_SECRET')
+  
+  if (!expectedSecret || authHeader !== `Bearer ${expectedSecret}`) {
     return new Response('Unauthorized', { status: 401 })
   }
 
@@ -29,7 +31,7 @@ serve(async (req) => {
     for (const org of orgs) {
       // 2. Fetch managers for this org
       const { data: managers } = await supabase
-        .from('organization_roles')
+        .from('organization_members')
         .select('user_id')
         .eq('organization_id', org.id)
         .in('role', ['admin', 'manager'])

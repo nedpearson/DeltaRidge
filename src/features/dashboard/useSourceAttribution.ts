@@ -24,8 +24,7 @@ export function useSourceAttribution() {
 
       // Query real tables
       const { data: sources } = await supabase.from('lead_sources').select('id, name')
-      const { data: leads } = await supabase.from('leads').select('id, lead_source_id')
-      const { data: handoffs } = await supabase.from('office_handoffs').select('lead_id, status, contract_value')
+      const { data: leads } = await supabase.from('leads').select('id, lead_source_id, status, roofr_links(proposal_total_cents)')
       
       const sourceMap = new Map<string, { opps: number, appts: number, won: number, rev: number, name: string }>()
       
@@ -45,10 +44,20 @@ export function useSourceAttribution() {
         const stats = sourceMap.get(sid)!
         stats.opps++
         
-        const myHandoffs = handoffs?.filter(h => h.lead_id === l.id) || []
-        const hasAppt = myHandoffs.length > 0 
-        const hasWon = myHandoffs.some(h => h.status === 'won')
-        const rev = myHandoffs.filter(h => h.status === 'won').reduce((sum, h) => sum + (h.contract_value || 0), 0)
+        // Count as appt if they reached at least 'attempted' or beyond
+        const hasAppt = l.status !== 'untouched' && l.status !== 'target'
+        const hasWon = l.status === 'sold'
+        
+        // Sum revenue from associated roofr_links
+        let rev = 0;
+        if (hasWon && l.roofr_links) {
+           const links = Array.isArray(l.roofr_links) ? l.roofr_links : [l.roofr_links];
+           links.forEach((link: any) => {
+             if (link.proposal_total_cents) {
+               rev += (link.proposal_total_cents / 100);
+             }
+           });
+        }
 
         if (hasAppt) stats.appts++
         if (hasWon) stats.won++

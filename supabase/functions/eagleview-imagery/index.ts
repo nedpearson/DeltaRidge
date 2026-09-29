@@ -21,7 +21,7 @@ const TOKEN_URL = 'https://apicenter.eagleview.com/oauth2/v1/token'
 
 const cors = {
   'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
 }
 
 let token: { value: string; expiresAt: number } | null = null

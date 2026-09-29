@@ -21,9 +21,13 @@ serve(async (req) => {
     const callerNumber = formData.get('From') as string
     const speechResult = formData.get('SpeechResult') as string
 
-    // Organization ID is hardcoded for demo, normally mapped via the Twilio 'To' number
-    const orgId = "00000000-0000-0000-0000-000000000000";
-
+    // Organization ID is dynamically fetched since we only have one primary tenant in this environment.
+    // In a full multi-tenant system, this would map the Twilio 'To' number to an organization_id.
+    const { data: org } = await supabase.from('organizations').select('id').limit(1).single();
+    if (!org) {
+      return new Response("Configuration Error: No active organization.", { status: 500 });
+    }
+    const orgId = org.id;
     // 2. TwiML Generation helper
     const generateTwiML = (text: string, gather = false) => {
       let twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Matthew-Neural">${text}</Say>`;

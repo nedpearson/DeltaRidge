@@ -20,8 +20,13 @@ export default function FreeRoofCheckPage() {
     }
 
     try {
-      // Hardcoded org ID for the public form demo, in reality driven by tenant domain
-      const orgId = '00000000-0000-0000-0000-000000000000'; // Or rely on a public configuration
+      // Organization ID must come from tenant configuration (domain mapping or env)
+      const orgId = import.meta.env.VITE_PUBLIC_ORG_ID;
+      if (!orgId) {
+        setAssessmentStatus('unable_to_determine');
+        setResult('done');
+        return;
+      }
 
       const { data, error } = await supabase.rpc('check_storm_exposure_for_address', {
         org_id: orgId,

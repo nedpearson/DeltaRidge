@@ -7,7 +7,7 @@ import { useSession } from '@/features/auth/session';
 
 export default function BrandBrainView() {
   const session = useSession();
-  const orgId = session?.membership?.organizationId || '00000000-0000-0000-0000-000000000000';
+  const orgId = session?.membership?.organizationId ?? null;
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'faq' | 'founder_story' | 'policy' | 'tone'>('faq');
   const [showForm, setShowForm] = useState(false);

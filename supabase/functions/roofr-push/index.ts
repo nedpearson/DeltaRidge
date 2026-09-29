@@ -40,7 +40,7 @@ const HOOK_URL = Deno.env.get('ZAPIER_ROOFR_HOOK_URL') ?? ''
 
 const cors = {
   'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
 }
 
 function json(body: unknown, status: number): Response {

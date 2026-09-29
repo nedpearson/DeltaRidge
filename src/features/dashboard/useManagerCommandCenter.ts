@@ -40,7 +40,7 @@ export function useManagerCommandCenter() {
       // ---------------------------------------------------------------
       const { data: recentActivities } = await supabase
         .from('activities')
-        .select('user_id, occurred_at, activity_type, leads(address)')
+        .select('user_id, occurred_at, activity_type, leads(properties(address_line1))')
         .order('occurred_at', { ascending: false })
         .limit(200)
 

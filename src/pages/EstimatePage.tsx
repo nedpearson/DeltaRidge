@@ -98,7 +98,6 @@ export default function EstimatePage() {
     try {
       await sendHandoff(id!, id!)
       setRoofrState('queued')
-      setTimeout(() => setRoofrState('created'), 2000)
     } catch { 
       setRoofrState('idle')
       console.error('Failed to send to Roofr.')

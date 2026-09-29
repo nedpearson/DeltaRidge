@@ -28,7 +28,8 @@ export function useLeadEconomics() {
 
       const { data: activities } = await supabase.from('activities').select('activity_type')
       const { data: leads } = await supabase.from('leads').select('status')
-      const { data: handoffs } = await supabase.from('office_handoffs').select('status, contract_value')
+      // Note: office_handoffs does not have contract_value. We should query roofr_links for proposals.
+      const { data: roofrLinks } = await supabase.from('roofr_links').select('proposal_total_cents')
       const { data: callOutcomes } = await supabase.from('call_outcomes').select('outcome')
 
       const assigned = leads?.length || 0
@@ -54,11 +55,16 @@ export function useLeadEconomics() {
       let won = 0
       let contractValue = 0
 
-      handoffs?.forEach(h => {
-        if (h.status === 'proposal_sent' || h.status === 'won') proposals++
-        if (h.status === 'won') {
+      leads?.forEach(l => {
+        if (l.status === 'proposal_pending') proposals++
+        if (l.status === 'sold') {
           won++
-          contractValue += (h.contract_value || 0)
+        }
+      })
+
+      roofrLinks?.forEach(r => {
+        if (r.proposal_total_cents) {
+           contractValue += (r.proposal_total_cents / 100);
         }
       })
 

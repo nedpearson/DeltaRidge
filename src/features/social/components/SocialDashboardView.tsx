@@ -91,25 +91,23 @@ export default function SocialDashboardView() {
 
       return {
         funnel: {
-          impressions: impressions || 45200,
-          interactions: interactions || 3105,
-          conversations: conversations || 412,
-          qualified: qualified || 128,
-          leadsCreated: leadsCreated || 110,
-          appointmentsOffered: appointmentsBooked || 95,
-          appointmentsBooked: appointmentsBooked || 82,
-          inspectionsCompleted: inspectionsCompleted || 75,
-          proposalsSent: proposalsSent || 60,
-          jobsWon: jobsWon || 22
+          impressions: impressions || 0,
+          interactions: interactions || 0,
+          conversations: conversations || 0,
+          qualified: qualified || 0,
+          leadsCreated: leadsCreated || 0,
+          appointmentsOffered: appointmentsBooked || 0,
+          appointmentsBooked: appointmentsBooked || 0,
+          inspectionsCompleted: inspectionsCompleted || 0,
+          proposalsSent: proposalsSent || 0,
+          jobsWon: jobsWon || 0
         },
         revenue: {
-          pipeline: pipelineRevenue || 850000,
-          closedWon: closedWonRevenue || 325000,
-          cac: 145 // Customer Acquisition Cost
+          pipeline: pipelineRevenue || 0,
+          closedWon: closedWonRevenue || 0,
+          cac: 0
         },
-        topCampaigns: topCampaigns.length > 0 ? topCampaigns : [
-          { id: 'c1', name: 'Ascension Hail Alert - Sept', spend: 450, revenue: 45000, roas: 100 }
-        ]
+        topCampaigns: topCampaigns
       };
     }
   });

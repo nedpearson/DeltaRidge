@@ -10,15 +10,24 @@ export interface Membership {
   role: 'admin' | 'manager' | 'salesperson' | 'office' | 'inspector'
 }
 
+export interface UserProfile {
+  id: string
+  fullName: string | null
+  phone: string | null
+  avatarUrl: string | null
+}
+
 interface SessionState {
   ready: boolean
   session: Session | null
   membership: Membership | null
+  profile: UserProfile | null
   /** True when signed in but not yet a member of any organization. */
   awaitingAccess: boolean
   signInWithEmail: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshMembership: () => Promise<void>
+  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: string | null }>
 }
 
 const Ctx = createContext<SessionState | null>(null)
@@ -34,15 +43,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const [membership, setMembership] = useState<Membership | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
 
   const loadMembership = useCallback(
     async (s: Session | null) => {
       if (!supabase || !s) {
         setMembership(null)
+        setProfile(null)
         return
       }
-      // RLS restricts this to the caller's own rows, so no user filter is
-      // needed - and adding one would not make it safer.
+      
+      // Load Membership
       const { data, error } = await supabase
         .from('organization_members')
         .select('organization_id, role, organizations(name)')
@@ -52,14 +63,33 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       if (error || !data) {
         setMembership(null)
-        return
+      } else {
+        const org = data.organizations as unknown as { name?: string } | null
+        setMembership({
+          organizationId: data.organization_id as string,
+          organizationName: org?.name ?? 'Delta Ridge',
+          role: data.role as Membership['role'],
+        })
       }
-      const org = data.organizations as unknown as { name?: string } | null
-      setMembership({
-        organizationId: data.organization_id as string,
-        organizationName: org?.name ?? 'Delta Ridge',
-        role: data.role as Membership['role'],
-      })
+
+      // Load Profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone, avatar_url')
+        .eq('id', s.user.id)
+        .limit(1)
+        .maybeSingle()
+        
+      if (profileData) {
+        setProfile({
+          id: profileData.id,
+          fullName: profileData.full_name,
+          phone: profileData.phone,
+          avatarUrl: profileData.avatar_url
+        })
+      } else {
+        setProfile(null)
+      }
     },
     [supabase],
   )
@@ -104,16 +134,31 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     await supabase?.auth.signOut()
     setMembership(null)
+    setProfile(null)
   }, [supabase])
+
+  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
+    if (!supabase || !session) return { error: 'Not authenticated' }
+    
+    const dbPayload: any = {}
+    if (updates.fullName !== undefined) dbPayload.full_name = updates.fullName
+    if (updates.phone !== undefined) dbPayload.phone = updates.phone
+    if (updates.avatarUrl !== undefined) dbPayload.avatar_url = updates.avatarUrl
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update(dbPayload)
+      .eq('id', session.user.id)
+      
+    if (error) return { error: error.message }
+    
+    setProfile(prev => prev ? { ...prev, ...updates } : null)
+    return { error: null }
+  }, [supabase, session])
 
   /**
    * Tells the outbox who is signed in, so every newly queued item is stamped
    * with its owner at capture time.
-   *
-   * A hook rather than a parameter on every save call: `queueSync` is called
-   * from a dozen places — a knock, a note, a photo, a status change — and
-   * threading the session through all of them means any future caller that
-   * forgets it queues anonymous work that the next sign-in inherits.
    */
   useEffect(() => {
     setOutboxOwnerSource(() => ({
@@ -127,12 +172,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       ready,
       session,
       membership,
+      profile,
       awaitingAccess: Boolean(session) && membership === null,
       signInWithEmail,
       signOut,
       refreshMembership: () => loadMembership(session),
+      updateProfile,
     }),
-    [ready, session, membership, signInWithEmail, signOut, loadMembership],
+    [ready, session, membership, profile, signInWithEmail, signOut, loadMembership, updateProfile],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

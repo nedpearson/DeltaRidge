@@ -15,7 +15,10 @@ export async function requireAuth(req: Request) {
   })
 
   const { data: auth, error } = await asCaller.auth.getUser()
-  if (error || !auth?.user) {
+  if (error) {
+    throw new Error(`Auth Error: ${error.message}`)
+  }
+  if (!auth?.user) {
     throw new Error("Invalid or expired authorization")
   }
 

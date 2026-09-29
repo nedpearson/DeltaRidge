@@ -31,35 +31,29 @@ export default function AccountPanel() {
 
   if (!session) {
     return (
-      <>
-        <SectionTitle>SYNC</SectionTitle>
-        <Card className="space-y-3">
-          {sent ? (
-            <p className="text-[13px] leading-relaxed text-status-success">
-              Check your email — the sign-in link is on its way. Opening it on this device signs you in here.
-            </p>
-          ) : (
-            <>
-              <p className="text-[12.5px] leading-relaxed text-text-secondary">
-                Inspections are saved on this device either way. Sign in to push them to the office.
-              </p>
-              <Field label="Work email">
-                <TextInput
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@delta-ridge.com"
-                  inputMode="email"
-                  autoComplete="email"
-                />
-              </Field>
-              {error && <p className="text-[12px] text-status-critical">{error}</p>}
-              <Button full variant="secondary" onClick={() => void send()} disabled={busy || !email.includes('@')}>
-                {busy ? 'Sending…' : 'Email me a sign-in link'}
-              </Button>
-            </>
-          )}
-        </Card>
-      </>
+      <div className="space-y-3 px-1 py-1">
+        {sent ? (
+          <p className="text-[13px] leading-relaxed text-status-success font-medium">
+            Check your email — the sign-in link is on its way!
+          </p>
+        ) : (
+          <>
+            <Field label="Work email">
+              <TextInput
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@delta-ridge.com"
+                inputMode="email"
+                autoComplete="email"
+              />
+            </Field>
+            {error && <p className="text-[12px] text-status-critical">{error}</p>}
+            <Button full variant="primary" onClick={() => void send()} disabled={busy || !email.includes('@')}>
+              {busy ? 'Sending…' : 'Sign In with Magic Link'}
+            </Button>
+          </>
+        )}
+      </div>
     )
   }
 

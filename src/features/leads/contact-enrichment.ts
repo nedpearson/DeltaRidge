@@ -14,6 +14,7 @@ export interface EnrichedContact {
   readonly secondaryPhones?: Array<{ phone: string; type: string; carrier?: string }> | undefined
   readonly source?: 'public_record' | 'third_party_lookup' | undefined
   readonly searchUrl?: string | undefined
+  readonly error?: string | undefined
 }
 
 export function buildFreeSearchUrl(street: string, city = 'Baton Rouge', state = 'LA', zip = '70810'): string {
@@ -81,13 +82,14 @@ export async function lookupResidentContact(params: {
     console.warn("Edge function lookup failed, falling back to demo mode:", err)
   }
 
-  // Fallback for development/demo mode when backend is unreachable
+  // No fallback to fake data - if lookup failed, report failure
   return {
-    success: true,
-    residentName: params.ownerName || undefined,
-    phone: '(225) 555-0199',
-    phoneType: 'Wireless',
-    carrier: 'AT&T (Demo)',
+    success: false,
+    error: "Network or edge function failure during lookup",
+    residentName: undefined,
+    phone: undefined,
+    phoneType: undefined,
+    carrier: undefined,
     source: 'third_party_lookup',
     searchUrl: buildFreeSearchUrl(street, city, state, zip),
   }

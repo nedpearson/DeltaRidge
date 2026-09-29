@@ -7,8 +7,9 @@ import { retryStalledOutbox } from '@/lib/sync-store'
 import { UniversalSearch } from './UniversalSearch'
 import NotificationCenter from './NotificationCenter'
 import { AIAssistant } from './AIAssistant'
-import { Bot } from 'lucide-react'
+import { Bot, UserCircle, Settings, LogOut } from 'lucide-react'
 import { useSession } from '@/features/auth/session'
+import AccountPanel from '@/features/auth/AccountPanel'
 
 export const NAV = [
   { to: '/', label: 'Today', icon: 'home' },
@@ -53,7 +54,7 @@ export function OnlinePill() {
     }
   }, [])
 
-  const label = !online ? 'Offline - saved on device' : pending > 0 ? `${pending} waiting to sync` : 'Saved on device'
+  const label = !online ? 'Offline' : pending > 0 ? `${pending} pending sync` : 'Synced'
   const [isSyncing, setIsSyncing] = useState(false)
 
   const handleSync = async () => {
@@ -85,6 +86,64 @@ export function OnlinePill() {
       <span className={`size-1.5 rounded-full bg-current ${isSyncing ? 'animate-ping' : ''}`} />
       {finalLabel}
     </button>
+  )
+}
+
+function ProfileMenu() {
+  const [open, setOpen] = useState(false)
+  const { session, membership, profile, signOut } = useSession()
+  
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => setOpen(!open)} 
+        className="flex items-center justify-center rounded-full bg-bg-card p-1.5 text-text-secondary hover:text-text-primary hover:bg-bg-elevated ring-1 ring-border-subtle transition-all"
+        title="Account & Settings"
+      >
+        <UserCircle size={18} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 w-72 z-50 rounded-xl border border-border-subtle bg-bg-card shadow-2xl shadow-black/50 overflow-hidden text-sm flex flex-col">
+            {session ? (
+              <div className="px-4 py-3 border-b border-border-subtle bg-bg-app">
+                <p className="font-semibold text-text-primary truncate">{profile?.fullName || session.user.email}</p>
+                {profile?.fullName && <p className="text-[12px] text-text-secondary truncate mt-0.5">{session.user.email}</p>}
+                {membership ? (
+                  <p className="text-[11px] text-text-secondary mt-1 truncate font-medium">{membership.organizationName} <span className="opacity-50">·</span> <span className="capitalize">{membership.role}</span></p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="px-4 py-3 border-b border-border-subtle bg-bg-app">
+                <p className="font-semibold text-text-primary">Not Signed In</p>
+                <p className="text-[11px] text-text-secondary mt-0.5">Sign in to access your office data.</p>
+              </div>
+            )}
+            
+            <div className="p-1">
+              <NavLink to="/settings" onClick={() => setOpen(false)} className="flex items-center gap-2.5 w-full px-3 py-2 text-left text-text-primary hover:bg-bg-elevated rounded-md transition-colors">
+                <Settings size={15} className="text-text-secondary" />
+                <span>Settings & Integrations</span>
+              </NavLink>
+            </div>
+
+            {session ? (
+              <div className="p-1 border-t border-border-subtle">
+                <button onClick={() => { setOpen(false); void signOut(); }} className="flex items-center gap-2.5 w-full px-3 py-2 text-left text-text-primary hover:bg-bg-elevated rounded-md transition-colors text-status-error hover:text-status-error">
+                  <LogOut size={15} className="text-status-error opacity-70" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <div className="p-2 border-t border-border-subtle bg-bg-app">
+                <AccountPanel />
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -155,6 +214,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <UniversalSearch />
             <NotificationCenter />
             <OnlinePill />
+            <ProfileMenu />
           </div>
         </div>
       </header>)}

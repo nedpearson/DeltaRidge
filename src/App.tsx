@@ -33,7 +33,7 @@ const CreativeStudioPage = lazy(() => import('@/pages/CreativeStudioPage'))
 const ContentCalendarPage = lazy(() => import('@/pages/ContentCalendarPage'))
 const SocialDashboardPage = lazy(() => import('@/pages/SocialDashboardPage'))
 
-import { SessionProvider } from '@/features/auth/session'
+import { SessionProvider, useSession } from '@/features/auth/session'
 import { useSync } from '@/features/auth/useSync'
 import { trackEvent } from '@/lib/analytics'
 
@@ -53,53 +53,70 @@ function RouteAnalytics() {
   return null
 }
 
+function Bootstrapper({ children }: { children: React.ReactNode }) {
+  const { ready } = useSession()
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-bg-app flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-text-secondary">
+          <div className="size-6 rounded-full border-2 border-brand-400 border-t-transparent animate-spin" />
+          <p className="text-sm font-semibold tracking-wide">Loading account…</p>
+        </div>
+      </div>
+    )
+  }
+  return <>{children}</>
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
-      <RouteAnalytics />
-      <SyncRunner />
-      <UpdateBanner />
-      <Suspense fallback={<div className="p-4 text-text-secondary text-sm">Loading...</div>}>
-        <Routes>
-          <Route path="/demo/portal/:id" element={<MemberPortal />} />
-          <Route path="/free-roof-check" element={<FreeRoofCheckPage />} />
-          <Route path="*" element={
-            <AppShell>
-              <Suspense fallback={<div className="p-4 text-text-secondary text-sm">Loading module...</div>}>
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/mission" element={<MissionPage />} />
-                  <Route path="/leads" element={<LeadsPage />} />
-                  <Route path="/lead/:id" element={<LeadPage />} />
-                  <Route path="/evidence/:id" element={<EvidencePackagePage />} />
-                  <Route path="/property/:addressKey" element={<PropertyPage />} />
-                  <Route path="/estimate" element={<EstimatePage />} />
-                  <Route path="/estimate/:id" element={<EstimatePage />} />
-                  <Route path="/costs" element={<CostBookPage />} />
-                  <Route path="/diagnostics" element={<DiagnosticsPage />} />
-                  <Route path="/manager" element={<ManagerPage />} />
-                  <Route path="/routes" element={<RouteHistoryPage />} />
-                  <Route path="/inbox" element={<InboxPage />} />
-                  <Route path="/brain" element={<BrandBrainPage />} />
-                  <Route path="/studio" element={<CreativeStudioPage />} />
-                  <Route path="/calendar" element={<ContentCalendarPage />} />
-                  <Route path="/social-metrics" element={<SocialDashboardPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/inspections" element={<InspectionsPage />} />
-                  <Route path="/new" element={<NewInspectionPage />} />
-                  <Route path="/inspection/:id" element={<InspectionPage />} />
-                  <Route path="/map" element={<MapPage />} />
-                  <Route path="/more" element={<MorePage />} />
-                  <Route path="/training" element={<TrainingSimulatorPage />} />
-                  <Route path="*" element={<NotFoundPage />} />
-                </Routes>
-              </Suspense>
-            </AppShell>
-          } />
-        </Routes>
-      </Suspense>
-    </SessionProvider>
+        <Bootstrapper>
+          <RouteAnalytics />
+          <SyncRunner />
+          <UpdateBanner />
+          <Suspense fallback={<div className="p-4 text-text-secondary text-sm">Loading...</div>}>
+            <Routes>
+              <Route path="/demo/portal/:id" element={<MemberPortal />} />
+              <Route path="/free-roof-check" element={<FreeRoofCheckPage />} />
+              <Route path="*" element={
+                <AppShell>
+                  <Suspense fallback={<div className="p-4 text-text-secondary text-sm">Loading module...</div>}>
+                    <Routes>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/mission" element={<MissionPage />} />
+                      <Route path="/leads" element={<LeadsPage />} />
+                      <Route path="/lead/:id" element={<LeadPage />} />
+                      <Route path="/evidence/:id" element={<EvidencePackagePage />} />
+                      <Route path="/property/:addressKey" element={<PropertyPage />} />
+                      <Route path="/estimate" element={<EstimatePage />} />
+                      <Route path="/estimate/:id" element={<EstimatePage />} />
+                      <Route path="/costs" element={<CostBookPage />} />
+                      <Route path="/diagnostics" element={<DiagnosticsPage />} />
+                      <Route path="/manager" element={<ManagerPage />} />
+                      <Route path="/routes" element={<RouteHistoryPage />} />
+                      <Route path="/inbox" element={<InboxPage />} />
+                      <Route path="/brain" element={<BrandBrainPage />} />
+                      <Route path="/studio" element={<CreativeStudioPage />} />
+                      <Route path="/calendar" element={<ContentCalendarPage />} />
+                      <Route path="/social-metrics" element={<SocialDashboardPage />} />
+                      <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/inspections" element={<InspectionsPage />} />
+                      <Route path="/new" element={<NewInspectionPage />} />
+                      <Route path="/inspection/:id" element={<InspectionPage />} />
+                      <Route path="/map" element={<MapPage />} />
+                      <Route path="/more" element={<MorePage />} />
+                      <Route path="/training" element={<TrainingSimulatorPage />} />
+                      <Route path="*" element={<NotFoundPage />} />
+                    </Routes>
+                  </Suspense>
+                </AppShell>
+              } />
+            </Routes>
+          </Suspense>
+        </Bootstrapper>
+      </SessionProvider>
     </QueryClientProvider>
   )
 }
