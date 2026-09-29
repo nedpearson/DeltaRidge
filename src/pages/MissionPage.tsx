@@ -91,7 +91,7 @@ export default function MissionPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-app)] text-[var(--color-text-secondary)]">
+      <div className="min-h-[calc(100dvh-var(--app-header-height,0px)-var(--bottom-nav-height,0px))] flex items-center justify-center bg-[var(--color-bg-app)] text-[var(--color-text-secondary)]">
         Loading route…
       </div>
     )
@@ -99,10 +99,10 @@ export default function MissionPage() {
 
   if (!currentLead) {
     return (
-      <div className="flex flex-col h-full bg-[var(--color-bg-app)] text-[var(--color-text-primary)] min-h-screen items-center justify-center p-6">
+      <div className="flex flex-col h-full bg-[var(--color-bg-app)] text-[var(--color-text-primary)] min-h-[calc(100dvh-var(--app-header-height,0px)-var(--bottom-nav-height,0px))] items-center justify-center p-6">
         <h1 className="text-2xl font-bold text-[var(--color-brand-primary)]">MISSION COMPLETE</h1>
         <p className="text-[var(--color-text-secondary)] mt-2">You have finished your queue.</p>
-        <Link to="/" className="mt-8 bg-[var(--color-bg-card)] border border-[var(--color-border-strong)] px-6 py-3 rounded text-[var(--color-brand-primary)] font-semibold">Back to Home</Link>
+        <Link to="/" className="mt-8 bg-[var(--color-bg-card)] border border-[var(--color-border-strong)] px-6 min-h-11 rounded-xl text-[var(--color-brand-primary)] font-semibold">Back to Home</Link>
       </div>
     )
   }
@@ -110,23 +110,23 @@ export default function MissionPage() {
   const remaining = leads.length - currentIndex
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-bg-app)] text-[var(--color-text-primary)] min-h-screen">
-      <header className="p-4 bg-[var(--color-bg-elevated)] border-b border-[var(--color-border-strong)] flex justify-between items-center">
+    <div className="flex min-h-[calc(100dvh-var(--app-header-height,0px)-var(--bottom-nav-height,0px))] flex-col bg-[var(--color-bg-app)] text-[var(--color-text-primary)]">
+      <header className="border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] px-4 py-3">
         <div>
-          <h1 className="text-xl font-bold text-[var(--color-brand-primary)] uppercase">MISSION: {todayData?.activeCampaign || 'DAILY ROUTE'}</h1>
+          <h1 className="truncate text-base font-bold text-[var(--color-brand-hover)] uppercase">MISSION: {todayData?.activeCampaign || 'DAILY ROUTE'}</h1>
           <p className="text-sm text-[var(--color-text-secondary)]">Remaining doors: <span className="font-bold text-white">{remaining}</span></p>
         </div>
       </header>
 
-      <main className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto">
+      <main className="flex flex-1 flex-col gap-4 p-3 sm:p-4">
         
         {outcomeFlow === 'none' && (
-          <div className="bg-[var(--color-bg-card)] rounded-xl p-5 border border-[var(--color-border-strong)] shadow-lg relative overflow-hidden">
+          <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-card)] p-4 sm:p-5">
             <div className="absolute top-0 left-0 w-1 h-full bg-[var(--color-brand-gold)]" />
             <h2 className="text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Next Property</h2>
             
             <div className="mb-4">
-              <p className="text-3xl font-display font-bold">{currentLead.address.split(',')[0]}</p>
+              <p className="break-words font-display text-[clamp(1.65rem,8vw,2.25rem)] font-bold leading-tight">{currentLead.address.split(',')[0]}</p>
               <p className="text-[var(--color-text-secondary)] text-sm flex items-center gap-1 mt-1">
                 <MapPin size={14} />
                 {currentLead.address}
@@ -152,19 +152,19 @@ export default function MissionPage() {
               </ul>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="grid grid-cols-2 gap-2.5 mb-5">
               <button
                 onClick={() => navigate(`/map?focus=${encodeURIComponent(currentLead.id)}`)}
-                className="col-span-2 bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-hover)] text-white font-bold py-4 rounded-lg shadow-lg flex items-center justify-center gap-2 text-lg"
+                className="col-span-2 bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-hover)] text-white font-bold min-h-12 rounded-xl-lg shadow-lg flex items-center justify-center gap-2 text-lg"
               >
                 <Navigation size={20} />
                 Open on Map
               </button>
-              <Link to={`/lead/${currentLead.id}`} className="bg-[var(--color-bg-elevated)] hover:bg-[var(--color-border-strong)] text-white font-semibold py-3 rounded-lg border border-[var(--color-border-subtle)] flex items-center justify-center gap-2 text-base">
+              <Link to={`/lead/${currentLead.id}`} className="bg-[var(--color-bg-elevated)] hover:bg-[var(--color-border-strong)] text-white font-semibold min-h-11 rounded-xl-lg border border-[var(--color-border-subtle)] flex items-center justify-center gap-2 text-base">
                 <User size={18} />
                 Lead 360
               </Link>
-              <button onClick={() => setCurrentIndex(i => i + 1)} className="bg-[var(--color-bg-elevated)] hover:bg-[var(--color-border-strong)] text-[var(--color-text-secondary)] font-semibold py-3 rounded-lg border border-[var(--color-border-subtle)] text-base">
+              <button onClick={() => setCurrentIndex(i => i + 1)} className="bg-[var(--color-bg-elevated)] hover:bg-[var(--color-border-strong)] text-[var(--color-text-secondary)] font-semibold min-h-11 rounded-xl-lg border border-[var(--color-border-subtle)] text-base">
                 Skip
               </button>
             </div>
@@ -175,12 +175,12 @@ export default function MissionPage() {
             <div className="border-t border-[var(--color-border-subtle)] pt-4">
               <h3 className="text-sm font-semibold text-[var(--color-text-muted)] mb-3 uppercase tracking-wider text-center">Record Outcome</h3>
               <div className="grid grid-cols-2 gap-2">
-                <button disabled={savingOutcome} onClick={() => handleQuickTap('no_answer')} className="bg-[var(--color-status-noanswer)]/20 text-[var(--color-status-noanswer)] border border-[var(--color-status-noanswer)]/30 font-medium py-3 rounded">Not Home</button>
-                <button disabled={savingOutcome} onClick={() => handleQuickTap('spoke')} className="bg-[var(--color-status-spoke)]/20 text-[var(--color-status-spoke)] border border-[var(--color-status-spoke)]/30 font-medium py-3 rounded">Spoke</button>
-                <button disabled={savingOutcome} onClick={() => handleQuickTap('interested')} className="bg-[var(--color-status-interested)]/20 text-[var(--color-status-interested)] border border-[var(--color-status-interested)]/30 font-medium py-3 rounded">Interested</button>
-                <button disabled={savingOutcome} onClick={() => handleQuickTap('appointment_set')} className="bg-[var(--color-status-appointment)]/20 text-[var(--color-status-appointment)] border border-[var(--color-status-appointment)]/30 font-medium py-3 rounded">Appointment</button>
-                <button disabled={savingOutcome} onClick={() => handleQuickTap('not_interested')} className="bg-[var(--color-status-lost)]/20 text-[var(--color-status-lost)] border border-[var(--color-status-lost)]/30 font-medium py-3 rounded">Not Interested</button>
-                <button disabled={savingOutcome} onClick={() => handleQuickTap('do_not_knock')} className="bg-[var(--color-status-dnc)]/40 text-[var(--color-text-disabled)] border border-[var(--color-status-dnc)] border-solid border font-medium py-3 rounded">Do Not Contact</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('no_answer')} className="bg-[var(--color-status-noanswer)]/20 text-[var(--color-status-noanswer)] border border-[var(--color-status-noanswer)]/30 font-medium min-h-11 rounded-xl">Not Home</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('spoke')} className="bg-[var(--color-status-spoke)]/20 text-[var(--color-status-spoke)] border border-[var(--color-status-spoke)]/30 font-medium min-h-11 rounded-xl">Spoke</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('interested')} className="bg-[var(--color-status-interested)]/20 text-[var(--color-status-interested)] border border-[var(--color-status-interested)]/30 font-medium min-h-11 rounded-xl">Interested</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('appointment_set')} className="bg-[var(--color-status-appointment)]/20 text-[var(--color-status-appointment)] border border-[var(--color-status-appointment)]/30 font-medium min-h-11 rounded-xl">Appointment</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('not_interested')} className="bg-[var(--color-status-lost)]/20 text-[var(--color-status-lost)] border border-[var(--color-status-lost)]/30 font-medium min-h-11 rounded-xl">Not Interested</button>
+                <button disabled={savingOutcome} onClick={() => handleQuickTap('do_not_knock')} className="bg-[var(--color-status-dnc)]/40 text-[var(--color-text-disabled)] border border-[var(--color-status-dnc)] border-solid border font-medium min-h-11 rounded-xl">Do Not Contact</button>
               </div>
             </div>
           </div>
@@ -205,7 +205,7 @@ export default function MissionPage() {
             </label>
 
             <div className="mt-auto pt-4 flex gap-3">
-               <button disabled={savingOutcome} onClick={handleSpokeSave} className="flex-1 disabled:opacity-50 bg-[var(--color-brand-primary)] text-white font-bold py-4 rounded-lg shadow flex justify-center items-center gap-2">
+               <button disabled={savingOutcome} onClick={handleSpokeSave} className="flex-1 disabled:opacity-50 bg-[var(--color-brand-primary)] text-white font-bold min-h-12 rounded-xl-lg shadow flex justify-center items-center gap-2">
                  Save & Advance <ChevronRight size={18} />
                </button>
             </div>
@@ -246,7 +246,7 @@ export default function MissionPage() {
             </div>
 
             <div className="mt-auto flex gap-3">
-               <button onClick={handleApptSave} disabled={!apptSlot || savingOutcome} className="flex-1 bg-[var(--color-brand-primary)] disabled:opacity-50 text-white font-bold py-4 rounded-lg shadow flex justify-center items-center gap-2">
+               <button onClick={handleApptSave} disabled={!apptSlot || savingOutcome} className="flex-1 bg-[var(--color-brand-primary)] disabled:opacity-50 text-white font-bold min-h-12 rounded-xl-lg shadow flex justify-center items-center gap-2">
                  Schedule & Advance <ChevronRight size={18} />
                </button>
             </div>
