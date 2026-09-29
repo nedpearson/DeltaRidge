@@ -3,9 +3,10 @@ import { readLeads, saveOutcome } from '@/features/leads/lead-store'
 import { applyOutcome, type DoorOutcome, type ManagedLead } from '@/features/leads/pipeline'
 import { MapPin, User, X, Calendar, ChevronRight, Navigation } from 'lucide-react'
 import { useRepToday } from '@/features/dashboard/useRepToday'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 export default function MissionPage() {
+  const navigate = useNavigate()
   const { data: todayData } = useRepToday()
   const [leads, setLeads] = useState<ManagedLead[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -64,8 +65,10 @@ export default function MissionPage() {
   }
 
   const handleApptSave = () => {
+    const parsed = Date.parse(apptSlot)
+    if (!apptSlot || !Number.isFinite(parsed)) return
     void handleOutcome('appointment_set', {
-      appointmentAt: apptSlot || new Date().toISOString(),
+      appointmentAt: new Date(parsed).toISOString(),
       contactName: spokeName,
       contactPhone: spokePhone
     })
@@ -102,9 +105,8 @@ export default function MissionPage() {
             <div className="mb-4">
               <p className="text-3xl font-display font-bold">{currentLead.address.split(',')[0]}</p>
               <p className="text-[var(--color-text-secondary)] text-sm flex items-center gap-1 mt-1">
-                <MapPin size={14} /> 
-                {/* Distance mock if no GPS */}
-                0.2 miles away
+                <MapPin size={14} />
+                {currentLead.address}
               </p>
             </div>
             
@@ -128,9 +130,12 @@ export default function MissionPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
-              <button className="col-span-2 bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-hover)] text-white font-bold py-4 rounded-lg shadow-lg flex items-center justify-center gap-2 text-lg">
+              <button
+                onClick={() => navigate(`/map?focus=${encodeURIComponent(currentLead.id)}`)}
+                className="col-span-2 bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-hover)] text-white font-bold py-4 rounded-lg shadow-lg flex items-center justify-center gap-2 text-lg"
+              >
                 <Navigation size={20} />
-                Navigate
+                Open on Map
               </button>
               <Link to={`/leads/${currentLead.id}`} className="bg-[var(--color-bg-elevated)] hover:bg-[var(--color-border-strong)] text-white font-semibold py-3 rounded-lg border border-[var(--color-border-subtle)] flex items-center justify-center gap-2 text-base">
                 <User size={18} />
@@ -189,19 +194,19 @@ export default function MissionPage() {
             <h2 className="text-xl font-bold mb-2 text-[var(--color-status-appointment)] flex items-center gap-2"><Calendar size={20} /> Fast Scheduler</h2>
             <p className="text-sm text-[var(--color-text-secondary)] mb-6">{currentLead.address}</p>
 
-            <div className="grid grid-cols-1 gap-3 mb-6">
-               <button onClick={() => setApptSlot('today')} className={`py-4 px-4 rounded border text-left flex justify-between items-center ${apptSlot === 'today' ? 'bg-[var(--color-brand-primary)]/20 border-[var(--color-brand-primary)]' : 'bg-[var(--color-bg-app)] border-[var(--color-border-subtle)]'}`}>
-                 <span className="font-semibold">Today</span>
-                 <span className="text-xs text-[var(--color-text-muted)]">Next available slot</span>
-               </button>
-               <button onClick={() => setApptSlot('tomorrow')} className={`py-4 px-4 rounded border text-left flex justify-between items-center ${apptSlot === 'tomorrow' ? 'bg-[var(--color-brand-primary)]/20 border-[var(--color-brand-primary)]' : 'bg-[var(--color-bg-app)] border-[var(--color-border-subtle)]'}`}>
-                 <span className="font-semibold">Tomorrow</span>
-                 <span className="text-xs text-[var(--color-text-muted)]">Morning</span>
-               </button>
-               <button onClick={() => setApptSlot('custom')} className={`py-4 px-4 rounded border text-left flex justify-between items-center ${apptSlot === 'custom' ? 'bg-[var(--color-brand-primary)]/20 border-[var(--color-brand-primary)]' : 'bg-[var(--color-bg-app)] border-[var(--color-border-subtle)]'}`}>
-                 <span className="font-semibold">Custom Time</span>
-                 <span className="text-xs text-[var(--color-text-muted)]">Select</span>
-               </button>
+            <div className="mb-6">
+              <label className="block">
+                <span className="text-xs text-[var(--color-text-muted)] uppercase">Appointment date & time</span>
+                <input
+                  type="datetime-local"
+                  value={apptSlot}
+                  onChange={(e) => setApptSlot(e.target.value)}
+                  className="w-full mt-1 bg-[var(--color-bg-app)] border border-[var(--color-border-subtle)] rounded p-3 text-white"
+                />
+              </label>
+              <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+                Choose the time agreed with the homeowner. This screen does not invent or imply office availability.
+              </p>
             </div>
 
             <div className="border-t border-[var(--color-border-subtle)] pt-4 mb-4">
