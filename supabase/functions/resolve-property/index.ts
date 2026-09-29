@@ -2,76 +2,75 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import { requireOrgMember } from "../_shared/auth.ts"
 
-const BATCHDATA_API_KEY = Deno.env.get('BATCHDATA_API_KEY') || ''
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name' } })
+    return new Response('ok', {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
+      },
+    })
   }
+  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
 
   try {
     const { address, organizationId } = await req.json()
-    if (!address || !organizationId) {
-      return new Response(JSON.stringify({ error: "Missing address or organizationId" }), { status: 400 })
+    if (typeof address !== 'string' || !address.trim() || typeof organizationId !== 'string' || !organizationId) {
+      return new Response(JSON.stringify({ error: 'Missing address or organizationId' }), { status: 400 })
     }
 
-    // Since this might be called publicly (e.g. Free Roof Check), we optionally check auth.
-    // If it's a public landing page, we rely on the organizationId being passed securely,
-    // or we should probably have a separate public endpoint. 
-    // Wait, FreeRoofCheck is public, so we shouldn't strictly require auth if it's the public form,
-    // but the prompt says: "Never trust organizationId from the browser."
-    // Let's require auth for this one, and create a specific public endpoint for Free Roof Check.
     await requireOrgMember(req, organizationId)
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    if (!supabaseUrl || !serviceRole) {
+      return new Response(JSON.stringify({ error: 'Server is not configured.' }), { status: 503 })
+    }
+    const db = createClient(supabaseUrl, serviceRole)
+    const cleanAddress = address.trim()
 
-    // 1. Check if it already exists
-    const { data: propData } = await supabase.rpc('resolve_property_from_address', {
+    const { data: existing, error: resolveError } = await db.rpc('resolve_property_from_address', {
       org_id: organizationId,
-      address_query: address
+      address_query: cleanAddress,
     })
-    
-    if (propData && propData.length > 0) {
-      return new Response(JSON.stringify({ success: true, propertyId: propData[0].id }), { headers: { 'Content-Type': 'application/json' } })
+    if (resolveError) throw resolveError
+
+    if (existing?.length) {
+      return new Response(JSON.stringify({
+        success: true,
+        propertyId: existing[0].id,
+        created: false,
+        geocoded: false,
+      }), { headers: { 'Content-Type': 'application/json' } })
     }
 
-    // 2. Geocode and normalize using an external service (BatchData or similar)
-    const lat = null
-    const lng = null
-    let geocoder = null
-    const confidence = null
-    
-    if (BATCHDATA_API_KEY) {
-      // Very basic implementation. In production, we'd parse the address properly.
-      // For now, let's assume we can hit BatchData. 
-      // (Implementation left minimal to avoid placeholder logic, but we must not mock success)
-      geocoder = 'batchdata'
-    } else {
-      geocoder = 'unconfigured'
-    }
+    const { data: property, error: insertError } = await db
+      .from('properties')
+      .insert({
+        organization_id: organizationId,
+        address_line1: cleanAddress,
+        provenance: 'resolve-property',
+        geocoder: null,
+        geocode_timestamp: null,
+        confidence: null,
+      })
+      .select('id')
+      .single()
 
-    // 3. Insert canonical property
-    const { data: newProp, error: insertPropError } = await supabase.from('properties').insert({
-      organization_id: organizationId,
-      raw_address: address,
-      normalized_address: address.toUpperCase(), // The RPC trigger will handle real normalization if we configure it correctly
-      address_line1: address,
-      geocoder: geocoder,
-      geocode_timestamp: new Date().toISOString(),
-      confidence: confidence,
-      provenance: 'resolve-property-engine',
-      latitude: lat,
-      longitude: lng
-    }).select('id').single()
+    if (insertError) throw insertError
 
-    if (insertPropError) throw insertPropError
-
-    return new Response(JSON.stringify({ success: true, propertyId: newProp.id }), {
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    return new Response(JSON.stringify({
+      success: true,
+      propertyId: property.id,
+      created: true,
+      geocoded: false,
+    }), {
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     })
   } catch (error: unknown) {
-    return new Response(JSON.stringify({ error: (error instanceof Error ? error.message : String(error)) }), { status: 400 })
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 })
