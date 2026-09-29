@@ -32,7 +32,7 @@ function Icon({ name }: { name: string }) {
 }
 
 export function OnlinePill() {
-  const { session, membership } = useSession()
+  const { session, membership, membershipError } = useSession()
   const orgId = membership?.organizationId || null
   const userId = session?.user?.id || null
 
@@ -54,11 +54,19 @@ export function OnlinePill() {
     }
   }, [])
 
-  const label = !online ? 'Offline' : pending > 0 ? `${pending} pending sync` : 'Synced'
+  const label = !online
+    ? 'Offline'
+    : membershipError
+      ? 'Account error'
+      : session && !membership
+        ? 'No organization'
+        : pending > 0
+          ? `${pending} pending sync`
+          : 'Synced'
   const [isSyncing, setIsSyncing] = useState(false)
 
   const handleSync = async () => {
-    if (!online || pending === 0 || isSyncing) return
+    if (!online || pending === 0 || isSyncing || !orgId || !userId) return
     setIsSyncing(true)
     if ('vibrate' in navigator) navigator.vibrate(20)
     try {
@@ -74,13 +82,14 @@ export function OnlinePill() {
     }
   }
 
-  const tone = !online ? 'bg-warning-surface/15 text-warning-highlight ring-warning-border' : isSyncing ? 'bg-brand-primary/15 text-brand-400 ring-brand-400/30' : 'bg-status-success/15 text-status-success ring-emerald-300/30'
+  const blocked = Boolean(membershipError) || (Boolean(session) && !membership)
+  const tone = !online || blocked ? 'bg-warning-surface/15 text-warning-highlight ring-warning-border' : isSyncing ? 'bg-brand-primary/15 text-brand-400 ring-brand-400/30' : 'bg-status-success/15 text-status-success ring-emerald-300/30'
   const finalLabel = isSyncing ? 'Syncing...' : label
 
   return (
     <button 
       onClick={handleSync}
-      disabled={!online || pending === 0 || isSyncing}
+      disabled={!online || pending === 0 || isSyncing || !orgId || !userId}
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 transition-all ${tone} ${pending > 0 && online ? 'hover:bg-opacity-20 cursor-pointer active:scale-95' : 'cursor-default'}`}
     >
       <span className={`size-1.5 rounded-full bg-current ${isSyncing ? 'animate-ping' : ''}`} />
