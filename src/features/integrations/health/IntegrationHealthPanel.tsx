@@ -233,8 +233,12 @@ export default function HealthTab({ organizationId }: { organizationId: string |
                         Last failure {ago(row.health.lastFailureAt)}
                       </p>
                     )}
-                    <button className="mt-2 text-[11px] uppercase tracking-wide font-semibold text-brand-gold bg-brand-gold/10 px-2 py-1 rounded">
-                        Retry
+                    <button
+                      type="button"
+                      onClick={() => void load()}
+                      className="mt-2 text-[11px] uppercase tracking-wide font-semibold text-brand-gold bg-brand-gold/10 px-2 py-1 rounded"
+                    >
+                      Refresh status
                     </button>
                   </div>
                 </li>
