@@ -110,17 +110,17 @@ export default function MapPage() {
   })
 
   return (
-    <div className="relative h-[calc(100vh-4rem)] flex flex-col bg-bg-page">
+    <div className="relative flex h-[calc(100dvh-var(--app-header-height,0px)-var(--bottom-nav-height,0px))] min-h-[28rem] flex-col overflow-hidden bg-bg-page">
       {/* Filter controls */}
-      <div className="absolute top-4 left-4 right-4 z-[400] flex gap-2 flex-wrap">
-        <Button variant={filter === 'all' ? 'primary' : 'secondary'} className="shadow-lg" onClick={() => setFilter('all')}>All ({leads.length})</Button>
-        <Button variant={filter === 'opportunities' ? 'primary' : 'secondary'} className="shadow-lg" onClick={() => setFilter('opportunities')}>Opportunities</Button>
-        <Button variant={filter === 'jobs' ? 'primary' : 'secondary'} className="shadow-lg" onClick={() => setFilter('jobs')}>Completed Jobs</Button>
+      <div className="absolute left-3 right-3 top-3 z-[400] flex gap-2 overflow-x-auto pb-1 sm:left-4 sm:right-4 sm:top-4">
+        <Button variant={filter === 'all' ? 'primary' : 'secondary'} className="shrink-0 !min-h-10 !px-3 !py-2 text-xs shadow-lg" onClick={() => setFilter('all')}>All ({leads.length})</Button>
+        <Button variant={filter === 'opportunities' ? 'primary' : 'secondary'} className="shrink-0 !min-h-10 !px-3 !py-2 text-xs shadow-lg" onClick={() => setFilter('opportunities')}>Opportunities</Button>
+        <Button variant={filter === 'jobs' ? 'primary' : 'secondary'} className="shrink-0 !min-h-10 !px-3 !py-2 text-xs shadow-lg" onClick={() => setFilter('jobs')}>Completed Jobs</Button>
       </div>
 
       {/* Warning banner for leads missing coordinates */}
       {noCoordinateCount > 0 && (
-        <div className="absolute top-16 left-4 right-4 z-[400] bg-surface-1 border border-status-warning/40 rounded-md px-3 py-2 text-[11px] text-text-secondary">
+        <div className="absolute left-3 right-3 top-16 z-[400] rounded-xl border border-status-warning/40 bg-bg-card/95 px-3 py-2 text-[11px] text-text-secondary backdrop-blur sm:left-4 sm:right-4">
           <span className="text-status-warning font-bold">{noCoordinateCount} leads</span> not shown — missing property coordinates.
         </div>
       )}
