@@ -1,119 +1,171 @@
+import { useQuery } from '@tanstack/react-query'
+import { BarChart3, Users, CalendarCheck, DollarSign, ArrowRight } from 'lucide-react'
+import { getSupabase } from '@/lib/supabase'
+import { useSession } from '@/features/auth/session'
 
-/* eslint-disable prefer-const */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useQuery } from '@tanstack/react-query';
-import { BarChart3, TrendingUp, Users, CalendarCheck, DollarSign, ArrowRight } from 'lucide-react';
-import { getSupabase } from '@/lib/supabase';
+type CampaignRow = { id: string; name: string }
+type SpendRow = { campaign_id: string | null; amount: number }
+type ConversationRow = { lead_id: string | null; status: string; intent_category: string | null }
+type LeadRow = { id: string; status: string; utm_campaign: string | null }
+type RoofrRow = {
+  lead_id: string
+  proposal_sent_at: string | null
+  proposal_signed_at: string | null
+  proposal_lost_at: string | null
+  proposal_total_cents: number | null
+}
+
+const QUALIFIED_INTENTS = new Set(['emergency', 'hot', 'warm', 'storm'])
 
 export default function SocialDashboardView() {
-  const { data: metrics, isLoading } = useQuery({
-    queryKey: ['social_metrics_funnel'],
+  const { membership } = useSession()
+  const orgId = membership?.organizationId ?? null
+
+  const { data: metrics, isLoading, error } = useQuery({
+    queryKey: ['social_metrics_funnel', orgId],
+    enabled: Boolean(orgId),
     queryFn: async () => {
       const supabase = getSupabase()
-      if (!supabase) throw new Error('No supabase client')
+      if (!supabase || !orgId) throw new Error('Organization access is required.')
 
-      const { data: campaigns } = await supabase.from('marketing_campaigns').select('*')
-      const { data: ledger } = await supabase.from('marketing_spend_ledger').select('campaign_id, amount')
-      const { data: leads } = await supabase.from('leads').select('id, utm_campaign, lead_source_id, status')
-      const { data: handoffs } = await supabase.from('office_handoffs').select('lead_id, status, contract_value')
-      const { data: calendar } = await supabase.from('content_calendar').select('performance_metrics, campaign_id')
+      const [campaignsResult, ledgerResult, conversationsResult, calendarResult] = await Promise.all([
+        supabase.from('marketing_campaigns').select('id, name').eq('organization_id', orgId),
+        supabase.from('marketing_spend_ledger').select('campaign_id, amount').eq('organization_id', orgId),
+        supabase.from('social_conversations').select('lead_id, status, intent_category').eq('organization_id', orgId),
+        supabase.from('content_calendar').select('performance_metrics, campaign_id').eq('organization_id', orgId),
+      ])
+
+      for (const result of [campaignsResult, ledgerResult, conversationsResult, calendarResult]) {
+        if (result.error) throw result.error
+      }
+
+      const campaigns = (campaignsResult.data ?? []) as CampaignRow[]
+      const ledger = (ledgerResult.data ?? []) as SpendRow[]
+      const conversations = (conversationsResult.data ?? []) as ConversationRow[]
+      const calendar = calendarResult.data ?? []
+      const leadIds = [...new Set(conversations.map((row) => row.lead_id).filter((id): id is string => Boolean(id)))]
+
+      let leads: LeadRow[] = []
+      let appointments: { id: string; lead_id: string | null }[] = []
+      let inspections: { id: string; lead_id: string | null; status: string }[] = []
+      let roofrLinks: RoofrRow[] = []
+
+      if (leadIds.length > 0) {
+        const [leadResult, appointmentResult, inspectionResult, roofrResult] = await Promise.all([
+          supabase.from('leads').select('id, status, utm_campaign').eq('organization_id', orgId).in('id', leadIds),
+          supabase.from('appointments').select('id, lead_id').eq('organization_id', orgId).in('lead_id', leadIds),
+          supabase.from('inspections').select('id, lead_id, status').eq('organization_id', orgId).in('lead_id', leadIds),
+          supabase
+            .from('roofr_links')
+            .select('lead_id, proposal_sent_at, proposal_signed_at, proposal_lost_at, proposal_total_cents')
+            .eq('organization_id', orgId)
+            .in('lead_id', leadIds),
+        ])
+
+        for (const result of [leadResult, appointmentResult, inspectionResult, roofrResult]) {
+          if (result.error) throw result.error
+        }
+
+        leads = (leadResult.data ?? []) as LeadRow[]
+        appointments = appointmentResult.data ?? []
+        inspections = inspectionResult.data ?? []
+        roofrLinks = (roofrResult.data ?? []) as RoofrRow[]
+      }
 
       let impressions = 0
       let interactions = 0
-      calendar?.forEach(c => {
-        if (c.performance_metrics) {
-          const pm = c.performance_metrics as any
-          impressions += (pm.impressions || 0)
-          interactions += (pm.interactions || pm.clicks || 0)
+      for (const row of calendar) {
+        const pm = row.performance_metrics
+        if (!pm || typeof pm !== 'object') continue
+        const typed = pm as Record<string, unknown>
+        if (typeof typed.impressions === 'number') impressions += typed.impressions
+        if (typeof typed.interactions === 'number') interactions += typed.interactions
+        else if (typeof typed.clicks === 'number') interactions += typed.clicks
+      }
+
+      const activeConversations = conversations.filter((row) => row.status === 'open' || row.status === 'bot_handling').length
+      const qualified = conversations.filter((row) => row.intent_category && QUALIFIED_INTENTS.has(row.intent_category)).length
+      const completedInspections = inspections.filter((row) => row.status === 'complete' || row.status === 'sent_to_office').length
+      const proposalsSent = roofrLinks.filter((row) => row.proposal_sent_at !== null).length
+      const jobsWon = leads.filter((row) => row.status === 'sold').length
+
+      const closedWonCents = roofrLinks.reduce(
+        (sum, row) => sum + (row.proposal_signed_at ? Number(row.proposal_total_cents ?? 0) : 0),
+        0,
+      )
+      const pipelineCents = roofrLinks.reduce(
+        (sum, row) =>
+          sum + (row.proposal_sent_at && !row.proposal_signed_at && !row.proposal_lost_at
+            ? Number(row.proposal_total_cents ?? 0)
+            : 0),
+        0,
+      )
+
+      const campaignMap = new Map(
+        campaigns.map((campaign) => [campaign.id, {
+          id: campaign.id,
+          name: campaign.name,
+          spend: 0,
+          revenueCents: 0,
+        }]),
+      )
+
+      for (const spend of ledger) {
+        if (spend.campaign_id && campaignMap.has(spend.campaign_id)) {
+          campaignMap.get(spend.campaign_id)!.spend += Number(spend.amount ?? 0)
         }
-      })
+      }
 
-      const campaignMap = new Map<string, { id: string, name: string, spend: number, revenue: number, roas: number }>()
-      campaigns?.forEach(c => {
-        campaignMap.set(c.id, { id: c.id, name: c.name, spend: 0, revenue: 0, roas: 0 })
-      })
-
-      ledger?.forEach(l => {
-        if (l.campaign_id && campaignMap.has(l.campaign_id)) {
-          campaignMap.get(l.campaign_id)!.spend += l.amount
-        }
-      })
-
-      let leadsCreated = 0
-      let appointmentsBooked = 0
-      let inspectionsCompleted = 0
-      let proposalsSent = 0
-      let jobsWon = 0
-      let closedWonRevenue = 0
-      let pipelineRevenue = 0
-
-      // Try to figure out conversations / qualified
-      let conversations = Math.floor(interactions * 0.15)
-      let qualified = 0
-
-      leads?.forEach(l => {
-        // If it's linked to a campaign via utm_campaign
-        const matchedCampaign = campaigns?.find(c => c.name === l.utm_campaign)
-        const cid = matchedCampaign?.id
-
-        leadsCreated++
-        qualified++ // Assuming all leads created here are qualified
-        
-        if (l.status === 'appointment' || l.status === 'inspected') appointmentsBooked++
-        if (l.status === 'inspected') inspectionsCompleted++
-
-        const myHandoffs = handoffs?.filter(h => h.lead_id === l.id) || []
-        
-        // let wonHere = false
-        myHandoffs.forEach(h => {
-          if (h.status === 'proposal_sent' || h.status === 'won') {
-             proposalsSent++
-          }
-          if (h.status === 'won') {
-            // wonHere = true
-            jobsWon++
-            closedWonRevenue += (h.contract_value || 0)
-            if (cid && campaignMap.has(cid)) {
-              campaignMap.get(cid)!.revenue += (h.contract_value || 0)
-            }
-          } else {
-             pipelineRevenue += (h.contract_value || 0)
-          }
-        })
-      })
+      const leadById = new Map(leads.map((lead) => [lead.id, lead]))
+      const campaignByName = new Map(campaigns.map((campaign) => [campaign.name, campaign.id]))
+      for (const link of roofrLinks) {
+        if (!link.proposal_signed_at || !link.proposal_total_cents) continue
+        const lead = leadById.get(link.lead_id)
+        if (!lead?.utm_campaign) continue
+        const campaignId = campaignByName.get(lead.utm_campaign)
+        if (!campaignId) continue
+        campaignMap.get(campaignId)!.revenueCents += Number(link.proposal_total_cents)
+      }
 
       const topCampaigns = Array.from(campaignMap.values())
-        .map(c => {
-           c.roas = c.spend > 0 ? parseFloat((c.revenue / c.spend).toFixed(1)) : 0
-           return c
-        })
-        .sort((a, b) => b.roas - a.roas)
+        .map((campaign) => ({
+          ...campaign,
+          roas: campaign.spend > 0 ? (campaign.revenueCents / 100) / campaign.spend : null,
+        }))
+        .sort((a, b) => (b.roas ?? -1) - (a.roas ?? -1))
+
+      const totalSpend = ledger.reduce((sum, row) => sum + Number(row.amount ?? 0), 0)
 
       return {
         funnel: {
-          impressions: impressions || 0,
-          interactions: interactions || 0,
-          conversations: conversations || 0,
-          qualified: qualified || 0,
-          leadsCreated: leadsCreated || 0,
-          appointmentsOffered: appointmentsBooked || 0,
-          appointmentsBooked: appointmentsBooked || 0,
-          inspectionsCompleted: inspectionsCompleted || 0,
-          proposalsSent: proposalsSent || 0,
-          jobsWon: jobsWon || 0
+          impressions,
+          interactions,
+          conversations: activeConversations,
+          qualified,
+          leadsCreated: leadIds.length,
+          appointmentsBooked: appointments.length,
+          inspectionsCompleted: completedInspections,
+          proposalsSent,
+          jobsWon,
         },
         revenue: {
-          pipeline: pipelineRevenue || 0,
-          closedWon: closedWonRevenue || 0,
-          cac: 0
+          pipelineCents,
+          closedWonCents,
+          cac: jobsWon > 0 ? totalSpend / jobsWon : null,
         },
-        topCampaigns: topCampaigns
-      };
-    }
-  });
+        topCampaigns,
+      }
+    },
+  })
 
-  if (isLoading || !metrics) {
-    return <div className="p-8 text-center text-text-secondary">Loading funnel analytics...</div>;
+  if (!orgId) {
+    return <div className="p-8 text-center text-text-secondary">Organization access is required for social analytics.</div>
+  }
+  if (isLoading) {
+    return <div className="p-8 text-center text-text-secondary">Loading funnel analytics…</div>
+  }
+  if (error || !metrics) {
+    return <div className="p-8 text-center text-status-error">Social analytics could not be loaded: {error instanceof Error ? error.message : 'Unknown error'}</div>
   }
 
   const funnelSteps = [
@@ -123,69 +175,51 @@ export default function SocialDashboardView() {
     { label: 'Leads', value: metrics.funnel.leadsCreated },
     { label: 'Appointments', value: metrics.funnel.appointmentsBooked },
     { label: 'Inspections', value: metrics.funnel.inspectionsCompleted },
-    { label: 'Jobs Won', value: metrics.funnel.jobsWon }
-  ];
+    { label: 'Proposals', value: metrics.funnel.proposalsSent },
+    { label: 'Jobs Won', value: metrics.funnel.jobsWon },
+  ]
 
   return (
-    <div className="flex-1 bg-surface-50 p-6 overflow-y-auto">
+    <div className="flex-1 bg-bg-app p-6 overflow-y-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-text">Social Growth Dashboard</h1>
-        <p className="text-text-secondary mt-1">Track the exact ROI of your content and social conversations.</p>
+        <h1 className="text-2xl font-semibold text-text-primary">Social Growth Dashboard</h1>
+        <p className="text-text-secondary mt-1">Only persisted conversations, CRM records, provider events, spend and revenue are counted.</p>
       </div>
 
-      {/* High-level KPIs */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <div className="bg-white p-5 rounded-xl border border-border shadow-sm">
-          <div className="flex items-center gap-2 text-text-secondary mb-2">
-            <Users className="w-4 h-4" />
-            <span className="text-sm font-medium">Active Conversations</span>
-          </div>
-          <div className="text-2xl font-semibold text-text">{metrics.funnel.conversations}</div>
-          <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" /> +12% this week
-          </div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-bg-card p-5 rounded-xl border border-border-subtle">
+          <div className="flex items-center gap-2 text-text-secondary mb-2"><Users className="w-4 h-4" /><span className="text-sm font-medium">Active Conversations</span></div>
+          <div className="text-2xl font-semibold text-text-primary">{metrics.funnel.conversations}</div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-border shadow-sm">
-          <div className="flex items-center gap-2 text-text-secondary mb-2">
-            <CalendarCheck className="w-4 h-4" />
-            <span className="text-sm font-medium">Social Appointments</span>
-          </div>
-          <div className="text-2xl font-semibold text-text">{metrics.funnel.appointmentsBooked}</div>
-          <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" /> +5% this week
-          </div>
+        <div className="bg-bg-card p-5 rounded-xl border border-border-subtle">
+          <div className="flex items-center gap-2 text-text-secondary mb-2"><CalendarCheck className="w-4 h-4" /><span className="text-sm font-medium">Social Appointments</span></div>
+          <div className="text-2xl font-semibold text-text-primary">{metrics.funnel.appointmentsBooked}</div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-border shadow-sm">
-          <div className="flex items-center gap-2 text-text-secondary mb-2">
-            <DollarSign className="w-4 h-4" />
-            <span className="text-sm font-medium">Pipeline Generated</span>
-          </div>
-          <div className="text-2xl font-semibold text-text">${(metrics.revenue.pipeline / 1000).toFixed(1)}k</div>
+        <div className="bg-bg-card p-5 rounded-xl border border-border-subtle">
+          <div className="flex items-center gap-2 text-text-secondary mb-2"><DollarSign className="w-4 h-4" /><span className="text-sm font-medium">Open Proposal Pipeline</span></div>
+          <div className="text-2xl font-semibold text-text-primary">{'$' + (metrics.revenue.pipelineCents / 100).toLocaleString()}</div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-border shadow-sm">
-          <div className="flex items-center gap-2 text-text-secondary mb-2">
-            <BarChart3 className="w-4 h-4" />
-            <span className="text-sm font-medium">Closed Won</span>
-          </div>
-          <div className="text-2xl font-semibold text-brand-600">${(metrics.revenue.closedWon / 1000).toFixed(1)}k</div>
+        <div className="bg-bg-card p-5 rounded-xl border border-border-subtle">
+          <div className="flex items-center gap-2 text-text-secondary mb-2"><BarChart3 className="w-4 h-4" /><span className="text-sm font-medium">Signed Proposal Revenue</span></div>
+          <div className="text-2xl font-semibold text-brand-400">{'$' + (metrics.revenue.closedWonCents / 100).toLocaleString()}</div>
+          <div className="text-xs text-text-secondary mt-1">CAC: {metrics.revenue.cac === null ? 'N/A' : '$' + metrics.revenue.cac.toFixed(2)}</div>
         </div>
       </div>
 
-      {/* Funnel Visualization */}
-      <div className="bg-white p-6 rounded-xl border border-border shadow-sm mb-8">
-        <h2 className="text-lg font-semibold text-text mb-6">Conversion Funnel</h2>
-        <div className="flex items-center justify-between">
+      <div className="bg-bg-card p-6 rounded-xl border border-border-subtle mb-8 overflow-x-auto">
+        <h2 className="text-lg font-semibold text-text-primary mb-6">Measured Funnel</h2>
+        <div className="flex items-center min-w-[820px]">
           {funnelSteps.map((step, index) => (
             <div key={step.label} className="flex items-center flex-1">
               <div className="flex flex-col items-center">
-                <div className="w-16 h-16 rounded-full bg-brand-50 border-2 border-brand-100 flex items-center justify-center text-brand-700 font-bold mb-2 shadow-sm">
+                <div className="w-16 h-16 rounded-full bg-brand-primary/10 border-2 border-brand-primary/20 flex items-center justify-center text-brand-400 font-bold mb-2">
                   {step.value}
                 </div>
                 <span className="text-xs font-medium text-text-secondary text-center">{step.label}</span>
               </div>
               {index < funnelSteps.length - 1 && (
-                <div className="flex-1 h-px bg-border mx-2 relative">
-                  <ArrowRight className="w-4 h-4 text-border absolute right-0 -top-2 bg-white" />
+                <div className="flex-1 h-px bg-border-subtle mx-2 relative">
+                  <ArrowRight className="w-4 h-4 text-text-secondary absolute right-0 -top-2 bg-bg-card" />
                 </div>
               )}
             </div>
@@ -193,35 +227,35 @@ export default function SocialDashboardView() {
         </div>
       </div>
 
-      {/* Top Campaigns */}
-      <div className="bg-white p-6 rounded-xl border border-border shadow-sm">
-        <h2 className="text-lg font-semibold text-text mb-4">Top Performing Campaigns</h2>
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-text-secondary">
-              <th className="pb-3 font-medium">Campaign</th>
-              <th className="pb-3 font-medium">Spend</th>
-              <th className="pb-3 font-medium">Revenue</th>
-              <th className="pb-3 font-medium">ROAS</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {metrics.topCampaigns.map(c => (
-              <tr key={c.id}>
-                <td className="py-3 font-medium text-text">{c.name}</td>
-                <td className="py-3">${c.spend}</td>
-                <td className="py-3">${c.revenue.toLocaleString()}</td>
-                <td className="py-3 text-green-600 font-medium">{c.roas}x</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="bg-bg-card p-6 rounded-xl border border-border-subtle">
+        <h2 className="text-lg font-semibold text-text-primary mb-4">Campaign Attribution</h2>
+        {metrics.topCampaigns.length === 0 ? (
+          <p className="text-sm text-text-secondary">No marketing campaigns have been recorded.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border-subtle text-text-secondary">
+                  <th className="pb-3 font-medium">Campaign</th>
+                  <th className="pb-3 font-medium">Recorded Spend</th>
+                  <th className="pb-3 font-medium">Signed Revenue</th>
+                  <th className="pb-3 font-medium">ROAS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-subtle">
+                {metrics.topCampaigns.map((campaign) => (
+                  <tr key={campaign.id}>
+                    <td className="py-3 font-medium text-text-primary">{campaign.name}</td>
+                    <td className="py-3">{'$' + campaign.spend.toLocaleString()}</td>
+                    <td className="py-3">{'$' + (campaign.revenueCents / 100).toLocaleString()}</td>
+                    <td className="py-3">{campaign.roas === null ? 'N/A' : campaign.roas.toFixed(2) + 'x'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
-  );
+  )
 }
-
-
-
-
-
