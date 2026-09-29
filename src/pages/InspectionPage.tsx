@@ -138,7 +138,7 @@ export default function InspectionPage() {
         {usable > 0 && ` · ${usable} photo${usable === 1 ? '' : 's'}`}
       </p>
 
-      <div className="sticky top-[57px] z-10 -mx-4 mt-3 bg-bg-app px-4 py-2 backdrop-blur">
+      <div className="sticky top-[var(--app-header-height,0px)] z-10 -mx-4 mt-3 bg-bg-app px-4 py-2 backdrop-blur">
         <div className="grid grid-cols-3 gap-1 rounded-xl bg-bg-card p-1">
           {TABS.map(([value, label]) => (
             <button
