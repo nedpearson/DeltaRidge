@@ -16,6 +16,9 @@ describe('localLeadStatus', () => {
     // and back unchanged, or a lead changes status by being synced.
     const settable: LeadStatus[] = [
       'attempted',
+      'reached',
+      'interested',
+      'inspection_requested',
       'follow_up',
       'need_visit',
       'appointment',
@@ -29,8 +32,9 @@ describe('localLeadStatus', () => {
   })
 
   it('shows an office-only outcome as the nearest thing a door sheet can say', () => {
-    expect(localLeadStatus('sold')).toBe('inspected')
-    expect(localLeadStatus('proposal_pending')).toBe('inspected')
+    expect(localLeadStatus('sold')).toBe('won')
+    expect(localLeadStatus('proposal_pending')).toBe('estimate_proposal')
+    expect(localLeadStatus('existing_customer')).toBe('customer')
     // 'lost' is written both for a refusal and for a door that was never a
     // prospect. It shows as the weaker of the two so a rep is not told somebody
     // turned them down when the roof was simply already new.
@@ -50,8 +54,8 @@ describe('localLeadStatus', () => {
 
 describe('TERMINAL_REMOTE_STATUSES', () => {
   it('covers every office status the door sheet cannot express', () => {
-    // These are exactly the statuses whose local mapping is lossy. If one were
-    // missing, a synced phone would push 'inspected' over a sold job.
+    // These are office-owned statuses. Even when the local UI can display an
+    // equivalent state, the field device must not overwrite the office outcome.
     for (const status of ['sold', 'lost', 'proposal_pending', 'existing_customer']) {
       expect(TERMINAL_REMOTE_STATUSES.has(status), status).toBe(true)
     }
