@@ -1,129 +1,135 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
-// import * as crypto from "https://deno.land/std@0.177.0/crypto/crypto.ts"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+const AUTOMATION_SECRET = Deno.env.get("AUTOMATION_WEBHOOK_SECRET") || ""
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false, autoRefreshToken: false }
+const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
 })
 
+const TRACE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
+
+function traceId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  let suffix = ''
+  for (let i = 0; i < 16; i++) suffix += TRACE_ALPHABET[bytes[i] % TRACE_ALPHABET.length]
+  return 'tr_' + suffix
+}
+
+async function trace(
+  organizationId: string,
+  id: string,
+  outcome: 'started' | 'ok' | 'failed' | 'refused',
+  detail?: string,
+) {
+  await db.from('integration_traces').insert({
+    organization_id: organizationId,
+    trace_id: id,
+    layer: 'outbound',
+    step: 'social_publish',
+    outcome,
+    entity: 'content_calendar',
+    detail: detail?.slice(0, 200) ?? null,
+  })
+}
+
 serve(async (req) => {
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 })
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !AUTOMATION_SECRET) {
+    return new Response(JSON.stringify({ error: 'Publishing worker is not configured.' }), { status: 503 })
+  }
+  if (req.headers.get('x-delta-ridge-automation-secret') !== AUTOMATION_SECRET) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+  }
 
   try {
-    // We expect this to be called by a cron. We could authenticate via secret token here.
-    
-    // 1. Fetch posts scheduled for right now or in the past that are still 'scheduled' or 'queued'
-    const now = new Date().toISOString()
-    const { data: postsToPublish, error: fetchError } = await supabase
-      .from('content_calendar')
-      .select(
-        `*,
-        account:social_accounts(*)`
-      )
-      .in('status', ['scheduled', 'queued'])
-      .lte('scheduled_for', now)
-      .limit(10)
+    const { data: claimed, error: claimError } = await db.rpc('claim_due_social_posts', { p_limit: 10 })
+    if (claimError) throw claimError
 
-    if (fetchError) throw fetchError
-
-    if (!postsToPublish || postsToPublish.length === 0) {
-      return new Response(JSON.stringify({ processed: 0 }), { status: 200 })
+    const ids = (claimed ?? []).map((row: { post_id: string }) => row.post_id)
+    if (ids.length === 0) {
+      return new Response(JSON.stringify({ processed: 0, failed: 0 }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
-    let publishedCount = 0
+    const { data: posts, error: fetchError } = await db
+      .from('content_calendar')
+      .select(`
+        id, organization_id, status,
+        account:social_accounts(platform, platform_account_id, encrypted_access_token, is_active),
+        asset:creative_assets(asset_type, content)
+      `)
+      .in('id', ids)
+    if (fetchError) throw fetchError
 
-    // 2. Publish each post
-    for (const post of postsToPublish) {
-      // Create idempotency key
-      // const idempotencyKey = post.id + '-' + (post.retry_count || 0)
-      
+    let published = 0
+    let failed = 0
+
+    for (const post of posts ?? []) {
+      const attemptTrace = traceId()
+      await trace(post.organization_id, attemptTrace, 'started')
+
       try {
-        const orgId = post.organization_id;
-
-        const { data: config } = await supabase
+        const { data: config, error: configError } = await db
           .from('social_autonomy_config')
           .select('master_kill_switch')
-          .eq('organization_id', orgId)
-          .single()
+          .eq('organization_id', post.organization_id)
+          .maybeSingle()
+        if (configError) throw configError
+        if (config?.master_kill_switch) throw new Error('Master kill switch is active.')
 
-        if (config?.master_kill_switch) {
-          console.warn(`Skipping publish for post ${post.id}: master kill switch is active`);
-          continue;
+        if (!post.account || post.account.is_active === false) throw new Error('Social account is unavailable.')
+        if (post.account.platform !== 'meta') throw new Error('This provider is not supported by the live publisher.')
+        if (!post.account.encrypted_access_token) throw new Error('Social account credential is unavailable.')
+        if (!post.asset || post.asset.asset_type !== 'copy' || !post.asset.content?.trim()) {
+          throw new Error('A non-empty text copy asset is required.')
         }
 
-        if (!post.account || !post.account.encrypted_access_token) {
-           throw new Error("Missing social account credentials")
-        }
+        const { MetaApiClient } = await import('../_shared/meta-api.ts')
+        const meta = new MetaApiClient(post.account.encrypted_access_token)
+        const result = await meta.publishPost(post.account.platform_account_id, post.asset.content)
 
-        if (post.account.is_active === false) {
-           console.warn(`Skipping publish for post ${post.id}: channel is paused`);
-           continue;
-        }
+        if (!result?.id) throw new Error(result?.error?.message || 'Provider did not return a post ID.')
 
-        // Only proceed for supported platforms
-        if (post.account.platform !== 'meta') {
-           throw new Error("Provider Not yet supported: " + post.account.platform);
-        }
-
-        // Set status to attempting
-        await supabase.from('content_calendar').update({ status: 'attempting' }).eq('id', post.id)
-        
-        // Log attempt
-        await supabase.from('integration_traces').insert({
-          organization_id: orgId,
-          provider: post.account.platform,
-          endpoint: 'publish',
-          request_payload: { post_id: post.id, content: post.content },
-          status_code: 0
-        })
-
-        // Dynamic import of MetaApiClient
-        const MetaApiClient = (await import('../_shared/meta-api.ts')).MetaApiClient;
-        const metaApi = new MetaApiClient(post.account.encrypted_access_token);
-        
-        // Dispatch to Graph API
-        const result = await metaApi.publishPost(
-           post.account.platform_account_id,
-           post.content || post.asset_text || ""
-        );
-
-        if (!result || result.error || !result.id) {
-           throw new Error(result?.error?.message || "Invalid response from Meta API");
-        }
-
-        // Update post status to published
-        const { error: updateError } = await supabase
+        const { error: publishUpdateError } = await db
           .from('content_calendar')
           .update({
             status: 'published',
             published_at: new Date().toISOString(),
-            platform_post_id: result.id
+            platform_post_id: result.id,
+            failure_reason: null,
           })
           .eq('id', post.id)
-          
-        if (updateError) {
-           throw new Error("Failed to update post status after publish");
-        }
+          .eq('status', 'attempting')
+        if (publishUpdateError) throw publishUpdateError
 
-        publishedCount++
-      } catch (err: any) {
-        console.error(`Failed to publish post ${post.id}:`, err)
-        // Mark as failed
-        await supabase.from('content_calendar').update({ status: 'failed', failure_reason: err.message }).eq('id', post.id)
+        await trace(post.organization_id, attemptTrace, 'ok', 'Provider confirmed published post ' + result.id)
+        published++
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error('Failed to publish post', post.id, message)
+        await db
+          .from('content_calendar')
+          .update({ status: 'failed', failure_reason: message.slice(0, 500) })
+          .eq('id', post.id)
+        await trace(post.organization_id, attemptTrace, 'failed', message)
+        failed++
       }
     }
 
-    return new Response(JSON.stringify({ processed: publishedCount }), {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
+    return new Response(JSON.stringify({ processed: published, failed }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: failed > 0 ? 207 : 200,
     })
-
-  } catch (error: any) {
-    console.error("Publishing cron failed:", error)
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('Publishing worker failed:', message)
+    return new Response(JSON.stringify({ error: message }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 500,
+    })
   }
 })
