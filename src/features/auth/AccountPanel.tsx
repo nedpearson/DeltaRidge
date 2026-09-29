@@ -51,6 +51,10 @@ export default function AccountPanel() {
             <Button full variant="primary" onClick={() => void send()} disabled={busy || !email.includes('@')}>
               {busy ? 'Sending…' : 'Sign In with Magic Link'}
             </Button>
+            <p className="text-[11px] text-text-secondary text-center mt-3 leading-relaxed">
+              <span className="font-semibold block mb-0.5">Looking for a password?</span>
+              Delta Ridge uses secure, passwordless authentication. Enter your email above to receive a magic link, or check your phone messages.
+            </p>
           </>
         )}
       </div>
@@ -79,3 +83,4 @@ export default function AccountPanel() {
     </>
   )
 }
+
