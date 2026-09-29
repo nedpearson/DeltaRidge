@@ -1,18 +1,16 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 import { requireOrgMember } from "../_shared/auth.ts"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || ""
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 interface AutoBookRequest {
-  conversationId: string;
-  selectedStartTime: string; // ISO String
-  selectedEndTime: string; // ISO String
-  propertyAddress: string;
+  conversationId: string
+  selectedStartTime: string
+  selectedEndTime?: string
+  propertyAddress?: string
 }
 
 serve(async (req) => {
@@ -22,150 +20,155 @@ serve(async (req) => {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST',
         'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-      }
+      },
     })
   }
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 })
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return new Response(JSON.stringify({ error: 'Server is not configured.' }), { status: 503 })
+  }
 
   try {
-    const { conversationId, selectedStartTime, selectedEndTime, propertyAddress } = await req.json() as AutoBookRequest
+    const { conversationId, selectedStartTime, selectedEndTime, propertyAddress } =
+      await req.json() as AutoBookRequest
 
     if (!conversationId || !selectedStartTime) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400 })
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 })
     }
 
-    // 1. Fetch conversation and check config
-    const { data: conversation, error: convError } = await supabase
-      .from("social_conversations")
+    const startDate = new Date(selectedStartTime)
+    if (!Number.isFinite(startDate.getTime())) {
+      return new Response(JSON.stringify({ error: 'Invalid appointment start time' }), { status: 400 })
+    }
+    const endDate = selectedEndTime
+      ? new Date(selectedEndTime)
+      : new Date(startDate.getTime() + 60 * 60 * 1000)
+
+    if (!Number.isFinite(endDate.getTime()) || endDate <= startDate) {
+      return new Response(JSON.stringify({ error: 'Appointment end must be after start' }), { status: 400 })
+    }
+
+    const { data: conversation, error: convError } = await db
+      .from('social_conversations')
       .select(`
-        organization_id, 
+        organization_id,
         social_profile_id,
         lead_id,
         profile:social_profiles(customer_id),
         lead:leads(property_id)
       `)
-      .eq("id", conversationId)
+      .eq('id', conversationId)
       .single()
 
-    if (convError || !conversation) throw convError || new Error("Conversation not found")
-
+    if (convError || !conversation) throw convError || new Error('Conversation not found')
     await requireOrgMember(req, conversation.organization_id)
 
-    const { data: config } = await supabase
-      .from("social_autonomy_config")
-      .select("auto_book_appointments")
-      .eq("organization_id", conversation.organization_id)
+    const { data: config, error: configError } = await db
+      .from('social_autonomy_config')
+      .select('auto_book_appointments, master_kill_switch')
+      .eq('organization_id', conversation.organization_id)
       .single()
 
+    if (configError) throw configError
+    if (config?.master_kill_switch) {
+      return new Response(JSON.stringify({ error: 'Automation is disabled by the master kill switch' }), { status: 403 })
+    }
     if (!config?.auto_book_appointments) {
-      return new Response(JSON.stringify({ error: "Auto-booking is disabled by management" }), { status: 403 })
+      return new Response(JSON.stringify({ error: 'Auto-booking is disabled by management' }), { status: 403 })
     }
 
-    // 2. Resolve Property
-    let propertyId = conversation.lead?.property_id;
+    let propertyId = conversation.lead?.property_id as string | undefined
 
-    if (!propertyId && propertyAddress) {
-      const { data: property, error: propError } = await supabase.rpc('resolve_property_from_address', {
+    if (!propertyId && propertyAddress?.trim()) {
+      const cleanAddress = propertyAddress.trim()
+      const { data: property, error: resolveError } = await db.rpc('resolve_property_from_address', {
         org_id: conversation.organization_id,
-        address_query: propertyAddress
+        address_query: cleanAddress,
       })
-      
-      propertyId = property?.[0]?.id
+      if (resolveError) throw resolveError
+
+      propertyId = property?.[0]?.id as string | undefined
       if (!propertyId) {
-        const { data: newProp } = await supabase.from('properties').insert({
-          organization_id: conversation.organization_id,
-          raw_address: propertyAddress,
-          normalized_address: propertyAddress.toUpperCase()
-        }).select('id').single()
-        propertyId = newProp?.id
+        const { data: created, error } = await db
+          .from('properties')
+          .insert({
+            organization_id: conversation.organization_id,
+            address_line1: cleanAddress,
+            provenance: 'social-auto-book',
+          })
+          .select('id')
+          .single()
+        if (error) throw error
+        propertyId = created.id as string
       }
     }
 
-    if (!propertyId) throw new Error("Failed to resolve property. A property address is required.")
+    if (!propertyId) throw new Error('Failed to resolve property. A property address is required.')
 
-    // 3. Find Rep Availability and Prevent Double Booking
-    const start = selectedStartTime;
-    const end = selectedEndTime || new Date(new Date(selectedStartTime).getTime() + 60 * 60 * 1000).toISOString();
-
-    const { data: orgUsers } = await supabase
-      .from('organization_members')
-      .select('user_id')
-      .eq('organization_id', conversation.organization_id)
-      .eq('is_active', true);
-      
-    if (!orgUsers || orgUsers.length === 0) {
-      throw new Error("No reps available in organization");
-    }
-    const userIds = orgUsers.map(u => u.user_id);
-
-    const { data: overlapping } = await supabase
-      .from('appointments')
-      .select('assigned_to')
-      .eq('organization_id', conversation.organization_id)
-      .not('assigned_to', 'is', null)
-      .in('status', ['scheduled', 'confirmed'])
-      .lt('scheduled_start', end)
-      .gt('scheduled_end', start);
-
-    const busyRepIds = new Set((overlapping || []).map(a => a.assigned_to));
-    const availableRepIds = userIds.filter(id => !busyRepIds.has(id));
-
-    if (availableRepIds.length === 0) {
-      throw new Error("No reps available at this time (double booking prevented)");
-    }
-
-    const assignedRepId = availableRepIds[0];
-
-    // 4. Create Lead if it doesn't exist
-    let leadId = conversation.lead_id
+    let leadId = conversation.lead_id as string | null
     if (!leadId) {
-      const { data: newLead } = await supabase.from('leads').insert({
-        organization_id: conversation.organization_id,
-        property_id: propertyId,
-        customer_id: conversation.profile?.customer_id,
-        status: 'appointment',
-        assigned_to: assignedRepId,
-      }).select('id').single()
-      
-      leadId = newLead?.id
-      
-      // Update conversation with new lead
-      if (leadId) {
-        await supabase.from('social_conversations').update({ lead_id: leadId }).eq('id', conversationId)
+      const { data: existingLead, error: existingLeadError } = await db
+        .from('leads')
+        .select('id')
+        .eq('organization_id', conversation.organization_id)
+        .eq('property_id', propertyId)
+        .is('deleted_at', null)
+        .not('status', 'in', '(sold,lost,not_interested)')
+        .limit(1)
+        .maybeSingle()
+      if (existingLeadError) throw existingLeadError
+
+      leadId = existingLead?.id as string | undefined ?? null
+      if (!leadId) {
+        const { data: newLead, error } = await db
+          .from('leads')
+          .insert({
+            organization_id: conversation.organization_id,
+            property_id: propertyId,
+            customer_id: conversation.profile?.customer_id ?? null,
+            status: 'appointment',
+          })
+          .select('id')
+          .single()
+        if (error) throw error
+        leadId = newLead.id as string
       }
+
+      const { error: conversationError } = await db
+        .from('social_conversations')
+        .update({ lead_id: leadId })
+        .eq('id', conversationId)
+      if (conversationError) throw conversationError
     }
 
-    // 5. Create Appointment
-    const { data: appointment, error: apptError } = await supabase.from('appointments').insert({
-      organization_id: conversation.organization_id,
-      lead_id: leadId,
-      property_id: propertyId,
-      customer_id: conversation.profile?.customer_id,
-      assigned_to: assignedRepId,
-      scheduled_start: start,
-      scheduled_end: end,
-      status: 'scheduled',
-      notes: "Auto-booked via Social AI Assistant from conversation "
-    }).select('id').single()
-
-    if (apptError) throw apptError
-
-    return new Response(JSON.stringify({ 
-      success: true, 
-      appointmentId: appointment.id,
-      assignedRepId: assignedRepId
-    }), {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
+    const { data: booking, error: bookingError } = await db.rpc('book_available_rep_appointment', {
+      p_org: conversation.organization_id,
+      p_lead: leadId,
+      p_property: propertyId,
+      p_customer: conversation.profile?.customer_id ?? null,
+      p_start: startDate.toISOString(),
+      p_end: endDate.toISOString(),
+      p_notes: `Auto-booked from social conversation ${conversationId}`,
     })
 
-  } catch (error: any) {
-    console.error("Auto-booking failed:", error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
+    if (bookingError) throw bookingError
+    const row = booking?.[0]
+    if (!row?.appointment_id || !row?.assigned_rep_id) throw new Error('Booking did not return an appointment')
+
+    return new Response(JSON.stringify({
+      success: true,
+      appointmentId: row.appointment_id,
+      assignedRepId: row.assigned_rep_id,
+    }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('Auto-booking failed:', message)
+    return new Response(JSON.stringify({ error: message }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 409,
     })
   }
 })
-
-
