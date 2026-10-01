@@ -679,7 +679,7 @@ export default function LeadsPage() {
       if (!auto) setError(null)
       if (!auto) {
         void currentPosition(3000, false).then((pos) => {
-          if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, source: (pos as any)._source })
+          if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, source: pos._source ?? 'gps' })
         })
       }
       try {
@@ -728,7 +728,7 @@ export default function LeadsPage() {
     // reported to be. `currentPosition` always settles, including when the
     // permission prompt is never answered — see src/lib/image.ts.
     void currentPosition(3000, false).then((pos) => {
-      if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, source: (pos as any)._source })
+      if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, source: pos._source ?? 'gps' })
     })
   }, [refresh])
 
@@ -1257,6 +1257,8 @@ export default function LeadsPage() {
     </div>
   )
 }
+
+
 
 
 
