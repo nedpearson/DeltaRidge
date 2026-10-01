@@ -8,20 +8,20 @@ default_pool_size = 15
 max_client_conn = 200
 
 [functions.roofr-events]
-verify_jwt = true
+verify_jwt = false
 
 [functions.eagleview-imagery]
-verify_jwt = true
+verify_jwt = false
 
 [functions.manager-daily-brief]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 import_map = "./functions/manager-daily-brief/deno.json"
 entrypoint = "./functions/manager-daily-brief/index.ts"
 
 [functions.process-video-engine]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 import_map = "./functions/process-video-engine/deno.json"
 entrypoint = "./functions/process-video-engine/index.ts"
 
