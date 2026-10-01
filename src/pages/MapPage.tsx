@@ -5,7 +5,7 @@ import L from 'leaflet'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { readLeads } from '@/features/leads/lead-store'
-import { currentPosition } from '@/lib/image'
+
 
 // Fix Leaflet's default icon path issues in React
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
@@ -188,3 +188,4 @@ export default function MapPage() {
     </div>
   )
 }
+
