@@ -47,7 +47,6 @@ import type { ScoredLead } from '@/features/leads/scoring'
 import { WINDOW_OPTIONS, type StormWindowKey } from '@/features/leads/window'
 import type { StormEvent } from '@/integrations/storm'
 import { newId, saveInspection, type LocalInspection } from '@/lib/db'
-import { currentPosition } from '@/lib/image'
 
 /**
  * Custom ranges are deliberately absent until there is a date picker to set
@@ -735,7 +734,6 @@ export default function LeadsPage() {
             (err) => setLocationDiagnostic('Failed to get location (Code ' + err.code + '): ' + err.message),
             { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
           )
-    })
   }, [refresh])
 
   /**
@@ -1121,7 +1119,7 @@ export default function LeadsPage() {
                 <p className="mt-2 text-[11.5px] leading-relaxed text-text-secondary">
                   Distance filtering needs your location, and the browser has not given one. Allow
                   location for this site and reopen this tab. Until then the list covers the whole
-                  service area, so the best door may be a long drive.
+                  service area, so the best door may be a long drive. <br/><br/><strong>Diagnostic:</strong> {locationDiagnostic || 'Waiting for browser...'}
                 </p>
               )}
 
@@ -1259,6 +1257,9 @@ export default function LeadsPage() {
     </div>
   )
 }
+
+
+
 
 
 
