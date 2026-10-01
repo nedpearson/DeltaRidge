@@ -47,6 +47,7 @@ import type { ScoredLead } from '@/features/leads/scoring'
 import { WINDOW_OPTIONS, type StormWindowKey } from '@/features/leads/window'
 import type { StormEvent } from '@/integrations/storm'
 import { newId, saveInspection, type LocalInspection } from '@/lib/db'
+import { currentPosition } from '@/lib/image'
 
 /**
  * Custom ranges are deliberately absent until there is a date picker to set
@@ -658,7 +659,6 @@ export default function LeadsPage() {
   /** null = no distance limit. Only meaningful once the browser gives a fix. */
   const [maxMiles, setMaxMiles] = useState<number | null>(null)
   const [here, setHere] = useState<{ latitude: number; longitude: number } | null>(null)
-    const [locationDiagnostic, setLocationDiagnostic] = useState<string | null>(null)
 
   const busyRef = useRef(false)
   const settingsRef = useRef(settings)
@@ -676,15 +676,13 @@ export default function LeadsPage() {
     if (auto && busyRef.current) return
     busyRef.current = true
     setBusy(true)
-    if (!auto) setError(null)
-    if (!auto) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-        (err) => setLocationDiagnostic('Failed to get location (Code ' + err.code + '): ' + err.message),
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
-      )
-    }
-    try {
+      if (!auto) setError(null)
+      if (!auto) {
+        void currentPosition(10000, false).then((pos) => {
+          if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+        })
+      }
+      try {
       setRun(await runLeadEngine(next))
       setError(null)
     } catch (err) {
@@ -729,11 +727,9 @@ export default function LeadsPage() {
     // position only changes where the walk starts and how far the routes are
     // reported to be. `currentPosition` always settles, including when the
     // permission prompt is never answered — see src/lib/image.ts.
-    navigator.geolocation.getCurrentPosition(
-            (pos) => setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-            (err) => setLocationDiagnostic('Failed to get location (Code ' + err.code + '): ' + err.message),
-            { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
-          )
+    void currentPosition(10000, false).then((pos) => {
+      if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+    })
   }, [refresh])
 
   /**
@@ -1119,7 +1115,7 @@ export default function LeadsPage() {
                 <p className="mt-2 text-[11.5px] leading-relaxed text-text-secondary">
                   Distance filtering needs your location, and the browser has not given one. Allow
                   location for this site and reopen this tab. Until then the list covers the whole
-                  service area, so the best door may be a long drive. <br/><br/><strong>Diagnostic:</strong> {locationDiagnostic || 'Waiting for browser...'}
+                  service area, so the best door may be a long drive.
                 </p>
               )}
 
@@ -1257,14 +1253,6 @@ export default function LeadsPage() {
     </div>
   )
 }
-
-
-
-
-
-
-
-
 
 
 

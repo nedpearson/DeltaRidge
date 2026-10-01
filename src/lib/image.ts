@@ -190,25 +190,57 @@ export async function processPhoto(file: Blob, maxEdge = 2048): Promise<Processe
  */
 export function currentPosition(timeoutMs = 6000, highAccuracy = true): Promise<GeolocationPosition | null> {
   return new Promise((resolve) => {
-    if (!('geolocation' in navigator)) return resolve(null)
-
     let settled = false
+    let timer: number
+
     const settle = (value: GeolocationPosition | null) => {
       if (settled) return
       settled = true
       window.clearTimeout(timer)
       resolve(value)
     }
-    const timer = window.setTimeout(() => settle(null), timeoutMs)
+
+    const fallback = async () => {
+      try {
+        const res = await fetch('https://get.geojs.io/v1/ip/geo.json', { method: 'GET', mode: 'cors' })
+        if (!res.ok) return settle(null)
+        const data = await res.json()
+        settle({
+          coords: {
+            latitude: parseFloat(data.latitude),
+            longitude: parseFloat(data.longitude),
+            accuracy: 10000,
+            altitude: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+          },
+          timestamp: Date.now(),
+        } as GeolocationPosition)
+      } catch {
+        settle(null)
+      }
+    }
+
+    if (!('geolocation' in navigator)) {
+      void fallback()
+      return
+    }
+
+    timer = window.setTimeout(() => {
+      if (!settled) void fallback()
+    }, timeoutMs)
 
     try {
       navigator.geolocation.getCurrentPosition(
         (pos) => settle(pos),
-        () => settle(null),
+        () => {
+          if (!settled) void fallback()
+        },
         { enableHighAccuracy: highAccuracy, timeout: timeoutMs, maximumAge: 30000 },
       )
     } catch {
-      settle(null)
+      if (!settled) void fallback()
     }
   })
 }
