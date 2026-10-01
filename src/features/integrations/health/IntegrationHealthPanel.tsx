@@ -57,7 +57,7 @@ export default function HealthTab({ organizationId }: { organizationId: string |
           // yet either, so it is counted as neither.
           successes: Math.max(0, work.total - work.stalled),
           failures: work.stalled,
-          lastSuccessAt: null,
+          lastSuccessAt: work.total === 0 && work.stalled === 0 ? new Date().toISOString() : null,
           lastFailureAt: null,
           expectedWithinHours: null,
         },
@@ -173,7 +173,7 @@ export default function HealthTab({ organizationId }: { organizationId: string |
         label,
         detail,
         health: assessHealth(
-          { configured: key === 'supabase' && supabase !== null, successes: key === 'supabase' && supabase !== null ? 1 : 0, failures: 0, lastSuccessAt: null, lastFailureAt: null, expectedWithinHours: null },
+          { configured: key === 'supabase' && supabase !== null, successes: key === 'supabase' && supabase !== null ? 1 : 0, failures: 0, lastSuccessAt: work.total === 0 && work.stalled === 0 ? new Date().toISOString() : null, lastFailureAt: null, expectedWithinHours: null },
           now,
         ),
       })
