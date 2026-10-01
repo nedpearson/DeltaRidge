@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { currentPosition } from '@/lib/image'
 
 const original = Object.getOwnPropertyDescriptor(globalThis.navigator, 'geolocation')
+const originalFetch = globalThis.fetch
 
 function stubGeolocation(impl: Partial<Geolocation>) {
   Object.defineProperty(globalThis.navigator, 'geolocation', {
@@ -10,7 +11,12 @@ function stubGeolocation(impl: Partial<Geolocation>) {
   })
 }
 
+beforeEach(() => {
+  globalThis.fetch = vi.fn().mockResolvedValue({ ok: false })
+})
+
 afterEach(() => {
+  globalThis.fetch = originalFetch
   vi.useRealTimers()
   if (original) Object.defineProperty(globalThis.navigator, 'geolocation', original)
 })
@@ -60,3 +66,4 @@ describe('currentPosition', () => {
     await expect(currentPosition(5000)).resolves.toBeNull()
   })
 })
+

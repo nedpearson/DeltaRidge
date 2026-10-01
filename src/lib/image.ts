@@ -191,7 +191,7 @@ export async function processPhoto(file: Blob, maxEdge = 2048): Promise<Processe
 export function currentPosition(timeoutMs = 6000, highAccuracy = true): Promise<GeolocationPosition | null> {
   return new Promise((resolve) => {
     let settled = false
-    let timer: number
+    let timer: number | undefined = undefined
 
     const settle = (value: GeolocationPosition | null) => {
       if (settled) return
@@ -244,4 +244,5 @@ export function currentPosition(timeoutMs = 6000, highAccuracy = true): Promise<
     }
   })
 }
+
 
