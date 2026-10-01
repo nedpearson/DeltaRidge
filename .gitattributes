@@ -1,0 +1,25 @@
+# One line ending in the repository, whatever the checkout does locally.
+#
+# Without this, git on the Linux side of the Cowork bridge reports ~265 files as
+# modified while Windows git (which applies core.autocrlf) reports a clean tree.
+# Same working tree, two answers. The risk is not the noise, it is that a
+# `git add -A` from the Linux side commits a whole-repo line-ending rewrite and
+# takes `git blame` with it.
+#
+# `text=auto eol=lf` normalises to LF in the object store and leaves the working
+# copy to each platform.
+* text=auto eol=lf
+
+# Binary, never normalised.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+
+# Generated. Keeps review diffs honest about what a human actually changed.
+package-lock.json -diff linguist-generated
