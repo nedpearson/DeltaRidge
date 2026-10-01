@@ -658,7 +658,7 @@ export default function LeadsPage() {
   const [ownerOccupiedOnly, setOwnerOccupiedOnly] = useState(false)
   /** null = no distance limit. Only meaningful once the browser gives a fix. */
   const [maxMiles, setMaxMiles] = useState<number | null>(null)
-  const [here, setHere] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [here, setHere] = useState<{ latitude: number; longitude: number; source?: string } | null>(null)
 
   const busyRef = useRef(false)
   const settingsRef = useRef(settings)
@@ -679,7 +679,7 @@ export default function LeadsPage() {
       if (!auto) setError(null)
       if (!auto) {
         void currentPosition(3000, false).then((pos) => {
-          if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+          if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, source: (pos as any)._source })
         })
       }
       try {
@@ -728,7 +728,7 @@ export default function LeadsPage() {
     // reported to be. `currentPosition` always settles, including when the
     // permission prompt is never answered — see src/lib/image.ts.
     void currentPosition(3000, false).then((pos) => {
-      if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+      if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, source: (pos as any)._source })
     })
   }, [refresh])
 
@@ -1093,7 +1093,7 @@ export default function LeadsPage() {
               {/* Distance narrows the list; it never reorders it. Inside the
                   radius the best door is still first — see `withinMiles`. */}
               {here ? (
-                <div className="mt-2 flex gap-1.5">
+                <div className="mt-2"><div className="flex gap-1.5">
                   {MILE_OPTIONS.map((miles) => (
                     <button
                       key={miles ?? 'any'}
@@ -1111,6 +1111,10 @@ export default function LeadsPage() {
                     </button>
                   ))}
                 </div>
+                <div className="mt-1.5 text-[11px] text-text-secondary text-center">
+                  Location source: {here.source === 'gps' ? 'Precise (GPS)' : 'Approximate (Network IP)'}
+                </div>
+              </div>
               ) : (
                 <p className="mt-2 text-[11.5px] leading-relaxed text-text-secondary">
                   Distance filtering needs your location, and the browser has not given one. Allow
@@ -1253,6 +1257,8 @@ export default function LeadsPage() {
     </div>
   )
 }
+
+
 
 
 

@@ -215,8 +215,8 @@ export function currentPosition(timeoutMs = 6000, highAccuracy = true): Promise<
             heading: null,
             speed: null,
           },
-          timestamp: Date.now(),
-        } as GeolocationPosition)
+          timestamp: Date.now(),\n          _source: 'ip',
+        } as any)
       } catch {
         settle(null)
       }
@@ -233,7 +233,7 @@ export function currentPosition(timeoutMs = 6000, highAccuracy = true): Promise<
 
     try {
       navigator.geolocation.getCurrentPosition(
-        (pos) => settle(pos),
+        (pos) => { (pos as any)._source = 'gps'; settle(pos) },
         () => {
           if (!settled) void fallback()
         },
