@@ -677,16 +677,15 @@ export default function LeadsPage() {
     if (auto && busyRef.current) return
     busyRef.current = true
     setBusy(true)
-      if (!auto) setError(null)
-      if (!auto) {
-        navigator.geolocation.getCurrentPosition(
-            (pos) => setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-            (err) => setLocationDiagnostic('Failed to get location (Code ' + err.code + '): ' + err.message),
-            { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
-          )
-        })
-      }
-      try {
+    if (!auto) setError(null)
+    if (!auto) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+        (err) => setLocationDiagnostic('Failed to get location (Code ' + err.code + '): ' + err.message),
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
+      )
+    }
+    try {
       setRun(await runLeadEngine(next))
       setError(null)
     } catch (err) {
@@ -1260,6 +1259,7 @@ export default function LeadsPage() {
     </div>
   )
 }
+
 
 
 
