@@ -5,6 +5,7 @@ import L from 'leaflet'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { readLeads } from '@/features/leads/lead-store'
+import { currentPosition } from '@/lib/image'
 
 // Fix Leaflet's default icon path issues in React
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
@@ -18,6 +19,12 @@ const LeadPin = new L.Icon({
   iconUrl: 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234776E6"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>'),
   iconSize: [30, 30],
   iconAnchor: [15, 30]
+})
+
+const UserPin = new L.Icon({
+  iconUrl: 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#3b82f6" stroke="#ffffff" stroke-width="3" /><circle cx="12" cy="12" r="12" fill="#3b82f6" fill-opacity="0.2" /></svg>'),
+  iconSize: [24, 24],
+  iconAnchor: [12, 12]
 })
 
 const JobPin = new L.Icon({
@@ -56,17 +63,22 @@ function FocusLead({ lead }: { lead: MappableLead | null }) {
 }
 
 /** Centers map on the user's actual GPS position when no explicit lead is focused. */
-function CenterOnDevice({ enabled }: { enabled: boolean }) {
+function CenterOnDevice({ enabled, setMyLoc }: { enabled: boolean, setMyLoc: (loc: [number, number]) => void }) {
   const map = useMap()
   useEffect(() => {
-    if (!enabled || !navigator.geolocation) return
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        map.setView([pos.coords.latitude, pos.coords.longitude], 14)
-      },
-      () => { /* GPS denied or unavailable — keep default view */ }
-    )
-  }, [enabled, map])
+    if (!enabled) return
+    let mounted = true
+    import('@/lib/image').then(({ currentPosition }) => {
+      currentPosition(5000, true).then((pos) => {
+        if (!mounted || !pos) return
+        const lat = pos.coords.latitude
+        const lon = pos.coords.longitude
+        setMyLoc([lat, lon])
+        map.setView([lat, lon], 14)
+      })
+    })
+    return () => { mounted = false }
+  }, [enabled, map, setMyLoc])
   return null
 }
 
@@ -76,6 +88,7 @@ export default function MapPage() {
   const [leads, setLeads] = useState<MappableLead[]>([])
   const [filter, setFilter] = useState<'all' | 'opportunities' | 'jobs'>('all')
   const [noCoordinateCount, setNoCoordinateCount] = useState(0)
+  const [myLoc, setMyLoc] = useState<[number, number] | null>(null)
 
   useEffect(() => {
     readLeads().then(data => {
@@ -137,7 +150,8 @@ export default function MapPage() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <CenterOnDevice enabled={focusLead === null} />
+        <CenterOnDevice enabled={focusLead === null} setMyLoc={setMyLoc} />
+        {myLoc && <Marker position={myLoc} icon={UserPin} zIndexOffset={1000} />}
         <FocusLead lead={focusLead} />
         {focusLead === null && filteredLeads.length > 0 && <FitToMarkers leads={filteredLeads} />}
 
