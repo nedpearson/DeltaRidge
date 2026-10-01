@@ -166,7 +166,12 @@ function DoorCard({
           <p className="mt-0.5 truncate text-[12px] text-text-secondary">
             {[lead.subdivision, lead.city].filter(Boolean).join(' · ') || 'East Baton Rouge Parish'}
           </p>
-        </div>
+        {managed?.contactPhone && (
+              <p className="mt-0.5 truncate text-[12px] font-mono text-text-secondary">
+                {managed.contactPhone}
+              </p>
+            )}
+          </div>
         <div className="shrink-0 text-right">
           <p className={`font-display text-2xl leading-none ${tone(lead.score)}`}>{lead.score}</p>
           <p className="mt-0.5 text-[10px] uppercase tracking-wider text-text-secondary">priority</p>
@@ -432,7 +437,12 @@ function PipelineCard({ lead, now }: { lead: ManagedLead; now: string }) {
               ? lead.address
               : [lead.subdivision, lead.city].filter(Boolean).join(' · ')}
           </p>
-        </div>
+        {lead.contactPhone && (
+              <p className="mt-0.5 truncate text-[12px] font-mono text-text-secondary">
+                {lead.contactPhone}
+              </p>
+            )}
+          </div>
         {due && (
           <span
             className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] ${
