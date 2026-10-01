@@ -215,7 +215,8 @@ export function currentPosition(timeoutMs = 6000, highAccuracy = true): Promise<
             heading: null,
             speed: null,
           },
-          timestamp: Date.now(),\n          _source: 'ip',
+          timestamp: Date.now(),
+          _source: 'ip',
         } as any)
       } catch {
         settle(null)
@@ -244,6 +245,7 @@ export function currentPosition(timeoutMs = 6000, highAccuracy = true): Promise<
     }
   })
 }
+
 
 
 
