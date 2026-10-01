@@ -5,6 +5,7 @@ import {
   splitRoutes,
   UNGROUPED,
   walkingMiles,
+  withinMiles,
 } from '@/features/leads/routes'
 import type { ScoredLead } from '@/features/leads/scoring'
 
@@ -158,5 +159,43 @@ describe('splitRoutes', () => {
     ])
     const { worthADrive, singleStops } = splitRoutes(routes)
     expect(worthADrive.length + singleStops.length).toBe(routes.length)
+  })
+})
+
+describe('withinMiles', () => {
+  // Downtown Baton Rouge, and a door out past Gonzales — the real shape of the
+  // complaint that prompted this: a rep on one side of the service area being
+  // shown the best door on the other side with no way to take it off the list.
+  const here = { latitude: 30.45, longitude: -91.15 }
+  const near = door({ latitude: 30.452, longitude: -91.153, score: 51 })
+  const far = door({ latitude: 30.22, longitude: -90.92, score: 93 })
+
+  it('drops doors outside the radius even when they score highest', () => {
+    const kept = withinMiles([far, near], 5, here)
+    expect(kept).toEqual([near])
+  })
+
+  it('does not reorder what it keeps', () => {
+    // The whole argument for scoring survives the filter: inside the radius the
+    // best door is still first. Filtering must not become a covert sort.
+    const a = door({ latitude: 30.451, longitude: -91.151, score: 40 })
+    const b = door({ latitude: 30.4505, longitude: -91.1505, score: 90 })
+    expect(withinMiles([a, b], 20, here).map((d) => d.score)).toEqual([40, 90])
+  })
+
+  it('returns everything when no limit is set', () => {
+    expect(withinMiles([far, near], null, here)).toHaveLength(2)
+  })
+
+  it('returns everything when the browser gave no position', () => {
+    // A phone that refused a fix must not look like a territory with no work in
+    // it. Silently emptying the list would be the worse failure.
+    expect(withinMiles([far, near], 5, undefined)).toHaveLength(2)
+  })
+
+  it('does not mutate the array it was given', () => {
+    const input = [far, near]
+    withinMiles(input, 5, here)
+    expect(input).toHaveLength(2)
   })
 })

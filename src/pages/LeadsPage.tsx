@@ -40,6 +40,7 @@ import {
   orderForWalking,
   splitRoutes,
   walkingMiles,
+  withinMiles,
   type Route,
 } from '@/features/leads/routes'
 import type { ScoredLead } from '@/features/leads/scoring'
@@ -636,6 +637,13 @@ function Chip({
   )
 }
 
+/**
+ * Distance choices offered to the rep. `null` is "any distance", which is the
+ * default: the run covers the whole service area and narrowing it is the rep's
+ * call, not ours.
+ */
+const MILE_OPTIONS: readonly (number | null)[] = [null, 5, 10, 20]
+
 export default function LeadsPage() {
   const navigate = useNavigate()
   const [run, setRun] = useState<LeadRun | null>(null)
@@ -648,6 +656,8 @@ export default function LeadsPage() {
   const [showCompetitors, setShowCompetitors] = useState(false)
   const [routeName, setRouteName] = useState<string | null>(null)
   const [ownerOccupiedOnly, setOwnerOccupiedOnly] = useState(false)
+  /** null = no distance limit. Only meaningful once the browser gives a fix. */
+  const [maxMiles, setMaxMiles] = useState<number | null>(null)
   const [here, setHere] = useState<{ latitude: number; longitude: number } | null>(null)
 
   const busyRef = useRef(false)
@@ -757,10 +767,12 @@ export default function LeadsPage() {
   }, [run, suppressed, managedByAddress])
 
   /** What the rep can filter down to, before routes are built. */
-  const filteredDoors = useMemo(
-    () => (ownerOccupiedOnly ? doors.filter((d) => d.parcel?.occupancy === 'owner_occupied') : doors),
-    [doors, ownerOccupiedOnly],
-  )
+  const filteredDoors = useMemo(() => {
+    const owned = ownerOccupiedOnly
+      ? doors.filter((d) => d.parcel?.occupancy === 'owner_occupied')
+      : doors
+    return withinMiles(owned, maxMiles, here ?? undefined)
+  }, [doors, ownerOccupiedOnly, maxMiles, here])
 
   const routes = useMemo(
     () => groupIntoRoutes(filteredDoors, here ?? undefined),
@@ -1073,6 +1085,35 @@ export default function LeadsPage() {
                 </button>
               )}
 
+              {/* Distance narrows the list; it never reorders it. Inside the
+                  radius the best door is still first — see `withinMiles`. */}
+              {here ? (
+                <div className="mt-2 flex gap-1.5">
+                  {MILE_OPTIONS.map((miles) => (
+                    <button
+                      key={miles ?? 'any'}
+                      onClick={() => {
+                        setMaxMiles(miles)
+                        setRouteName(null)
+                      }}
+                      className={`flex-1 rounded-full px-2 py-2 text-[12.5px] ${
+                        maxMiles === miles
+                          ? 'bg-status-success/20 text-status-success'
+                          : 'bg-bg-elevated text-text-secondary'
+                      }`}
+                    >
+                      {miles === null ? 'Any distance' : `${miles} mi`}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-[11.5px] leading-relaxed text-text-secondary">
+                  Distance filtering needs your location, and the browser has not given one. Allow
+                  location for this site and reopen this tab. Until then the list covers the whole
+                  service area, so the best door may be a long drive.
+                </p>
+              )}
+
               {doors.length === 0 ? (
                 <div className="mt-3">
                   <Empty
@@ -1083,8 +1124,16 @@ export default function LeadsPage() {
               ) : filteredDoors.length === 0 ? (
                 <div className="mt-3">
                   <Empty
-                    title="No owner-occupied doors on this list"
-                    body="Every door here is either a likely rental or an address the parish parcel roll does not carry. Turn the filter off to see them."
+                    title={
+                      maxMiles !== null
+                        ? `No doors within ${maxMiles} miles`
+                        : 'No owner-occupied doors on this list'
+                    }
+                    body={
+                      maxMiles !== null
+                        ? 'The doors that qualified on this run are further out. Widen the distance filter to see them — the list is ranked by opportunity, so the nearest door is not always the one worth the drive.'
+                        : 'Every door here is either a likely rental or an address the parish parcel roll does not carry. Turn the filter off to see them.'
+                    }
                   />
                 </div>
               ) : activeRoute ? (

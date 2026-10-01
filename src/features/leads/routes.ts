@@ -59,6 +59,31 @@ function spread(doors: readonly ScoredLead[], lat: number, lon: number): number 
 }
 
 /**
+ * Narrows doors to those within `maxMiles` of the rep.
+ *
+ * Deliberately a filter and not a sort. `groupIntoRoutes` below explains why
+ * order stays with the score — a closer route is not a better one, and
+ * reordering by distance hides the best work behind the nearest work. But that
+ * argument only holds for doors the rep could actually reach today. A rep
+ * working one side of the parish needs the far doors *gone*, not demoted; and
+ * inside whatever radius they pick, the best door is still first.
+ *
+ * With no position there is nothing to measure from, so the list comes back
+ * untouched rather than silently empty. A rep whose phone refused a fix should
+ * see the whole list, not a blank screen that looks like no work exists.
+ */
+export function withinMiles(
+  doors: readonly ScoredLead[],
+  maxMiles: number | null,
+  from?: { latitude: number; longitude: number },
+): ScoredLead[] {
+  if (maxMiles === null || !from) return [...doors]
+  return doors.filter(
+    (door) => distanceMiles(from.latitude, from.longitude, door.latitude, door.longitude) <= maxMiles,
+  )
+}
+
+/**
  * Groups doors into routes, best first.
  *
  * "Best" is the top score in the route, not the door count and not the average.
