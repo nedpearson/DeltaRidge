@@ -23,7 +23,7 @@ export async function evidenceFor(
 ): Promise<KnockVerificationRecord> {
   let fix: { latitude: number; longitude: number; accuracyMeters?: number } | null = null
   try {
-    const pos = await currentPosition(timeoutMs)
+    const pos = await currentPosition(timeoutMs, false) // Fast, low-accuracy fix is better than timing out
     if (pos) {
       fix = {
         latitude: pos.coords.latitude,
@@ -44,3 +44,4 @@ export async function evidenceFor(
     ...(result.accuracyMeters !== null ? { accuracyMeters: result.accuracyMeters } : {}),
   }
 }
+

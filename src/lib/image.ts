@@ -188,7 +188,7 @@ export async function processPhoto(file: Blob, maxEdge = 2048): Promise<Processe
  * "Getting location…" with no way out. Reproduced in a browser whose geolocation
  * permission was left unanswered. So we keep our own clock and always settle.
  */
-export function currentPosition(timeoutMs = 6000): Promise<GeolocationPosition | null> {
+export function currentPosition(timeoutMs = 6000, highAccuracy = true): Promise<GeolocationPosition | null> {
   return new Promise((resolve) => {
     if (!('geolocation' in navigator)) return resolve(null)
 
@@ -205,10 +205,11 @@ export function currentPosition(timeoutMs = 6000): Promise<GeolocationPosition |
       navigator.geolocation.getCurrentPosition(
         (pos) => settle(pos),
         () => settle(null),
-        { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 30000 },
+        { enableHighAccuracy: highAccuracy, timeout: timeoutMs, maximumAge: 30000 },
       )
     } catch {
       settle(null)
     }
   })
 }
+
