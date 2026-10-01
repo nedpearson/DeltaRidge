@@ -85,7 +85,7 @@ export async function lookupResidentContact(params: {
   // No fallback to fake data - if lookup failed, report failure
   return {
     success: false,
-    error: "Network or edge function failure during lookup",
+    message: "Network or edge function failure during lookup",
     residentName: undefined,
     phone: undefined,
     phoneType: undefined,
@@ -128,3 +128,4 @@ export async function saveResidentContact(
   await saveLead(updated)
   return updated
 }
+

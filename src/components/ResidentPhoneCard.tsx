@@ -149,7 +149,7 @@ export default function ResidentPhoneCard({
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
-            {!errorMsg && (<a href={freeSearchUrl} target="_blank" rel="noreferrer" className="contents"><Button variant="secondary" className="!px-2.5 !py-1 text-[11px]">🔍 Look Up</Button></a>)}
+            {<a href={freeSearchUrl} target="_blank" rel="noreferrer" className="contents"><Button variant="secondary" className="!px-2.5 !py-1 text-[11px]">🔍 Look Up</Button></a>}
             <Button
               variant="secondary"
               onClick={() => setEditing(true)}
@@ -195,3 +195,4 @@ export default function ResidentPhoneCard({
     </div>
   )
 }
+
