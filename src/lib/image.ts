@@ -202,7 +202,7 @@ export function currentPosition(timeoutMs = 6000, highAccuracy = true): Promise<
 
     const fallback = async () => {
       try {
-        const res = await fetch('https://get.geojs.io/v1/ip/geo.json', { method: 'GET', mode: 'cors' })
+        const res = await fetch('/api/location')
         if (!res.ok) return settle(null)
         const data = await res.json()
         settle({
@@ -244,5 +244,6 @@ export function currentPosition(timeoutMs = 6000, highAccuracy = true): Promise<
     }
   })
 }
+
 
 
