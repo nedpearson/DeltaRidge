@@ -967,7 +967,7 @@ export default function LeadsPage() {
                 <option value="1.75">1.75" and up</option>
               </Select>
             </Field>
-            <Field label="Radius">
+            <Field label="Distance from storm">
               <Select
                 value={String(settings.radiusMiles)}
                 onChange={(e) => patch({ radiusMiles: Number(e.target.value) })}
@@ -1253,6 +1253,7 @@ export default function LeadsPage() {
     </div>
   )
 }
+
 
 
 
