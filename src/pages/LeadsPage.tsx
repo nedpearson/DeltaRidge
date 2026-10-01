@@ -659,6 +659,7 @@ export default function LeadsPage() {
   /** null = no distance limit. Only meaningful once the browser gives a fix. */
   const [maxMiles, setMaxMiles] = useState<number | null>(null)
   const [here, setHere] = useState<{ latitude: number; longitude: number } | null>(null)
+    const [locationDiagnostic, setLocationDiagnostic] = useState<string | null>(null)
 
   const busyRef = useRef(false)
   const settingsRef = useRef(settings)
@@ -678,8 +679,11 @@ export default function LeadsPage() {
     setBusy(true)
       if (!auto) setError(null)
       if (!auto) {
-        void currentPosition(10000, false).then((pos) => {
-          if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+        navigator.geolocation.getCurrentPosition(
+            (pos) => setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+            (err) => setLocationDiagnostic('Failed to get location (Code ' + err.code + '): ' + err.message),
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
+          )
         })
       }
       try {
@@ -727,8 +731,11 @@ export default function LeadsPage() {
     // position only changes where the walk starts and how far the routes are
     // reported to be. `currentPosition` always settles, including when the
     // permission prompt is never answered — see src/lib/image.ts.
-    void currentPosition(10000, false).then((pos) => {
-      if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+    navigator.geolocation.getCurrentPosition(
+            (pos) => setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+            (err) => setLocationDiagnostic('Failed to get location (Code ' + err.code + '): ' + err.message),
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
+          )
     })
   }, [refresh])
 
@@ -1253,6 +1260,10 @@ export default function LeadsPage() {
     </div>
   )
 }
+
+
+
+
 
 
 
