@@ -676,8 +676,13 @@ export default function LeadsPage() {
     if (auto && busyRef.current) return
     busyRef.current = true
     setBusy(true)
-    if (!auto) setError(null)
-    try {
+      if (!auto) setError(null)
+      if (!auto) {
+        void currentPosition(10000, false).then((pos) => {
+          if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+        })
+      }
+      try {
       setRun(await runLeadEngine(next))
       setError(null)
     } catch (err) {
@@ -722,7 +727,7 @@ export default function LeadsPage() {
     // position only changes where the walk starts and how far the routes are
     // reported to be. `currentPosition` always settles, including when the
     // permission prompt is never answered — see src/lib/image.ts.
-    void currentPosition().then((pos) => {
+    void currentPosition(10000, false).then((pos) => {
       if (pos) setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
     })
   }, [refresh])
@@ -1248,6 +1253,9 @@ export default function LeadsPage() {
     </div>
   )
 }
+
+
+
 
 
 
