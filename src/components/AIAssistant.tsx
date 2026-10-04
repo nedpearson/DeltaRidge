@@ -1,12 +1,26 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Mic, Send, X, Bot } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 
 export function AIAssistant({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const location = useLocation()
   const [query, setQuery] = useState('')
-  const [messages, setMessages] = useState([
-    { id: '1', role: 'assistant', text: 'Which subdivision should I focus on?' },
-    { id: '2', role: 'assistant', text: 'Summarizing 123 Oak St...' }
-  ])
+  const [messages, setMessages] = useState<{ id: string; role: string; text: string }[]>([])
+
+  useEffect(() => {
+    if (isOpen) {
+      let initialSuggestion = 'How can I help you today?'
+      const path = location.pathname
+      
+      if (path.startsWith('/lead/')) {
+        initialSuggestion = "Summarize this lead's storm exposure."
+      } else if (path.startsWith('/settings')) {
+        initialSuggestion = 'Check AI automation readiness.'
+      }
+
+      setMessages([{ id: Date.now().toString(), role: 'assistant', text: initialSuggestion }])
+    }
+  }, [isOpen, location.pathname])
 
   if (!isOpen) return null
 

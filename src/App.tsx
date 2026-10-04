@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 const queryClient = new QueryClient()
-import MemberPortal from '@/pages/MemberPortal'
+import HomeownerPortal from '@/pages/HomeownerPortal'
 import MissionPage from '@/pages/MissionPage'
 import FreeRoofCheckPage from '@/pages/FreeRoofCheckPage'
 import { Suspense, lazy, useEffect } from 'react'
@@ -79,7 +79,7 @@ export default function App() {
           <UpdateBanner />
           <Suspense fallback={<div className="p-4 text-text-secondary text-sm">Loading...</div>}>
             <Routes>
-              <Route path="/demo/portal/:id" element={<MemberPortal />} />
+              <Route path="/portal/:id" element={<HomeownerPortal />} />
               <Route path="/free-roof-check" element={<FreeRoofCheckPage />} />
               <Route path="*" element={
                 <AppShell>

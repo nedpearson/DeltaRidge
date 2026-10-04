@@ -1,3 +1,4 @@
+import type { RouteSessionMetrics } from './route-store'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   isPaused as sessionIsPaused,
@@ -33,7 +34,7 @@ export interface RouteTracking {
   /** What the browser said about permission, in words the rep can act on. */
   problem: string | null
   start: (label?: string) => Promise<void>
-  stop: () => Promise<void>
+  stop: (metrics?: RouteSessionMetrics) => Promise<void>
   /** Stops recording without ending the route. Nothing is captured while paused. */
   pause: () => Promise<void>
   resume: () => Promise<void>
@@ -129,7 +130,36 @@ export function useRouteTracking(): RouteTracking {
 
   const start = useCallback(
     async (label?: string) => {
+      if (!('geolocation' in navigator)) {
+        setProblem('This device has no location services, so the route will have no map.')
+        return
+      }
+      
+      try {
+        const perm = await navigator.permissions.query({ name: 'geolocation' })
+        if (perm.state === 'denied') {
+          setProblem('Location permission denied. Please enable it in your browser settings to track your route.')
+          return
+        }
+      } catch {
+        // Permissions API not supported or failed, fallback to triggering a request
+      }
+
       setStarting(true)
+      try {
+        // Force a permission request if not yet granted
+        await new Promise<void>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(() => resolve(), (err) => {
+            if (err.code === err.PERMISSION_DENIED) reject(new Error('denied'))
+            else resolve() // other errors like timeout are fine to proceed
+          }, { timeout: 10000 })
+        })
+      } catch (_err) {
+        setProblem('Location permission denied. Please enable it in your browser settings to track your route.')
+        setStarting(false)
+        return
+      }
+
       try {
         const created = await startSession(new Date().toISOString(), label)
         setSession(created)
@@ -161,10 +191,10 @@ export function useRouteTracking(): RouteTracking {
     }
   }, [session, watch])
 
-  const stop = useCallback(async () => {
+  const stop = useCallback(async (metrics?: RouteSessionMetrics) => {
     clearWatch()
     if (!session) return
-    const closed = await stopSession(session.id, new Date().toISOString())
+    const closed = await stopSession(session.id, new Date().toISOString(), 'stopped', metrics)
     setSession(closed && !closed.endedAt ? closed : null)
     lastKept.current = null
   }, [session, clearWatch])

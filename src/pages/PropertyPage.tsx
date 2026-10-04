@@ -399,27 +399,32 @@ function StormsTab({ profile }: { profile: PropertyProfile }) {
     return (
       <Empty
         title="No qualifying storms nearby"
-        body={`No hail report in the current window fell within ${STORM_RADIUS_MILES} miles of this parcel.`}
+        body={`No hail or 60+ MPH wind reports in the current window fell within ${STORM_RADIUS_MILES} miles of this parcel.`}
       />
     )
   }
   return (
     <Card>
-      {profile.storms.map((s: StormEvent) => (
-        <div key={s.externalId} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="text-[13px] text-text-secondary">
-              {[s.city, s.countyParish].filter(Boolean).join(', ') || 'Unnamed location'}
-            </p>
-            <p className="shrink-0 font-display text-[15px] text-gold-400">
-              {s.hailSizeInches !== undefined ? `${s.hailSizeInches}"` : '—'}
+      {profile.storms.map((s: StormEvent) => {
+        const isWind = s.eventType === 'wind' || s.windSpeedMph !== undefined;
+        const mainMetric = isWind && s.windSpeedMph ? `${s.windSpeedMph} MPH` : (s.hailSizeInches !== undefined ? `${s.hailSizeInches}"` : '—');
+        
+        return (
+          <div key={s.externalId} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-[13px] text-text-secondary">
+                {[s.city, s.countyParish].filter(Boolean).join(', ') || 'Unnamed location'}
+              </p>
+              <p className={`shrink-0 font-display text-[15px] ${isWind ? 'text-status-warning' : 'text-gold-400'}`}>
+                {mainMetric}
+              </p>
+            </div>
+            <p className="mt-0.5 text-[10.5px] text-text-secondary">
+              {shortDate(s.occurredAt)} · {s.eventType === 'wind' ? 'wind report' : (s.observation === 'radar_estimate' ? 'radar estimate' : 'official ground report')} · {s.provider.toUpperCase()}
             </p>
           </div>
-          <p className="mt-0.5 text-[10.5px] text-text-secondary">
-            {shortDate(s.occurredAt)} · official ground report · NWS
-          </p>
-        </div>
-      ))}
+        )
+      })}
     </Card>
   )
 }

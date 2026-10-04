@@ -48,6 +48,7 @@ const ORDER: Record<OutboxEntity, number> = {
   // After its lead, so a knock never arrives before the door it was at.
   leadActivity: 1,
   routePoint: 1,
+  propertyVisit: 1,
   // After the activity, so the recording can be filed against the knock it
   // was made during rather than floating loose on the lead.
   leadAttachment: 2,

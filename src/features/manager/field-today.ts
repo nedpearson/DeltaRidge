@@ -54,6 +54,7 @@ export interface RepFieldRow {
   readonly doors: DoorTotals
   /** Inspections started at a door today. */
   readonly inspections: number
+  readonly isInStormZone?: boolean
 }
 
 /** Is a declared break currently open on this route? */

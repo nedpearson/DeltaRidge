@@ -103,29 +103,30 @@ export interface LocalVoiceNote {
   syncState: SyncState
 }
 
+export interface LocalPropertyVisit {
+  id: string
+  leadId: string
+  routeSessionId?: string
+  gpsVerified: boolean
+  closestDistanceMeters?: number
+  reportedAction: string
+  notes?: string
+  visitedAt: string
+  syncState: SyncState
+}
+
 export type OutboxEntity =
   | 'inspection'
   | 'photo'
   | 'observation'
   | 'voiceNote'
   | 'handoff'
-  /** A managed lead. Lives in the CRM database; queued through this outbox. */
   | 'lead'
-  /** One knock, call, text or note against a lead. */
   | 'leadActivity'
-  /** A voice note or photo captured while working a lead. */
   | 'leadAttachment'
-  /**
-   * A stretch of door-knocking the rep started and stopped.
-   *
-   * Through this queue and not a separate uploader, deliberately. Route data
-   * looks like telemetry, and telemetry is the kind of thing that gets its own
-   * "simpler" path which silently drops rows on a bad connection — which is the
-   * offline-sync problem the lead layer already has a solution for.
-   */
   | 'routeSession'
-  /** One GPS fix inside one of those sessions. Never outside one. */
   | 'routePoint'
+  | 'propertyVisit'
 
 /**
  * One step of a trace, held on the device until it can be pushed.
@@ -259,6 +260,7 @@ interface DeltaRidgeDB extends DBSchema {
   photos: { key: string; value: LocalPhoto; indexes: { 'by-inspection': string } }
   observations: { key: string; value: LocalObservation; indexes: { 'by-inspection': string } }
   voiceNotes: { key: string; value: LocalVoiceNote; indexes: { 'by-inspection': string } }
+  propertyVisits: { key: string; value: LocalPropertyVisit; indexes: { 'by-lead': string } }
   outbox: { key: string; value: OutboxItem }
   /**
    * Trace steps waiting to be pushed.
@@ -302,6 +304,10 @@ export function getDB(): Promise<IDBPDatabase<DeltaRidgeDB>> {
         if (!db.objectStoreNames.contains('voiceNotes')) {
           const voiceNotes = db.createObjectStore('voiceNotes', { keyPath: 'id' })
           voiceNotes.createIndex('by-inspection', 'inspectionId')
+        }
+        if (!db.objectStoreNames.contains('propertyVisits')) {
+          const visits = db.createObjectStore('propertyVisits', { keyPath: 'id' })
+          visits.createIndex('by-lead', 'leadId')
         }
         if (!db.objectStoreNames.contains('outbox')) {
           db.createObjectStore('outbox', { keyPath: 'id' })
@@ -511,6 +517,12 @@ export async function listVoiceNotes(inspectionId: string): Promise<LocalVoiceNo
   const db = await getDB()
   const rows = await db.getAllFromIndex('voiceNotes', 'by-inspection', inspectionId)
   return rows.sort((a, b) => a.recordedAt.localeCompare(b.recordedAt))
+}
+
+export async function savePropertyVisit(visit: LocalPropertyVisit): Promise<void> {
+  const db = await getDB()
+  await db.put('propertyVisits', visit)
+  await enqueue(db, 'propertyVisit', visit.id)
 }
 
 export async function outboxCount(): Promise<number> {

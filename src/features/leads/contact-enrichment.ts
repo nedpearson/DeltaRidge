@@ -79,7 +79,7 @@ export async function lookupResidentContact(params: {
     }
   } catch (err) {
     // Network or edge function failure fallback
-    console.warn("Edge function lookup failed, falling back to demo mode:", err)
+    console.warn("Edge function lookup failed, returning empty array:", err)
   }
 
   // No fallback to fake data - if lookup failed, report failure

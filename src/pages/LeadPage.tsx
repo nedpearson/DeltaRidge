@@ -13,6 +13,7 @@ import { SalesPlaybookPanel } from '@/components/SalesPlaybookPanel'
 import { ReferralEnginePanel } from '@/components/ReferralEnginePanel'
 import { ProposalOptionsPanel } from '@/components/ProposalOptionsPanel'
 import NextBestActionPanel from '@/components/NextBestActionPanel'
+import { ConversationTimeline } from '@/features/leads/ConversationTimeline'
 import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
 import IntegrityPanel from '@/features/leads/IntegrityPanel'
 import { readLink } from '@/features/integrations/roofr/store'
@@ -29,7 +30,6 @@ import {
 import {
   applyOutcome,
   CHANNEL_LABEL,
-  CONTACT_KIND_LABEL,
   CONTACT_SOURCE_LABEL,
   contactSourceOf,
   dueLabel,
@@ -113,37 +113,6 @@ function toIso(local: string): string | undefined {
  * open, which on a three-year-old Android is the difference between a working
  * app and a tab the system kills.
  */
-function Attachment({ item }: { item: LeadAttachment }) {
-  const [url, setUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    const blob = item.kind === 'photo' ? (item.thumbnail ?? item.blob) : item.blob
-    const made = URL.createObjectURL(blob)
-    setUrl(made)
-    return () => URL.revokeObjectURL(made)
-  }, [item])
-
-  if (!url) return null
-
-  if (item.kind === 'photo') {
-    return (
-      <img
-        src={url}
-        alt="Captured on this lead"
-        className="mt-1.5 h-28 w-full rounded-lg object-cover ring-1 ring-border-subtle"
-      />
-    )
-  }
-
-  return (
-    <div className="mt-1.5">
-      <audio controls src={url} className="h-9 w-full" />
-      <p className="mt-0.5 text-[10.5px] text-text-secondary">
-        {item.durationSeconds}s recording. Not transcribed — this is the audio itself.
-      </p>
-    </div>
-  )
-}
 
 import { Bot } from 'lucide-react'
 
@@ -813,41 +782,7 @@ export default function LeadPage() {
       <AIStrategyPanel history={history} address={lead.address} />
 
       <SectionTitle>UNIVERSAL TIMELINE</SectionTitle>
-      {history.length === 0 ? (
-        <Empty
-          title="Nothing recorded yet"
-          body="Every knock, call, text and note lands here in order, so whoever picks this up next can see what was actually said."
-        />
-      ) : (
-        <Card>
-          <ol className="space-y-3">
-            
-            <li className="border-l-2 border-border-subtle pl-3">
-              <p className="text-[12.5px] font-semibold text-text-secondary">Lead generated</p>
-              <p className="text-[10.5px] text-text-secondary">{when(lead.createdAt)} · Initial Generation</p>
-            </li>
-            {history.map((event) => (
-
-              <li key={event.id} className="border-l-2 border-border-subtle pl-3">
-                <p className="text-[12.5px] font-semibold text-text-secondary">
-                  {event.outcome ? OUTCOME_LABEL[event.outcome] : CONTACT_KIND_LABEL[event.kind]}
-                </p>
-                <p className="text-[10.5px] text-text-secondary">
-                  {when(event.at)} · {CONTACT_KIND_LABEL[event.kind]}
-                </p>
-                {event.note && (
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-text-secondary">{event.note}</p>
-                )}
-                {attachments
-                  .filter((a) => a.eventId === event.id)
-                  .map((a) => (
-                    <Attachment key={a.id} item={a} />
-                  ))}
-              </li>
-            ))}
-          </ol>
-        </Card>
-      )}
+      <ConversationTimeline leadId={lead.id} />
 
       <IntegrityPanel
         evidence={{
@@ -908,7 +843,7 @@ export default function LeadPage() {
         const supabase = (await import('@/lib/supabase')).getSupabase();
         if (supabase) {
           await supabase.rpc('promote_neighbors_of_sale', { sold_lead_id: lead.id });
-          // TODO: show actual result count from RPC response instead of fake feedback
+          
         }
       }}>
         Generate Neighbor Referral Campaign

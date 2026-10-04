@@ -617,7 +617,7 @@ export default function EstimatePage() {
           onCancel={() => setShowHandoffGate(false)}
           onConfirm={() => {
             setShowHandoffGate(false);
-            // TODO: wire to real backend — update lead status to 'production_ready'
+            // Removed pending production_ready implementation
           }}
         />
       )}

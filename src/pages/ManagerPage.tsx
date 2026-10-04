@@ -5,6 +5,7 @@ import RevenueLeakagePanel from '@/features/dashboard/RevenueLeakagePanel'
 import { useManagerCommandCenter } from '@/features/dashboard/useManagerCommandCenter';
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { StormWarRoomPanel } from '@/components/StormWarRoomPanel'
+import { StormCommandCenter } from '@/features/manager/StormCommandCenter'
 import { Button, Card, Empty, PageHeader, SectionTitle, SegmentedTabs } from '@/components/ui'
 import { useSession } from '@/features/auth/session'
 import { readCachedRun } from '@/features/leads/engine'
@@ -49,6 +50,7 @@ import { readGradingConfig } from '@/features/manager/grade-store'
 import { DuplicateMergePanel } from '@/features/admin/DuplicateMergePanel'
 import { DEFAULT_CONFIG, type GradingConfig } from '@/features/manager/grading'
 import { DEFAULT_WINDOW_DAYS } from '@/features/manager/read'
+import { AutopilotDashboard } from '@/features/manager/AutopilotDashboard'
 import {
   efficiencyFor,
   orgBaseline,
@@ -56,6 +58,7 @@ import {
   suggestAssignees,
   territoryCoverage,
   COMFORTABLE_OPEN_ASSIGNMENTS,
+  distanceInMiles,
   type ActivityRow,
   type RepContext,
   type RouteRow,
@@ -78,14 +81,17 @@ import {
  * rep who did no work while the other is a bug. They are separate states here.
  */
 
-type Tab = 'command_center' | 'war_room' | 'demand' | 'leads_territory'
+type Tab = 'command_center' | 'autopilot' | 'war_room' | 'demand' | 'leads_territory'
   | 'team_routes'
   | 'sales_revenue'
   | 'roofcare'
   | 'operations'
+  | 'storm_os'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'command_center', label: 'COMMAND CENTER' },
+  { id: 'autopilot', label: 'AUTOPILOT' },
+  { id: 'storm_os', label: 'STORM OS' },
   { id: 'war_room', label: 'WAR ROOM' },
   { id: 'demand', label: 'DEMAND' },
   { id: 'leads_territory', label: 'LEADS & TERRITORY' },
@@ -270,15 +276,26 @@ export default function ManagerPage() {
       set.add(row.subdivision)
       worked.set(row.userId, set)
     }
+    const activeRouteByRep = new Map<string, { lat: number, lng: number }>()
+    for (const r of snapshot.routes) {
+      if (!r.endedAt && r.latitude != null && r.longitude != null) {
+        activeRouteByRep.set(r.userId, { lat: r.latitude, lng: r.longitude })
+      }
+    }
     return snapshot.team
       .filter((m) => m.isActive && m.role !== 'office')
-      .map((m) => ({
-        repId: m.userId,
-        openAssignments: openByRep.get(m.userId) ?? 0,
-        workedSubdivisions: worked.get(m.userId) ?? new Set<string>(),
-        efficiency: efficiencyFor(m.userId, outcomes, baseline).index,
-      }))
-  }, [snapshot.team, snapshot.activity, openByRep, outcomes, baseline])
+      .map((m) => {
+        const route = activeRouteByRep.get(m.userId)
+        return {
+          repId: m.userId,
+          openAssignments: openByRep.get(m.userId) ?? 0,
+          workedSubdivisions: worked.get(m.userId) ?? new Set<string>(),
+          efficiency: efficiencyFor(m.userId, outcomes, baseline).index,
+          ...(route ? { lat: route.lat, lng: route.lng } : {}),
+          hasConflict: false,
+        }
+      })
+  }, [snapshot.team, snapshot.activity, snapshot.routes, openByRep, outcomes, baseline])
 
   if (!session) {
     return <Nothing title="Sign in" body="These screens read from the server, so they need an account." />
@@ -346,6 +363,21 @@ export default function ManagerPage() {
           <div>
             <div className="mb-3"><SectionTitle>ACTIVITY LOG</SectionTitle></div>
             <LogTab rows={snapshot.audit} nameOf={nameOf} loading={loading} />
+          </div>
+        </div>
+      )}
+
+      {tab === 'autopilot' && (
+        <div className="space-y-8">
+          <AutopilotDashboard />
+        </div>
+      )}
+
+      {tab === 'storm_os' && (
+        <div className="space-y-8">
+          <div>
+            <div className="mb-3"><SectionTitle>STORM OS DASHBOARD</SectionTitle></div>
+            <StormCommandCenter />
           </div>
         </div>
       )}
@@ -595,6 +627,12 @@ export default function ManagerPage() {
                <Button variant="primary" full className="mb-2">Open Lead 360</Button>
              </Card>
              <Card>
+               <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-2">Opportunity Score</h3>
+               <p className="text-[12px] text-text-secondary">
+                 Scored via <span className="font-semibold text-brand-gold">property_opportunity_scores</span>
+               </p>
+             </Card>
+             <Card>
                <h3 className="text-[11px] font-bold uppercase tracking-widest text-text-secondary mb-2">Next Action</h3>
                <p className="text-[12px] text-text-secondary">Assign or follow up</p>
              </Card>
@@ -746,15 +784,46 @@ function FieldTab({
   // resolved against the local clock: a rep knocking at 7pm in Baton Rouge is
   // already on tomorrow's date in UTC.
   const today = useMemo(() => resolveHistoryWindow('today'), [])
-  const rows = useMemo(
-    () =>
-      fieldToday({
-        repIds,
-        routes: routes.filter((r) => r.startedAt >= today.from && r.startedAt <= today.to),
-        activity: activity.filter((a) => a.occurredAt >= today.from && a.occurredAt <= today.to),
-      }),
-    [repIds, routes, activity, today],
-  )
+  const [storms, setStorms] = useState<{lat: number, lng: number}[]>([])
+  
+  useEffect(() => {
+    const fetchStorms = async () => {
+      const { getSupabase } = await import('@/lib/supabase')
+      const supabase = getSupabase()
+      if (!supabase) return
+      const { data } = await supabase.from('storm_events').select('location').gte('wind_speed_mph', 60)
+      if (data) {
+        setStorms(data.map(d => {
+           // PostGIS point: POINT(lng lat)
+           const match = d.location?.match(/POINT\(([^ ]+) ([^)]+)\)/)
+           if (match) return { lng: parseFloat(match[1]), lat: parseFloat(match[2]) }
+           return null
+        }).filter(Boolean) as {lat: number, lng: number}[])
+      }
+    }
+    fetchStorms()
+  }, [])
+
+  const rows = useMemo(() => {
+    const raw = fieldToday({
+      repIds,
+      routes: routes.filter((r) => r.startedAt >= today.from && r.startedAt <= today.to),
+      activity: activity.filter((a) => a.occurredAt >= today.from && a.occurredAt <= today.to),
+    })
+    return raw.map(row => {
+      let inZone = false
+      if (row.latitude && row.longitude) {
+        for (const s of storms) {
+          // within 5 miles
+          if (distanceInMiles(row.latitude, row.longitude, s.lat, s.lng) <= 5) {
+            inZone = true
+            break
+          }
+        }
+      }
+      return { ...row, isInStormZone: inZone }
+    })
+  }, [repIds, routes, activity, today, storms])
 
   // The day so far, computed before anything is said about it. The brief is a
   // rephrasing of these figures and never a source of one - see brief.ts.
@@ -813,7 +882,12 @@ function FieldTab({
       {rows.map((row) => (
         <Card key={row.repId}>
           <div className="flex items-baseline justify-between gap-3">
-            <p className="truncate text-[14px] font-semibold">{nameOf(row.repId)}</p>
+            <div className="flex items-center gap-2">
+              <p className="truncate text-[14px] font-semibold">{nameOf(row.repId)}</p>
+              {row.isInStormZone && (
+                <span className="text-[10px] uppercase font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded">In Storm Zone</span>
+              )}
+            </div>
             <span
               className={
                 'shrink-0 text-[11px] uppercase tracking-wider ' +
@@ -947,7 +1021,12 @@ function AssignTab({
             const expanded = picked === door.addressKey
             const suggestions = expanded
               ? suggestAssignees(
-                  { score: door.score, ...(door.subdivision ? { subdivision: door.subdivision } : {}) },
+                  { 
+                    score: door.score, 
+                    ...(door.subdivision ? { subdivision: door.subdivision } : {}),
+                    lat: door.latitude,
+                    lng: door.longitude
+                  },
                   reps,
                 )
               : []

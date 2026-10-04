@@ -404,10 +404,24 @@ export interface RepContext {
   workedSubdivisions: Set<string>
   /** Their index, if there is one. Absent is normal and not a penalty. */
   efficiency: number | null
+  lat?: number
+  lng?: number
+  hasConflict?: boolean
 }
 
 /** Doors above this and a rep is stretched; the suggestion says so. */
 export const COMFORTABLE_OPEN_ASSIGNMENTS = 25
+
+export function distanceInMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3958.8 // Radius of earth in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  return R * c
+}
 
 /**
  * Who this door should probably go to, and why in full.
@@ -428,10 +442,6 @@ export function suggestAssignees(
     .map((rep) => {
       const factors: SuggestionFactor[] = []
 
-      // Mock distance for demonstration as real GPS coordinates are not yet available per rep context
-      const mockDistance = "1.2"
-      const mockHasConflict = false
-
       const subdivision = lead.subdivision ?? null
       if (subdivision && rep.workedSubdivisions.has(subdivision)) {
         factors.push({
@@ -439,11 +449,18 @@ export function suggestAssignees(
           weight: 40,
           detail: `They have knocked doors in ${subdivision}, so this is on their way.`,
         })
-      } else {
+      } else if (rep.lat !== undefined && rep.lng !== undefined && lead.lat !== undefined && lead.lng !== undefined) {
+        const dist = distanceInMiles(rep.lat, rep.lng, lead.lat, lead.lng)
         factors.push({
           label: 'Proximity',
-          weight: 20 - Number(mockDistance) * 5,
-          detail: `${mockDistance} miles away.`,
+          weight: Math.max(-50, 20 - dist * 5),
+          detail: `${dist.toFixed(1)} miles away.`,
+        })
+      } else {
+        factors.push({
+          label: 'Unknown Proximity',
+          weight: 0,
+          detail: 'No location data available to calculate distance.',
         })
       }
 
@@ -461,7 +478,7 @@ export function suggestAssignees(
         })
       }
 
-      if (mockHasConflict) {
+      if (rep.hasConflict) {
         factors.push({
           label: 'Appointment Conflict',
           weight: -50,

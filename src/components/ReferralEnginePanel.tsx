@@ -3,8 +3,8 @@ import { Card, Button, SectionTitle } from '@/components/ui'
 import { Share2, Star, MapPin } from 'lucide-react'
 
 export function ReferralEnginePanel({ status }: { status: string }) {
-  if (status !== 'won' && status !== 'customer' && status !== 'inspected') {
-    return null; // For demo, let it render if inspected too so we can see it
+  if (status !== 'won' && status !== 'customer') {
+    return null;
   }
 
   return (

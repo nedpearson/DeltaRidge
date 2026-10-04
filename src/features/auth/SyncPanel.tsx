@@ -28,6 +28,7 @@ const LABEL: Record<OutboxItem['entity'], string> = {
   leadAttachment: 'Lead recording',
   routeSession: 'Work route',
   routePoint: 'Route location',
+  propertyVisit: 'Property Visit',
 }
 
 function summarise(stalled: OutboxItem[]): string {

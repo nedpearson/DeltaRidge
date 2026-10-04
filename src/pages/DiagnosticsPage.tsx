@@ -39,6 +39,7 @@ const ENTITY_LABEL: Record<OutboxItem['entity'], string> = {
   leadAttachment: 'Lead recording',
   routeSession: 'Work route',
   routePoint: 'Route location',
+  propertyVisit: 'Property Visit',
 }
 
 function ago(iso: string | null): string {

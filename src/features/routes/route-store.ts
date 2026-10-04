@@ -39,6 +39,12 @@ export interface RoutePause {
   until?: string
 }
 
+export interface RouteSessionMetrics {
+  routeSeconds: number
+  distanceMeters: number
+  propertiesVisited: number
+}
+
 export interface RouteSession {
   id: string
   startedAt: string
@@ -50,6 +56,7 @@ export interface RouteSession {
   deviceId: string
   /** Breaks taken during the route, oldest first. */
   pauses?: RoutePause[]
+  metrics?: RouteSessionMetrics
 }
 
 export interface RoutePoint {
@@ -171,6 +178,7 @@ export async function stopSession(
   id: string,
   at: string,
   reason: RouteSession['endedReason'] = 'stopped',
+  metrics?: RouteSessionMetrics
 ): Promise<RouteSession | null> {
   const db = await getDb()
   const existing = (await db.get(SESSIONS, id)) as RouteSession | undefined
@@ -190,6 +198,7 @@ export async function stopSession(
     endedAt: at,
     endedReason: reason,
     ...(pauses.length > 0 ? { pauses } : {}),
+    ...(metrics ? { metrics } : {}),
   }
   await db.put(SESSIONS, closed)
   await queue('routeSession', closed.id)
