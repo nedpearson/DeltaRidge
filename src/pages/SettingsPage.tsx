@@ -4,7 +4,8 @@ import { getSupabase } from '@/lib/supabase';
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('organization');
   const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState<any>({
+  interface SettingsData { storm_settings: { wind_threshold: number; hail_threshold: number; enable_wind: boolean }; gps_settings: { enable_tracking: boolean; property_geofence_radius: number }; ai_settings: { autonomy_level: string; enable_sms: boolean; enable_voice: boolean } }
+  const [settings, setSettings] = useState<SettingsData>({
     storm_settings: { wind_threshold: 60, hail_threshold: 1.0, enable_wind: true },
     gps_settings: { enable_tracking: true, property_geofence_radius: 100 },
     ai_settings: { autonomy_level: 'Assisted', enable_sms: true, enable_voice: false }
@@ -28,6 +29,7 @@ export default function SettingsPage() {
       }
     }
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveSettings = async () => {
@@ -132,3 +134,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+

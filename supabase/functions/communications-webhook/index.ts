@@ -45,8 +45,8 @@ serve(async (req) => {
     .single();
 
   let orgId = customerData?.organization_id;
-  let leadId = customerData?.leads?.[0]?.id;
-  let propertyId = customerData?.leads?.[0]?.property_id;
+  const leadId = customerData?.leads?.[0]?.id;
+  const propertyId = customerData?.leads?.[0]?.property_id;
 
   if (!orgId) {
     // Attempt fallback to a default organization if not found, 

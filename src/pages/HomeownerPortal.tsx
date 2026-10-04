@@ -39,7 +39,7 @@ export default function HomeownerPortal() {
         const { data } = supabase.storage.from('insurance_docs').getPublicUrl(filePath)
         setFileUrl(data.publicUrl)
       }
-    } catch (err) {
+    } catch {
       setFileUrl(`local://${file.name}`)
     }
   }
@@ -193,3 +193,4 @@ export default function HomeownerPortal() {
     </div>
   )
 }
+
