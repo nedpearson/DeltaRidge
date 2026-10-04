@@ -22,7 +22,7 @@ create index on conversations(organization_id, property_id);
 
 alter table conversations enable row level security;
 create policy conversations_manager_all on conversations for all using (
-    organization_id in (select app.current_org_ids()) and app.is_manager()
+    organization_id in (select app.current_org_ids()) and app.has_org_role(organization_id, array['admin', 'manager']::app_role[])
 );
 create policy conversations_rep_assigned on conversations for all using (
     organization_id in (select app.current_org_ids()) and 
@@ -43,7 +43,7 @@ create index on messages(organization_id, conversation_id);
 
 alter table messages enable row level security;
 create policy messages_manager_all on messages for all using (
-    organization_id in (select app.current_org_ids()) and app.is_manager()
+    organization_id in (select app.current_org_ids()) and app.has_org_role(organization_id, array['admin', 'manager']::app_role[])
 );
 create policy messages_rep_assigned on messages for all using (
     organization_id in (select app.current_org_ids()) and 
@@ -68,7 +68,7 @@ create index on calls(organization_id, conversation_id);
 
 alter table calls enable row level security;
 create policy calls_manager_all on calls for all using (
-    organization_id in (select app.current_org_ids()) and app.is_manager()
+    organization_id in (select app.current_org_ids()) and app.has_org_role(organization_id, array['admin', 'manager']::app_role[])
 );
 create policy calls_rep_assigned on calls for all using (
     organization_id in (select app.current_org_ids()) and 
@@ -131,7 +131,7 @@ create index on campaign_enrollments(organization_id, lead_id);
 
 alter table campaign_enrollments enable row level security;
 create policy campaign_enrollments_manager on campaign_enrollments for all using (
-    organization_id in (select app.current_org_ids()) and app.is_manager()
+    organization_id in (select app.current_org_ids()) and app.has_org_role(organization_id, array['admin', 'manager']::app_role[])
 );
 create policy campaign_enrollments_rep on campaign_enrollments for all using (
     organization_id in (select app.current_org_ids()) and 
@@ -184,7 +184,7 @@ create index on insurance_profiles(organization_id, property_id);
 
 alter table insurance_profiles enable row level security;
 create policy insurance_profiles_manager on insurance_profiles for all using (
-    organization_id in (select app.current_org_ids()) and app.is_manager()
+    organization_id in (select app.current_org_ids()) and app.has_org_role(organization_id, array['admin', 'manager']::app_role[])
 );
 create policy insurance_profiles_rep on insurance_profiles for all using (
     organization_id in (select app.current_org_ids()) and 
@@ -212,6 +212,6 @@ create index on ai_agent_runs(organization_id);
 
 alter table ai_agent_runs enable row level security;
 create policy ai_agent_runs_manager on ai_agent_runs for all using (
-    organization_id in (select app.current_org_ids()) and app.is_manager()
+    organization_id in (select app.current_org_ids()) and app.has_org_role(organization_id, array['admin', 'manager']::app_role[])
 );
 -- Reps shouldn't usually view global telemetry, but maybe their own? We'll just grant to managers.
