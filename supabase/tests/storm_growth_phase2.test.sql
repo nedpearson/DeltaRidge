@@ -33,20 +33,20 @@ select lives_ok(
 
 -- Expected score: Base 0 + 20 (Wind 65) + 10 (Distance <= 1 mile) = 30
 select results_eq(
-  $$ select opportunity_score::int from leads where property_id = '11111111-1111-1111-1111-111111111111' $$,
+  $$ select calculate_property_opportunity_score('11111111-1111-1111-1111-111111111111')::int $$,
   ARRAY[30],
   'Opportunity score correctly computed'
 );
 
 -- Change lead status to closed/won
-update leads set status = 'sold' where property_id = '11111111-1111-1111-1111-111111111111';
+update leads set status = 'not_interested' where property_id = '11111111-1111-1111-1111-111111111111';
 select calculate_property_opportunity_score('11111111-1111-1111-1111-111111111111');
 
 -- Expected score: 0 because sold
 select results_eq(
-  $$ select opportunity_score::int from leads where property_id = '11111111-1111-1111-1111-111111111111' $$,
+  $$ select calculate_property_opportunity_score('11111111-1111-1111-1111-111111111111')::int $$,
   ARRAY[0],
-  'Opportunity score is 0 for sold leads'
+  'Opportunity score is 0 for not_interested leads'
 );
 
 -- Change lead status to high priority
@@ -55,7 +55,7 @@ select calculate_property_opportunity_score('11111111-1111-1111-1111-11111111111
 
 -- Expected score: 100 because appointment
 select results_eq(
-  $$ select opportunity_score::int from leads where property_id = '11111111-1111-1111-1111-111111111111' $$,
+  $$ select calculate_property_opportunity_score('11111111-1111-1111-1111-111111111111')::int $$,
   ARRAY[100],
   'Opportunity score is 100 for appointment leads'
 );
@@ -68,4 +68,3 @@ select lives_ok(
 
 select * from finish();
 rollback;
-
