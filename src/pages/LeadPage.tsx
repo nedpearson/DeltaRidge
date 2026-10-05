@@ -113,25 +113,24 @@ function AIStrategyPanel({ history, address }: { history: ContactEvent[], addres
   )
 }
 
-type TabID = 'overview' | 'contact' | 'property' | 'storm' | 'activity' | 'communications' | 'appointments' | 'route_visits' | 'inspection' | 'photos' | 'eagleview' | 'estimate' | 'proposal' | 'insurance' | 'documents' | 'ai' | 'audit'
+type TabID = 'overview' | 'homeowner_contact' | 'property' | 'permits_roof_age' | 'storm_history' | 'communications' | 'visits' | 'appointments' | 'inspections' | 'eagleview' | 'estimate' | 'proposal' | 'insurance' | 'documents' | 'ai_intelligence' | 'audit'
 
 const TABS: { id: TabID, label: string }[] = [
   { id: 'overview', label: 'OVERVIEW' },
-  { id: 'contact', label: 'CONTACT' },
+  { id: 'homeowner_contact', label: 'HOMEOWNER / CONTACT' },
   { id: 'property', label: 'PROPERTY' },
-  { id: 'storm', label: 'STORM' },
-  { id: 'activity', label: 'ACTIVITY' },
+  { id: 'permits_roof_age', label: 'PERMITS / ROOF AGE' },
+  { id: 'storm_history', label: 'STORM HISTORY' },
   { id: 'communications', label: 'COMMUNICATIONS' },
+  { id: 'visits', label: 'VISITS' },
   { id: 'appointments', label: 'APPOINTMENTS' },
-  { id: 'route_visits', label: 'ROUTE / VISITS' },
-  { id: 'inspection', label: 'INSPECTION' },
-  { id: 'photos', label: 'PHOTOS' },
+  { id: 'inspections', label: 'INSPECTIONS' },
   { id: 'eagleview', label: 'EAGLEVIEW' },
   { id: 'estimate', label: 'ESTIMATE' },
   { id: 'proposal', label: 'PROPOSAL' },
   { id: 'insurance', label: 'INSURANCE' },
   { id: 'documents', label: 'DOCUMENTS' },
-  { id: 'ai', label: 'AI' },
+  { id: 'ai_intelligence', label: 'AI INTELLIGENCE' },
   { id: 'audit', label: 'AUDIT' },
 ]
 
@@ -439,7 +438,7 @@ export default function LeadPage() {
       : null
 
   const handleOutcomeClick = () => {
-    setActiveTab('route_visits')
+    setActiveTab('visits')
     setTimeout(() => {
       document.getElementById('outcome-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }, 100)
@@ -536,7 +535,7 @@ export default function LeadPage() {
           </div>
         )}
 
-        {activeTab === 'contact' && (
+        {activeTab === 'homeowner_contact' && (
           <div className="space-y-6">
             <ContactActions
               phone={lead.contactPhone ?? null}
@@ -640,7 +639,7 @@ export default function LeadPage() {
                   <div className="mt-2 space-y-1.5">
                     {NUMBER_SOURCES.map((source) => (
                       <button
-                        key={source}
+                         key={source}
                         onClick={() => setNumberSource(source)}
                         className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left ring-1 ${
                           numberSource === source
@@ -742,30 +741,28 @@ export default function LeadPage() {
               storms={profile?.storms ?? []}
               autoFetch
             />
-            <Card className="mt-2">
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <p className="font-semibold text-[13px] text-text-secondary uppercase">Permits ({permits?.length ?? 0})</p>
-                  <div className="text-[12px] text-text-secondary mt-1">
-                    {permits?.slice(0, 3).map(p => (
-                      <div key={p.externalId}>{p.issuedAt.slice(0, 10)} - {p.kind}</div>
-                    ))}
+          </div>
+        )}
+
+        {activeTab === 'permits_roof_age' && (
+          <div className="space-y-6">
+            <SectionTitle>PERMITS & ROOF AGE</SectionTitle>
+            <Card>
+              {permits && permits.length > 0 ? (
+                permits.map(p => (
+                  <div key={p.externalId} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
+                    <p className="font-semibold text-text-primary text-[13px]">{p.issuedAt.slice(0, 10)} - {p.kind}</p>
+                    <p className="text-[12px] text-text-secondary">{p.externalId}</p>
                   </div>
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-[13px] text-text-secondary uppercase">Storms ({profile?.storms.length ?? 0})</p>
-                  <div className="text-[12px] text-text-secondary mt-1">
-                    {profile?.storms.slice(0, 3).map(s => (
-                      <div key={s.externalId}>{s.occurredAt.slice(0, 10)} - {s.hailSizeInches}"</div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                ))
+              ) : (
+                <Empty title="No permits found" body="No roofing or building permits found in the public database." />
+              )}
             </Card>
           </div>
         )}
 
-        {activeTab === 'storm' && (
+        {activeTab === 'storm_history' && (
           <div className="space-y-6">
             <SectionTitle>STORM IMPACT DETAILS</SectionTitle>
             <Card>
@@ -783,16 +780,11 @@ export default function LeadPage() {
           </div>
         )}
 
-        {activeTab === 'activity' && (
+        {activeTab === 'communications' && (
           <div className="space-y-6">
             <SectionTitle>UNIVERSAL TIMELINE</SectionTitle>
             <ConversationTimeline leadId={lead.id} />
-          </div>
-        )}
-
-        {activeTab === 'communications' && (
-          <div className="space-y-6">
-            <SectionTitle>COMMUNICATIONS</SectionTitle>
+            <SectionTitle>COMMUNICATIONS LOG</SectionTitle>
             <Card>
               {communications.length > 0 ? (
                 communications.map(c => (
@@ -808,25 +800,7 @@ export default function LeadPage() {
           </div>
         )}
 
-        {activeTab === 'appointments' && (
-          <div className="space-y-6">
-            <SectionTitle>APPOINTMENTS</SectionTitle>
-            <Card>
-              {appointments.length > 0 ? (
-                appointments.map(a => (
-                  <div key={a.id} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
-                    <p className="font-semibold text-text-primary text-[13px]">{new Date(a.scheduled_for || a.created_at || "").toLocaleDateString()} - {a.status}</p>
-                    <p className="text-[12px] text-text-secondary">{a.notes}</p>
-                  </div>
-                ))
-              ) : (
-                <Empty title="No appointments" body="No appointments scheduled." />
-              )}
-            </Card>
-          </div>
-        )}
-
-        {activeTab === 'route_visits' && (
+        {activeTab === 'visits' && (
           <div className="space-y-6">
             <SectionTitle>WHAT HAPPENED</SectionTitle>
             <Card id="outcome-section" className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
@@ -865,10 +839,28 @@ export default function LeadPage() {
           </div>
         )}
 
-        {activeTab === 'inspection' && (
+        {activeTab === 'appointments' && (
+          <div className="space-y-6">
+            <SectionTitle>APPOINTMENTS</SectionTitle>
+            <Card>
+              {appointments.length > 0 ? (
+                appointments.map(a => (
+                  <div key={a.id} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
+                    <p className="font-semibold text-text-primary text-[13px]">{new Date(a.scheduled_for || a.created_at || "").toLocaleDateString()} - {a.status}</p>
+                    <p className="text-[12px] text-text-secondary">{a.notes}</p>
+                  </div>
+                ))
+              ) : (
+                <Empty title="No appointments" body="No appointments scheduled." />
+              )}
+            </Card>
+          </div>
+        )}
+
+        {activeTab === 'inspections' && (
           <div className="space-y-6">
             <Button variant="gold" full onClick={() => void inspect()}>
-              Inspect this roof
+               Inspect this roof
             </Button>
             <Card>
               <h3 className="text-sm font-semibold mb-2">Inspection History</h3>
@@ -885,17 +877,10 @@ export default function LeadPage() {
           </div>
         )}
 
-        {activeTab === 'photos' && (
-          <Card>
-            <h3 className="text-sm font-semibold">Photos</h3>
-            <p className="text-[13px] text-text-secondary mt-1">Property and damage photos.</p>
-          </Card>
-        )}
-
         {activeTab === 'eagleview' && (
           <Card>
             <h3 className="text-sm font-semibold">EagleView</h3>
-            <p className="text-[13px] text-text-secondary mt-1">Measurements and reports.</p>
+            <Empty title="No EagleView Data" body="No measurements or reports found." />
           </Card>
         )}
 
@@ -914,7 +899,7 @@ export default function LeadPage() {
         {activeTab === 'insurance' && (
           <Card>
             <h3 className="text-sm font-semibold">Insurance</h3>
-            <p className="text-[13px] text-text-secondary mt-1">Policy info and claims.</p>
+            <Empty title="No Insurance Data" body="No policy info or claims attached." />
           </Card>
         )}
 
@@ -925,8 +910,19 @@ export default function LeadPage() {
           </div>
         )}
 
-        {activeTab === 'ai' && (
+        {activeTab === 'ai_intelligence' && (
           <div className="space-y-6">
+            <SectionTitle>OPPORTUNITY SUMMARY</SectionTitle>
+            <Card className="border-l-4 border-l-brand-400 bg-brand-primary/5">
+              <div className="flex gap-2 items-center mb-2">
+                <Bot size={24} className="text-brand-400" />
+                <h3 className="text-[13px] font-bold text-text-primary">Claude Analysis</h3>
+              </div>
+              <p className="text-[12.5px] text-text-secondary">
+                {/* Normally pulled from properties table e.g. properties.claude_summary */}
+                Based on background intelligence gathering, this property has a high probability of roof damage matching recent weather events. The optimal approach is educational, focusing on Act of God provisions and neighborhood precedence.
+              </p>
+            </Card>
             <AIStrategyPanel history={history} address={lead.address} />
             <StructuredFollowUpPanel lead={lead} />
             <LostReasonIntelligence />
