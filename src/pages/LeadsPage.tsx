@@ -29,7 +29,7 @@ export default function LeadsPage() {
         return
       }
 
-      let query = supabase
+      const query = supabase
         .from('property_opportunity_scores')
         .select('*')
         .order('opportunity_score', { ascending: false })
