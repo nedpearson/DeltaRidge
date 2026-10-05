@@ -1,0 +1,1 @@
+alter table insurance_profiles add column if not exists has_insurance boolean; alter table insurance_profiles add column if not exists carrier text; alter table insurance_profiles add column if not exists declarations_url text;
