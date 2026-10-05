@@ -5,6 +5,7 @@ import { getSupabase } from '@/lib/supabase'
 
 type PropertyIntelligence = {
   property_id: string;
+  lead_id?: string;
   normalized_address: string;
   address_line1: string;
   city: string;
@@ -184,7 +185,7 @@ export default function LeadsPage() {
 
                 <div className="flex bg-bg-base border-t border-border-subtle">
                   <button 
-                    onClick={() => navigate('/lead/' + p.normalized_address)}
+                    onClick={() => navigate('/leads/' + (p.lead_id || p.property_id))}
                     className="flex-1 py-3 text-sm font-semibold text-brand-primary hover:bg-brand-primary/5 transition-colors"
                   >
                     Open Lead

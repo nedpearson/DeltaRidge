@@ -1,11 +1,3 @@
--- Phase 1: Enhance Properties Table with Property Intelligence
-alter table properties 
-  add column if not exists last_roof_permit_date date,
-  add column if not exists last_roof_permit_source text,
-  add column if not exists last_roof_permit_desc text,
-  add column if not exists owner_name text,
-  add column if not exists owner_source text;
-
 -- Phase 2: Create Server-Side Read Model RPC
 drop function if exists get_property_intelligence;
 create or replace function get_property_intelligence(

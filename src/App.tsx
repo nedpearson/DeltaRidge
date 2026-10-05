@@ -92,7 +92,7 @@ export default function App() {
                       <Route path="/leads" element={<LeadsPage />} />
                       <Route path="/storm-os" element={<StormOSPage />} />
                       <Route path="/team" element={<TeamPage />} />
-                      <Route path="/lead/:id" element={<LeadPage />} />
+                      <Route path="/leads/:id" element={<LeadPage />} />
                       <Route path="/evidence/:id" element={<EvidencePackagePage />} />
                       <Route path="/property/:addressKey" element={<PropertyPage />} />
                       <Route path="/estimate" element={<EstimatePage />} />
