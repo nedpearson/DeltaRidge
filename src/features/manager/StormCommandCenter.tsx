@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui'
 import { getSupabase } from '@/lib/supabase'
@@ -119,3 +120,4 @@ export function StormCommandCenter() {
     </div>
   )
 }
+

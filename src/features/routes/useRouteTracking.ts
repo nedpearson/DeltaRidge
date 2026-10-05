@@ -154,7 +154,7 @@ export function useRouteTracking(): RouteTracking {
             else resolve() // other errors like timeout are fine to proceed
           }, { timeout: 10000 })
         })
-      } catch (_err) {
+      } catch {
         setProblem('Location permission denied. Please enable it in your browser settings to track your route.')
         setStarting(false)
         return
