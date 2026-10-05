@@ -1,0 +1,15 @@
+Show the storm window and what the hail sources actually are
+
+The list could not answer "what happened this year". A rolling month count
+has no way to express it, so windows are now explicit and resolve to real
+dates that the engine, the tests and the screen all share.
+
+Storm coverage is reported source by source. MRMS/MESH radar hail is named
+as not configured rather than blended into one count that reads as complete
+- it needs server-side GRIB2 processing, which a browser cannot do.
+
+The qualifying storms are carried on the run so the count can be checked
+against the events behind it.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FjwPjbws8E18ozYHn5jACY

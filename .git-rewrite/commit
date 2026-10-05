@@ -1,0 +1,29 @@
+tree 59458e2fa4dd73009e8e238ec2cd162fadee86b7
+parent 2a4c292b59104dea11526b2eac44f9956f902724
+author Ned Pearson <nedpearson@gmail.com> 1789931494 -0500
+committer Ned Pearson <nedpearson@gmail.com> 1789931494 -0500
+
+A door becomes a lead the moment somebody answers it
+
+A list of 150 addresses is a canvassing route, not a pipeline. Until now a
+door that got knocked went straight back into the pool, and tomorrow's run
+regenerated it as if nothing had been said.
+
+Recording an outcome now PROMOTES the door into a record of its own, in its
+own database, with the score and the reasons frozen as they stood at the
+knock. It survives the next refresh, the next app update and a day offline.
+
+Four numbers across the top - NEW, FOLLOW-UP, NEED VISIT, APPTS - and each
+one is a list you can work. Not-home and come-back-later are counted
+together, because both mean the same thing to a rep: that door is owed
+another visit.
+
+One tap at the door, because the alternative is a rep who stops recording by
+the fourth house. The note and the time come after the tap, never before.
+
+Nothing here claims more than the device saw. A call is recorded as PLACED
+and a text as INITIATED, never as answered or delivered. Do-not-knock is
+permanent and keeps that address off every future list.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FjwPjbws8E18ozYHn5jACY
