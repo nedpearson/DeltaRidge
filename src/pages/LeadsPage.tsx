@@ -3,25 +3,39 @@ import { useNavigate } from 'react-router-dom'
 import { Card, Empty, PageHeader } from '@/components/ui'
 import { getSupabase } from '@/lib/supabase'
 
-
-type PropertyScore = {
+type PropertyIntelligence = {
   property_id: string;
-  max_wind?: number;
-  max_hail?: number;
-  opportunity_score: number;
-  assigned_to?: string | null;
+  normalized_address: string;
   address_line1: string;
   city: string;
-  normalized_address: string;
-  distance_miles?: number;
+  owner_name?: string | null;
+  owner_source?: string | null;
+  roof_age_years?: number | null;
+  roof_age_source?: string | null;
+  last_roof_permit_date?: string | null;
+  last_roof_permit_desc?: string | null;
+  last_roof_permit_source?: string | null;
+  max_wind?: number | null;
+  max_hail?: number | null;
+  latest_storm_date?: string | null;
+  storm_distance_miles?: number | null;
+  opportunity_score: number;
+  assigned_to?: string | null;
+  assigned_to_name?: string | null;
+  lead_status?: string | null;
+  has_phone?: boolean | null;
+  has_email?: boolean | null;
+  last_contact_date?: string | null;
+  last_visit_date?: string | null;
+  distance_miles?: number | null;
 };
 
-type FilterType = 'ALL' | 'HAIL' | 'WIND 60+ MPH' | 'ASSIGNED' | 'UNASSIGNED';
+type FilterType = 'ALL' | 'HAIL' | 'WIND 60+ MPH' | 'ROOF 15+ YEARS' | 'UNVISITED' | 'ASSIGNED' | 'UNASSIGNED';
 
 export default function LeadsPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
-  const [properties, setProperties] = useState<PropertyScore[]>([])
+  const [properties, setProperties] = useState<PropertyIntelligence[]>([])
   const [filter, setFilter] = useState<FilterType>('ALL')
   const [locating, setLocating] = useState(false)
   const [coords, setCoords] = useState<{lat: number, lon: number} | null>(null)
@@ -35,7 +49,7 @@ export default function LeadsPage() {
         return
       }
 
-      const { data, error } = await supabase.rpc('get_nearby_opportunities', {
+      const { data, error } = await supabase.rpc('get_property_intelligence', {
         p_lat: coords?.lat || null,
         p_lon: coords?.lon || null,
         p_max_miles: 50.0
@@ -67,6 +81,8 @@ export default function LeadsPage() {
   const filteredProperties = properties.filter(p => {
     if (filter === 'HAIL') return p.max_hail && p.max_hail > 0;
     if (filter === 'WIND 60+ MPH') return p.max_wind && p.max_wind >= 60;
+    if (filter === 'ROOF 15+ YEARS') return p.roof_age_years && p.roof_age_years >= 15;
+    if (filter === 'UNVISITED') return !p.last_visit_date;
     if (filter === 'ASSIGNED') return p.assigned_to != null;
     if (filter === 'UNASSIGNED') return p.assigned_to == null;
     return true;
@@ -76,13 +92,13 @@ export default function LeadsPage() {
     <div className="mx-auto max-w-screen-sm pb-24 pt-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="px-3 sm:px-4">
         <PageHeader 
-          title="Storm Opportunities" 
+          title="Property Intelligence" 
           description="Top ranked properties affected by recent storm events." 
         />
         
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-            {(['ALL', 'HAIL', 'WIND 60+ MPH', 'ASSIGNED', 'UNASSIGNED'] as FilterType[]).map((f) => (
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none w-full">
+            {(['ALL', 'HAIL', 'WIND 60+ MPH', 'ROOF 15+ YEARS', 'UNVISITED', 'ASSIGNED', 'UNASSIGNED'] as FilterType[]).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -102,37 +118,88 @@ export default function LeadsPage() {
           </button>
         </div>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-4">
           {loading ? (
-            <p className="text-sm text-text-secondary">Loading opportunities...</p>
+            <p className="text-sm text-text-secondary">Loading intelligence...</p>
           ) : filteredProperties.length === 0 ? (
             <Empty title="No opportunities found" body="No properties match the selected filter." />
           ) : (
             filteredProperties.map(p => (
-              <div key={p.property_id} onClick={() => navigate('/property/' + p.normalized_address)} className="cursor-pointer group">
-                <Card className="group-hover:bg-bg-elevated transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-text-primary">{p.address_line1 || `Property ID: ${p.property_id.substring(0, 8)}`}</h3>
-                      <p className="text-xs text-text-secondary mt-0.5">{p.city}</p>
-                      <p className="text-sm text-text-secondary mt-1.5 flex gap-2">
-                        {p.max_wind ? <span>💨 {p.max_wind} MPH</span> : null} 
-                        {p.max_hail ? <span>🧊 {p.max_hail}"</span> : null}
-                        {p.distance_miles !== null && p.distance_miles !== undefined && (
-                          <span>📍 {p.distance_miles.toFixed(1)} mi</span>
-                        )}
-                      </p>
-                      {p.assigned_to && (
-                        <p className="text-xs text-brand-primary mt-1">● Assigned</p>
+              <Card key={p.property_id} className="p-0 overflow-hidden border-border-subtle">
+                <div className="p-4 bg-bg-base border-b border-border-subtle flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-bold text-text-primary">
+                      {p.owner_name || 'Owner not found'}
+                    </h3>
+                    <p className="text-sm font-medium text-text-secondary mt-0.5">
+                      {p.address_line1}, {p.city}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2 text-xs font-medium">
+                      {p.has_phone && <span className="bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded">📞 Phone</span>}
+                      {p.has_email && <span className="bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded">📧 Email</span>}
+                      {p.distance_miles !== null && p.distance_miles !== undefined && (
+                        <span className="text-text-secondary">📍 {p.distance_miles.toFixed(1)} mi away</span>
                       )}
                     </div>
-                    <div className="text-right">
+                  </div>
+                  <div className="text-right flex flex-col items-end">
+                    <div className="flex items-baseline gap-1 bg-brand-primary/10 px-3 py-1 rounded-lg">
                       <span className="text-2xl font-display font-bold text-brand-primary">{p.opportunity_score}</span>
-                      <p className="text-[10px] uppercase text-text-muted mt-0.5 tracking-wider">Score</p>
+                      <span className="text-[10px] uppercase font-bold text-brand-primary/70">Score</span>
+                    </div>
+                    {p.assigned_to_name && (
+                      <p className="text-xs font-medium text-text-secondary mt-2">● {p.assigned_to_name}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-bg-elevated p-4 text-sm text-text-secondary">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="block text-xs uppercase tracking-wider font-semibold text-text-muted mb-1">Roof Intelligence</span>
+                      {p.roof_age_years ? (
+                        <p className="font-medium text-text-primary">~{p.roof_age_years} yrs old <span className="text-xs font-normal text-text-muted">({p.roof_age_source})</span></p>
+                      ) : (
+                        <p className="italic">Unknown • no replacement permit found</p>
+                      )}
+                    </div>
+                    <div>
+                      <span className="block text-xs uppercase tracking-wider font-semibold text-text-muted mb-1">Storm Exposure</span>
+                      <p className="font-medium text-text-primary">
+                        {p.max_wind ? `${p.max_wind} MPH wind` : 'No wind'} • {p.max_hail ? `${p.max_hail}" hail` : 'No hail'}
+                      </p>
                     </div>
                   </div>
-                </Card>
-              </div>
+
+                  <div className="mt-4 pt-3 border-t border-border-subtle">
+                     <span className="block text-xs uppercase tracking-wider font-semibold text-text-muted mb-2">Why this lead?</span>
+                     <ul className="space-y-1">
+                        {p.roof_age_years && p.roof_age_years >= 15 && <li>• {p.roof_age_years}-year roof</li>}
+                        {!p.roof_age_years && <li>• No recent re-roof permit</li>}
+                        {p.max_wind && p.max_wind >= 60 && <li>• {p.max_wind} MPH wind exposure</li>}
+                        {p.max_hail && p.max_hail >= 1.0 && <li>• {p.max_hail}" hail exposure</li>}
+                     </ul>
+                  </div>
+                </div>
+
+                <div className="flex bg-bg-base border-t border-border-subtle">
+                  <button 
+                    onClick={() => navigate('/lead/' + p.normalized_address)}
+                    className="flex-1 py-3 text-sm font-semibold text-brand-primary hover:bg-brand-primary/5 transition-colors"
+                  >
+                    Open Lead
+                  </button>
+                  <div className="w-px bg-border-subtle" />
+                  <a 
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.address_line1 + ', ' + p.city)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 py-3 text-sm font-semibold text-text-secondary hover:bg-bg-elevated transition-colors text-center"
+                  >
+                    Navigate
+                  </a>
+                </div>
+              </Card>
             ))
           )}
         </div>
