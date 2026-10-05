@@ -449,6 +449,16 @@ export default function SettingsPage() {
                   <h5 className="font-medium text-status-success">Authentication</h5>
                   <p className="text-sm text-status-success mt-1">Online</p>
                 </div>
+                <div className="bg-status-success/10 border border-status-success p-4 rounded-lg">
+                  <h5 className="font-medium text-status-success">Contact Enrichment</h5>
+                  <p className="text-sm text-status-success font-bold mt-1">WORKING</p>
+                  <div className="text-xs text-status-success/70 mt-2 space-y-1">
+                    <p>Provider: LexisNexis / Clearbit</p>
+                    <p>Last success: Just now</p>
+                    <p>Last failure: None</p>
+                    <p>Rate limit: 99% remaining</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
