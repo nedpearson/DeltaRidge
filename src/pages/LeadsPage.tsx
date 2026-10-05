@@ -75,7 +75,7 @@ export default function LeadsPage() {
       },
       (err) => {
         console.error('Geolocation error:', err)
-        alert('Could not get your location. Please check your browser permissions.')
+        console.warn('Could not get your location. Please check your browser permissions.')
         setLocating(false)
       }
     )
