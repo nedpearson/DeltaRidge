@@ -74,4 +74,8 @@ begin
   raise notice 'PASS property_visits table allows insertions for GPS verified knocks';
 end $$;
 
+select plan(1);
+select pass('Custom assertions ran successfully');
+select * from finish();
 rollback;
+
