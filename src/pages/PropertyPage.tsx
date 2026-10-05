@@ -70,7 +70,29 @@ export default function PropertyPage() {
 
   useEffect(() => {
     if (addressKey === '') return
-    void findByAddress(addressKey).then(setManaged)
+    async function fetchProperty() {
+      const local = await findByAddress(addressKey)
+      if (local) {
+        setManaged(local)
+      } else {
+        const { getSupabase } = await import('@/lib/supabase')
+        const supa = getSupabase()
+        if (supa) {
+          const { data } = await supa.from('properties').select('*, leads(*)').eq('normalized_address', decodeURIComponent(addressKey)).maybeSingle()
+          if (data) {
+            setManaged({
+              id: data.leads?.[0]?.id || data.id,
+              addressKey: data.normalized_address,
+              address: data.address,
+              latitude: data.latitude,
+              longitude: data.longitude,
+              status: data.leads?.[0]?.status || 'new',
+            } as ManagedLead)
+          }
+        }
+      }
+    }
+    fetchProperty()
   }, [addressKey])
 
   useEffect(() => {

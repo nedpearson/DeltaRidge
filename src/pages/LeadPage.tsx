@@ -157,6 +157,10 @@ export default function LeadPage() {
   const [permits, setPermits] = useState<PermitRecord[] | null>(null)
   const [profile, setProfile] = useState<PropertyProfile | null>(null)
 
+  const [inspections, setInspections] = useState<Array<{ id: string, created_at?: string, createdAt?: string, status?: string }>>([])
+  const [appointments, setAppointments] = useState<Array<{ id: string, scheduled_for?: string, created_at?: string, status?: string, notes?: string }>>([])
+  const [communications, setCommunications] = useState<Array<{ id: string, created_at: string, type?: string, notes?: string }>>([])
+
   useEffect(() => {
     void readCachedRun().then(setRun)
   }, [])
@@ -192,11 +196,47 @@ export default function LeadPage() {
   }, [lead, permits, run, scoredLead])
 
   const load = useCallback(async (leadId: string) => {
-    const [found, events, files] = await Promise.all([
+    const [localFound, events, files] = await Promise.all([
       readLead(leadId),
       readHistory(leadId),
       listAttachments(leadId),
     ])
+    
+    let found = localFound
+    if (!found) {
+      const { getSupabase } = await import('@/lib/supabase')
+      const supa = getSupabase()
+      if (supa) {
+        const { data } = await supa.from('properties').select('*, leads(*)').eq('normalized_address', decodeURIComponent(leadId)).maybeSingle()
+        if (data) {
+          const l = data.leads?.[0]
+          found = {
+            id: l?.id || data.id,
+            addressKey: data.normalized_address,
+            address: data.address,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            status: l?.status || 'new',
+            reasons: l?.reasons || [],
+            score: l?.score || 0,
+            createdAt: l?.created_at || new Date().toISOString(),
+            updatedAt: l?.updated_at || new Date().toISOString(),
+            knockCount: l?.knock_count || 0
+          } as ManagedLead
+        }
+      }
+    }
+
+    if (found) {
+      const { getSupabase } = await import('@/lib/supabase')
+      const supa = getSupabase()
+      if (supa) {
+        supa.from('inspections').select('*').eq('lead_id', found.id).then(({ data }) => setInspections(data || []))
+        supa.from('appointments').select('*').eq('lead_id', found.id).then(({ data }) => setAppointments(data || []))
+        supa.from('communications').select('*').eq('lead_id', found.id).then(({ data }) => setCommunications(data || []))
+      }
+    }
+
     setLead(found)
     setHistory(events)
     setAttachments(files)
@@ -698,10 +738,21 @@ export default function LeadPage() {
         )}
 
         {activeTab === 'storm' && (
-          <Card>
-            <h3 className="text-sm font-semibold">Storm</h3>
-            <p className="text-[13px] text-text-secondary mt-1">Storm impact details and history.</p>
-          </Card>
+          <div className="space-y-6">
+            <SectionTitle>STORM IMPACT DETAILS</SectionTitle>
+            <Card>
+              {profile?.storms && profile.storms.length > 0 ? (
+                profile.storms.map(s => (
+                  <div key={s.externalId} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
+                    <p className="font-semibold text-text-primary text-[13px]">{new Date(s.occurredAt).toLocaleDateString()} - {s.hailSizeInches ? `${s.hailSizeInches}" Hail` : `${s.windSpeedMph} MPH Wind`}</p>
+                    <p className="text-[12px] text-text-secondary">{s.city}, {s.countyParish} - {s.observation}</p>
+                  </div>
+                ))
+              ) : (
+                <Empty title="No storms" body="No storm data found for this property." />
+              )}
+            </Card>
+          </div>
         )}
 
         {activeTab === 'activity' && (
@@ -712,17 +763,39 @@ export default function LeadPage() {
         )}
 
         {activeTab === 'communications' && (
-          <Card>
-            <h3 className="text-sm font-semibold">Communications</h3>
-            <p className="text-[13px] text-text-secondary mt-1">Emails and messages history.</p>
-          </Card>
+          <div className="space-y-6">
+            <SectionTitle>COMMUNICATIONS</SectionTitle>
+            <Card>
+              {communications.length > 0 ? (
+                communications.map(c => (
+                  <div key={c.id} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
+                    <p className="font-semibold text-text-primary text-[13px]">{new Date(c.created_at).toLocaleDateString()} - {c.type}</p>
+                    <p className="text-[12px] text-text-secondary">{c.notes}</p>
+                  </div>
+                ))
+              ) : (
+                <Empty title="No communications" body="No communications recorded for this lead." />
+              )}
+            </Card>
+          </div>
         )}
 
         {activeTab === 'appointments' && (
-          <Card>
-            <h3 className="text-sm font-semibold">Appointments</h3>
-            <p className="text-[13px] text-text-secondary mt-1">Scheduled appointments and visits.</p>
-          </Card>
+          <div className="space-y-6">
+            <SectionTitle>APPOINTMENTS</SectionTitle>
+            <Card>
+              {appointments.length > 0 ? (
+                appointments.map(a => (
+                  <div key={a.id} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
+                    <p className="font-semibold text-text-primary text-[13px]">{new Date(a.scheduled_for || a.created_at || "").toLocaleDateString()} - {a.status}</p>
+                    <p className="text-[12px] text-text-secondary">{a.notes}</p>
+                  </div>
+                ))
+              ) : (
+                <Empty title="No appointments" body="No appointments scheduled." />
+              )}
+            </Card>
+          </div>
         )}
 
         {activeTab === 'route_visits' && (
@@ -770,8 +843,16 @@ export default function LeadPage() {
               Inspect this roof
             </Button>
             <Card>
-              <h3 className="text-sm font-semibold">Inspection</h3>
-              <p className="text-[13px] text-text-secondary mt-1">Inspection reports and damage assessment.</p>
+              <h3 className="text-sm font-semibold mb-2">Inspection History</h3>
+              {inspections.length > 0 ? (
+                inspections.map(i => (
+                  <div key={i.id} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
+                    <p className="font-semibold text-text-primary text-[13px]">{new Date(i.created_at || i.createdAt || "").toLocaleDateString()} - {i.status}</p>
+                  </div>
+                ))
+              ) : (
+                <Empty title="No inspections" body="No inspection reports found." />
+              )}
             </Card>
           </div>
         )}
