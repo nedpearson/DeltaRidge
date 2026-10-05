@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui'
 import { getSupabase } from '@/lib/supabase'
 
 export function StormCommandCenter() {
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
   
-  // Data State
   const [kpis, setKpis] = useState({
     activeStorms: 0,
     newLeads: 0,
@@ -31,27 +32,49 @@ export function StormCommandCenter() {
         return
       }
       
-      const { data: stormData } = await supabase
-        .from('storm_events')
-        .select('*')
-        .gte('wind_speed_mph', 60)
-        .order('event_date', { ascending: false })
-        .limit(5)
+      const [
+        { count: activeStorms },
+        { count: newLeads },
+        { count: unassigned },
+        { count: activeReps },
+        { count: appointments },
+        { count: inspections },
+        { count: estimates },
+        { count: wins },
+        { count: aiExceptions }
+      ] = await Promise.all([
+        supabase.from('storm_events').select('*', { count: 'exact', head: true }).gte('wind_speed_mph', 60),
+        supabase.from('leads').select('*', { count: 'exact', head: true }).in('status', ['untouched', 'target']),
+        supabase.from('leads').select('*', { count: 'exact', head: true }).is('assigned_to', null),
+        supabase.from('route_sessions').select('*', { count: 'exact', head: true }).is('ended_at', null),
+        supabase.from('appointments').select('*', { count: 'exact', head: true }),
+        supabase.from('inspections').select('*', { count: 'exact', head: true }),
+        supabase.from('estimates').select('*', { count: 'exact', head: true }),
+        supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'sold'),
+        supabase.from('ai_agent_runs').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending')
+      ])
+
+      // Calculate pipeline (estimate totals)
+      const { data: pipelineData } = await supabase
+        .from('estimate_versions')
+        .select('total_price_cents')
+      
+      const totalPipelineCents = pipelineData?.reduce((acc, curr) => acc + (curr.total_price_cents || 0), 0) || 0
 
       setKpis({
-        activeStorms: stormData?.length || 0,
-        newLeads: 24,
-        unassigned: 12,
-        activeReps: 8,
-        routes: 3,
-        appointments: 5,
-        followUps: 14,
-        inspections: 7,
-        estimates: 4,
-        wins: 2,
-        pipeline: 45000,
-        aiExceptions: 3,
-        integrationAlerts: 1
+        activeStorms: activeStorms || 0,
+        newLeads: newLeads || 0,
+        unassigned: unassigned || 0,
+        activeReps: activeReps || 0,
+        routes: activeReps || 0, // Using active reps for routes count
+        appointments: appointments || 0,
+        followUps: 0,
+        inspections: inspections || 0,
+        estimates: estimates || 0,
+        wins: wins || 0,
+        pipeline: totalPipelineCents,
+        aiExceptions: aiExceptions || 0,
+        integrationAlerts: 0
       });
 
       setLoading(false)
@@ -64,14 +87,16 @@ export function StormCommandCenter() {
     return <div className="p-4 text-text-secondary text-sm">Loading Storm OS...</div>
   }
 
-  const KpiCard = ({ label, value, subtitle, highlight = false, alert = false }: any) => (
-    <Card className={`relative overflow-hidden ${alert ? 'border-status-error border-2' : ''}`}>
-      {highlight && <div className="absolute top-0 left-0 w-full h-1 bg-brand-primary"></div>}
-      {alert && <div className="absolute top-0 left-0 w-full h-1 bg-status-error"></div>}
-      <div className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">{label}</div>
-      <div className={`mt-2 text-3xl font-bold ${alert ? 'text-status-error' : 'text-text-primary'}`}>{value}</div>
-      {subtitle && <div className="mt-1 text-xs text-text-secondary">{subtitle}</div>}
-    </Card>
+  const KpiCard = ({ label, value, subtitle, highlight = false, alert = false, onClick }: any) => (
+    <div onClick={onClick} className="cursor-pointer group">
+      <Card className={`relative overflow-hidden transition-colors group-hover:bg-bg-elevated ${alert ? 'border-status-error border-2' : ''}`}>
+        {highlight && <div className="absolute top-0 left-0 w-full h-1 bg-brand-primary"></div>}
+        {alert && <div className="absolute top-0 left-0 w-full h-1 bg-status-error"></div>}
+        <div className="text-[10px] font-bold uppercase tracking-wider text-text-secondary group-hover:text-text-primary transition-colors">{label}</div>
+        <div className={`mt-2 text-3xl font-bold ${alert ? 'text-status-error' : 'text-text-primary'}`}>{value}</div>
+        {subtitle && <div className="mt-1 text-xs text-text-secondary">{subtitle}</div>}
+      </Card>
+    </div>
   )
 
   return (
@@ -89,21 +114,21 @@ export function StormCommandCenter() {
                <div className="bg-bg-app border border-border-subtle p-3 rounded">
                  <div className="text-xs font-bold text-text-primary">Unassigned Leads ({kpis.unassigned})</div>
                  <div className="text-xs text-text-secondary mt-1">High priority properties await routing</div>
-                 <button className="mt-2 text-xs bg-brand-primary text-white px-2 py-1 rounded">Assign Now</button>
+                 <button onClick={() => navigate('/leads')} className="mt-2 text-xs bg-brand-primary text-white px-2 py-1 rounded hover:bg-brand-secondary transition-colors">Assign Now</button>
                </div>
              )}
              {kpis.aiExceptions > 0 && (
                <div className="bg-bg-app border border-border-subtle p-3 rounded">
                  <div className="text-xs font-bold text-text-primary">AI Exceptions ({kpis.aiExceptions})</div>
                  <div className="text-xs text-text-secondary mt-1">AI agent stalled on inbound queries</div>
-                 <button className="mt-2 text-xs bg-brand-primary text-white px-2 py-1 rounded">Intervene</button>
+                 <button onClick={() => navigate('/settings')} className="mt-2 text-xs bg-brand-primary text-white px-2 py-1 rounded hover:bg-brand-secondary transition-colors">Intervene</button>
                </div>
              )}
              {kpis.integrationAlerts > 0 && (
                <div className="bg-bg-app border border-border-subtle p-3 rounded">
                  <div className="text-xs font-bold text-text-primary">Integration Alerts ({kpis.integrationAlerts})</div>
                  <div className="text-xs text-text-secondary mt-1">CRM sync failed for recent wins</div>
-                 <button className="mt-2 text-xs bg-brand-primary text-white px-2 py-1 rounded">Review Sync</button>
+                 <button onClick={() => navigate('/settings')} className="mt-2 text-xs bg-brand-primary text-white px-2 py-1 rounded hover:bg-brand-secondary transition-colors">Review Sync</button>
                </div>
              )}
            </div>
@@ -113,17 +138,17 @@ export function StormCommandCenter() {
       <div>
         <h2 className="text-sm font-bold text-text-primary uppercase tracking-wide mb-3">Actionable KPIs</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <KpiCard label="ACTIVE STORMS" value={kpis.activeStorms} highlight />
-          <KpiCard label="NEW LEADS" value={kpis.newLeads} />
-          <KpiCard label="UNASSIGNED" value={kpis.unassigned} alert={kpis.unassigned > 0} />
-          <KpiCard label="ACTIVE REPS" value={kpis.activeReps} />
-          <KpiCard label="ROUTES" value={kpis.routes} />
-          <KpiCard label="APPOINTMENTS" value={kpis.appointments} />
-          <KpiCard label="FOLLOW-UPS" value={kpis.followUps} />
-          <KpiCard label="INSPECTIONS" value={kpis.inspections} />
-          <KpiCard label="ESTIMATES" value={kpis.estimates} />
-          <KpiCard label="WINS" value={kpis.wins} highlight />
-          <KpiCard label="PIPELINE" value={'$' + (kpis.pipeline / 1000).toFixed(1) + 'k'} />
+          <KpiCard label="ACTIVE STORMS" value={kpis.activeStorms} highlight onClick={() => navigate('/storm-os')} />
+          <KpiCard label="NEW LEADS" value={kpis.newLeads} onClick={() => navigate('/leads')} />
+          <KpiCard label="UNASSIGNED" value={kpis.unassigned} alert={kpis.unassigned > 0} onClick={() => navigate('/leads')} />
+          <KpiCard label="ACTIVE REPS" value={kpis.activeReps} onClick={() => navigate('/team')} />
+          <KpiCard label="ROUTES" value={kpis.routes} onClick={() => navigate('/team')} />
+          <KpiCard label="APPOINTMENTS" value={kpis.appointments} onClick={() => navigate('/leads')} />
+          <KpiCard label="FOLLOW-UPS" value={kpis.followUps} onClick={() => navigate('/leads')} />
+          <KpiCard label="INSPECTIONS" value={kpis.inspections} onClick={() => navigate('/leads')} />
+          <KpiCard label="ESTIMATES" value={kpis.estimates} onClick={() => navigate('/leads')} />
+          <KpiCard label="WINS" value={kpis.wins} highlight onClick={() => navigate('/leads')} />
+          <KpiCard label="PIPELINE" value={'$' + (kpis.pipeline / 100000).toFixed(1) + 'k'} onClick={() => navigate('/leads')} />
         </div>
       </div>
     </div>
