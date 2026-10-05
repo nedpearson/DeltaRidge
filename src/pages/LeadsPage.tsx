@@ -9,6 +9,7 @@ type PropertyIntelligence = {
   normalized_address: string;
   address_line1: string;
   city: string;
+  opportunity_type: string;
   owner_name?: string | null;
   owner_source?: string | null;
   roof_age_years?: number | null;
@@ -31,13 +32,13 @@ type PropertyIntelligence = {
   distance_miles?: number | null;
 };
 
-type FilterType = 'ALL' | 'HAIL' | 'WIND 60+ MPH' | 'ROOF 15+ YEARS' | 'UNVISITED' | 'ASSIGNED' | 'UNASSIGNED';
+type FilterType = 'ALL' | 'STORM' | 'HAIL' | 'WIND 60+ MPH' | 'AGING ROOF' | 'UNVISITED' | 'ASSIGNED' | 'UNASSIGNED';
 
 export default function LeadsPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [properties, setProperties] = useState<PropertyIntelligence[]>([])
-  const [filter, setFilter] = useState<FilterType>('ALL')
+  const [filter, setFilter] = useState<FilterType>('STORM')
   const [locating, setLocating] = useState(false)
   const [coords, setCoords] = useState<{lat: number, lon: number} | null>(null)
 
@@ -53,7 +54,8 @@ export default function LeadsPage() {
       const { data, error } = await supabase.rpc('get_property_intelligence', {
         p_lat: coords?.lat || null,
         p_lon: coords?.lon || null,
-        p_max_miles: 50.0
+        p_max_miles: 50.0,
+        p_opportunity_filter: 'ALL'
       })
       
       if (!error && data) {
@@ -80,12 +82,14 @@ export default function LeadsPage() {
   }
 
   const filteredProperties = properties.filter(p => {
-    if (filter === 'HAIL') return p.max_hail && p.max_hail > 0;
-    if (filter === 'WIND 60+ MPH') return p.max_wind && p.max_wind >= 60;
-    if (filter === 'ROOF 15+ YEARS') return p.roof_age_years && p.roof_age_years >= 15;
-    if (filter === 'UNVISITED') return !p.last_visit_date;
-    if (filter === 'ASSIGNED') return p.assigned_to != null;
-    if (filter === 'UNASSIGNED') return p.assigned_to == null;
+    // If not a storm combined/hail/wind, and filter is STORM/HAIL/WIND, filter it out
+    if (filter === 'STORM' && !p.opportunity_type.startsWith('STORM')) return false;
+    if (filter === 'HAIL' && p.opportunity_type !== 'STORM_HAIL' && p.opportunity_type !== 'STORM_COMBINED') return false;
+    if (filter === 'WIND 60+ MPH' && p.opportunity_type !== 'STORM_WIND' && p.opportunity_type !== 'STORM_COMBINED') return false;
+    if (filter === 'AGING ROOF' && p.opportunity_type !== 'AGING_ROOF') return false;
+    if (filter === 'UNVISITED' && p.last_visit_date) return false;
+    if (filter === 'ASSIGNED' && p.assigned_to == null) return false;
+    if (filter === 'UNASSIGNED' && p.assigned_to != null) return false;
     return true;
   });
 
@@ -94,12 +98,12 @@ export default function LeadsPage() {
       <div className="px-3 sm:px-4">
         <PageHeader 
           title="Property Intelligence" 
-          description="Top ranked properties affected by recent storm events." 
+          description="Top ranked properties across your territory." 
         />
         
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none w-full">
-            {(['ALL', 'HAIL', 'WIND 60+ MPH', 'ROOF 15+ YEARS', 'UNVISITED', 'ASSIGNED', 'UNASSIGNED'] as FilterType[]).map((f) => (
+            {(['ALL', 'STORM', 'HAIL', 'WIND 60+ MPH', 'AGING ROOF', 'UNVISITED', 'ASSIGNED', 'UNASSIGNED'] as FilterType[]).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
