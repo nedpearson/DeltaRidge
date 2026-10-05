@@ -15,12 +15,14 @@ const MANAGER_NAV = [
   { to: '/', label: 'Home', icon: 'home' },
   { to: '/storm-os', label: 'Storm OS', icon: 'storm' },
   { to: '/team', label: 'Team', icon: 'users' },
+  { to: '/leads', label: 'Leads', icon: 'target' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
 ] as const
 
 const REP_NAV = [
   { to: '/', label: 'Home', icon: 'home' },
   { to: '/map', label: 'Map', icon: 'map' },
+  { to: '/leads', label: 'Leads', icon: 'target' },
   { to: '/inspections', label: 'Jobs', icon: 'clipboard' },
 ] as const
 

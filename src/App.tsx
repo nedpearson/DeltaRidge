@@ -12,6 +12,8 @@ import InspectionsPage from '@/pages/InspectionsPage'
 import NewInspectionPage from '@/pages/NewInspectionPage'
 import InspectionPage from '@/pages/InspectionPage'
 import LeadsPage from '@/pages/LeadsPage'
+import StormOSPage from '@/pages/StormOSPage'
+import TeamPage from '@/pages/TeamPage'
 import PropertyPage from '@/pages/PropertyPage'
 import LeadPage from '@/pages/LeadPage'
 import EvidencePackagePage from '@/pages/EvidencePackagePage'
@@ -88,6 +90,8 @@ export default function App() {
                       <Route path="/" element={<HomePage />} />
                       <Route path="/mission" element={<MissionPage />} />
                       <Route path="/leads" element={<LeadsPage />} />
+                      <Route path="/storm-os" element={<StormOSPage />} />
+                      <Route path="/team" element={<TeamPage />} />
                       <Route path="/lead/:id" element={<LeadPage />} />
                       <Route path="/evidence/:id" element={<EvidencePackagePage />} />
                       <Route path="/property/:addressKey" element={<PropertyPage />} />
