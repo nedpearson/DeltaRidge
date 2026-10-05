@@ -45,7 +45,7 @@ export default function SettingsPage() {
       }
     }
     setLoading(false);
-    alert("Settings saved successfully!");
+    // settings saved
   };
 
   return (
@@ -134,5 +134,6 @@ export default function SettingsPage() {
     </div>
   );
 }
+
 
 
