@@ -2,7 +2,7 @@ begin;
 select plan(7);
 
 -- 1. Setup Data
-insert into organizations (id, name) values ('00000000-0000-0000-0000-000000000001', 'Test Org') on conflict do nothing;
+insert into organizations (id, name, slug) values ('00000000-0000-0000-0000-000000000001', 'Test Org', 'test-org') on conflict do nothing;
 insert into properties (id, organization_id, address_line1, location) 
 values ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000001', '123 Main St', ST_SetSRID(ST_MakePoint(-90.0, 30.0), 4326));
 
@@ -68,3 +68,4 @@ select lives_ok(
 
 select * from finish();
 rollback;
+
