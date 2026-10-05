@@ -227,7 +227,7 @@ export default function LeadPage() {
       if (supa) {
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(leadId);
         if (isUUID) {
-          let { data: leadData } = await supa.from('leads').select('*, properties(*)').eq('id', leadId).maybeSingle();
+          const { data: leadData } = await supa.from('leads').select('*, properties(*)').eq('id', leadId).maybeSingle();
           if (leadData && leadData.properties) {
             found = {
               id: leadData.id,
@@ -243,7 +243,7 @@ export default function LeadPage() {
               knockCount: leadData.knock_count || 0
             } as ManagedLead;
           } else {
-            let { data: pData } = await supa.from('properties').select('*, leads(*)').eq('id', leadId).maybeSingle();
+            const { data: pData } = await supa.from('properties').select('*, leads(*)').eq('id', leadId).maybeSingle();
             if (pData) {
               const l = pData.leads?.[0];
               found = {
@@ -295,7 +295,7 @@ export default function LeadPage() {
     void pendingWork().then((work) =>
       setQueued({ total: work.total, stalled: work.stalled }),
     )
-  }, [])
+  }, [navigate])
 
   useEffect(() => {
     if (id) void load(id)
