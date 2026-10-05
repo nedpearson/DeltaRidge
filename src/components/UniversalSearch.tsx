@@ -50,8 +50,10 @@ export function UniversalSearch() {
 
   const handleSelect = (result: SearchResult) => {
     setOpen(false)
-    if (result.result_type === 'lead' || result.result_type === 'property') {
+    if (result.result_type === 'lead') {
       navigate(`/lead/${result.id}`)
+    } else if (result.result_type === 'property') {
+      navigate(`/property/${result.id}`)
     }
   }
 

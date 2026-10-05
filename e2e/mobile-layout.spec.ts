@@ -27,7 +27,7 @@ for (const width of [320, 375, 430]) {
       const nav = page.locator('nav.mobile-tabbar')
       await expect(nav).toBeVisible()
 
-      for (const label of ['Today', 'Leads', 'Map', 'Jobs', 'More']) {
+      for (const label of ['Home', 'Map', 'Jobs']) {
         const link = nav.getByText(label, { exact: true })
         await expect(link).toBeVisible()
       }

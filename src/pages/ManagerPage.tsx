@@ -89,16 +89,16 @@ type Tab = 'command_center' | 'autopilot' | 'war_room' | 'demand' | 'leads_terri
   | 'storm_os'
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'storm_os', label: 'STORM OS' },
   { id: 'command_center', label: 'COMMAND CENTER' },
   { id: 'autopilot', label: 'AUTOPILOT' },
-  { id: 'storm_os', label: 'STORM OS' },
   { id: 'war_room', label: 'WAR ROOM' },
   { id: 'demand', label: 'DEMAND' },
   { id: 'leads_territory', label: 'LEADS & TERRITORY' },
   { id: 'team_routes', label: 'TEAM & ROUTES' },
   { id: 'sales_revenue', label: 'SALES & REVENUE' },
   { id: 'roofcare', label: 'ROOFCARE' },
-    { id: 'operations', label: 'OPERATIONS' },
+  { id: 'operations', label: 'OPERATIONS' },
 ]
 
 function ago(iso: string | null): string {
@@ -132,7 +132,7 @@ function Nothing({ title, body }: { title: string; body: string }) {
 
 export default function ManagerPage() {
   const { session, membership, membershipError } = useSession()
-  const [tab, setTab] = useState<Tab>('command_center')
+  const [tab, setTab] = useState<Tab>('storm_os')
   const [snapshot, setSnapshot] = useState<ManagerSnapshot>(EMPTY_SNAPSHOT)
   const [openRepDrawer, setOpenRepDrawer] = useState<string | null>(null)
   const [openLeadDrawer, setOpenLeadDrawer] = useState<string | null>(null)

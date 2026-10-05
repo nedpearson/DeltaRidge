@@ -28,68 +28,38 @@ export function ConversationTimeline({ leadId }: { leadId: string }) {
       }
 
       try {
-        const [
-          _convoRes,
-          msgRes,
-          callRes,
-          actRes
-        ] = await Promise.all([
-          supabase.from('conversations').select('*').eq('lead_id', leadId),
-          supabase.from('messages').select('*').eq('lead_id', leadId),
-          supabase.from('calls').select('*').eq('lead_id', leadId),
-          supabase.from('activities').select('*').eq('lead_id', leadId)
-        ])
-        
-        // const conversations = convoRes.data || [] // Unused for now but fetched for timeline context if needed
-        const messages = msgRes.data || []
-        const calls = callRes.data || []
-        const activities = actRes.data || []
-
+        const { data, error: _error } = await supabase
+          .from('omnichannel_timeline')
+          .select('*')
+          .eq('lead_id', leadId)
+          .order('created_at', { ascending: false })
+          
         const timeline: TimelineEvent[] = []
 
-        if (messages) {
-          messages.forEach((m: any) => {
-            timeline.push({
-              id: `msg_${m.id}`,
-              type: m.channel === 'email' ? 'EMAIL' : 'TEXT',
-              timestamp: m.created_at || m.timestamp,
-              content: m.body || m.content,
-              isAi: m.is_ai || m.sender_type === 'ai',
-              authorName: m.sender_name
-            })
-          })
-        }
-
-        if (calls) {
-          calls.forEach((c: any) => {
-            timeline.push({
-              id: `call_${c.id}`,
-              type: 'CALL',
-              timestamp: c.created_at || c.timestamp,
-              content: c.notes || c.summary,
-              isAi: c.is_ai || c.agent_type === 'ai',
-            })
-          })
-        }
-
-        if (activities) {
-          activities.forEach((a: any) => {
+        if (data) {
+          data.forEach((row: any) => {
             let type: TimelineEvent['type'] = 'REP NOTE'
-            if (a.type === 'storm') type = 'STORM EVENT'
-            if (a.type === 'inspection') type = 'INSPECTION'
-            
+            if (row.event_type === 'message') {
+              type = row.subtype === 'email' ? 'EMAIL' : 'TEXT'
+            } else if (row.event_type === 'call') {
+              type = 'CALL'
+            } else if (row.event_type === 'activity') {
+               type = 'REP NOTE'
+               if (row.subtype === 'storm') type = 'STORM EVENT'
+               if (row.subtype === 'inspection') type = 'INSPECTION'
+            }
+
             timeline.push({
-              id: `act_${a.id}`,
+              id: row.id,
               type,
-              timestamp: a.created_at || a.timestamp,
-              content: a.description || a.note,
-              authorName: a.user_name || a.author
+              timestamp: row.created_at,
+              content: row.content || row.notes || row.description,
+              isAi: row.ai_generated || false,
+              authorName: row.user_name || row.author || row.direction
             })
           })
         }
 
-        timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-        
         if (mounted) {
           setEvents(timeline)
           setLoading(false)

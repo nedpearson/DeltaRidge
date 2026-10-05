@@ -11,6 +11,7 @@ export default function HomeownerPortal() {
   const [hasInsurance, setHasInsurance] = useState<boolean | null>(null)
   const [carrier, setCarrier] = useState('')
   const [policyNumber, setPolicyNumber] = useState('')
+  const [claimNumber, setClaimNumber] = useState('')
   const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -61,6 +62,7 @@ export default function HomeownerPortal() {
       has_insurance: hasInsurance,
       carrier: carrier,
       policy_number: policyNumber,
+      claim_number: claimNumber,
       declarations_url: fileUrl,
       updated_at: new Date().toISOString()
     })
@@ -173,7 +175,7 @@ export default function HomeownerPortal() {
 
         {step === 4 && (
           <Card className="bg-bg-app">
-            <h3 className="text-[15px] font-bold text-text-primary mb-4">Confirm Policy Number</h3>
+            <h3 className="text-[15px] font-bold text-text-primary mb-4">Confirm Policy & Claim Details</h3>
             <Field label="Policy Number (if known)">
               <TextInput 
                 value={policyNumber}
@@ -181,6 +183,15 @@ export default function HomeownerPortal() {
                 placeholder="Policy #"
               />
             </Field>
+            <div className="mt-4">
+              <Field label="Claim Number (if filed)">
+                <TextInput 
+                  value={claimNumber}
+                  onChange={(e) => setClaimNumber(e.target.value)}
+                  placeholder="Claim #"
+                />
+              </Field>
+            </div>
             <div className="mt-4 flex gap-2">
               <Button variant="secondary" onClick={() => setStep(3)}>Back</Button>
               <Button variant="gold" onClick={() => void handleSubmit()} disabled={isSubmitting} className="flex-1">

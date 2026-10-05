@@ -3,10 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import { Card, Empty, PageHeader } from '@/components/ui'
 import { getSupabase } from '@/lib/supabase'
 
+
+type PropertyScore = {
+  property_id: string;
+  max_wind?: number;
+  max_hail?: number;
+  opportunity_score: number;
+};
 export default function LeadsPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
-  const [properties, setProperties] = useState<any[]>([])
+  const [properties, setProperties] = useState<PropertyScore[]>([])
 
   useEffect(() => {
     async function load() {

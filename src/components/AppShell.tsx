@@ -7,16 +7,21 @@ import { retryStalledOutbox } from '@/lib/sync-store'
 import { UniversalSearch } from './UniversalSearch'
 import NotificationCenter from './NotificationCenter'
 import { AIAssistant } from './AIAssistant'
-import { Bot, UserCircle, Settings, LogOut, Sun } from 'lucide-react'
+import { Bot, UserCircle, Settings, LogOut, Sun, CloudLightning, Users } from 'lucide-react'
 import { useSession } from '@/features/auth/session'
 import AccountPanel from '@/features/auth/AccountPanel'
 
-export const NAV = [
-  { to: '/', label: 'Today', icon: 'home' },
-  { to: '/leads', label: 'Leads', icon: 'target' },
+const MANAGER_NAV = [
+  { to: '/', label: 'Home', icon: 'home' },
+  { to: '/storm-os', label: 'Storm OS', icon: 'storm' },
+  { to: '/team', label: 'Team', icon: 'users' },
+  { to: '/settings', label: 'Settings', icon: 'settings' },
+] as const
+
+const REP_NAV = [
+  { to: '/', label: 'Home', icon: 'home' },
   { to: '/map', label: 'Map', icon: 'map' },
   { to: '/inspections', label: 'Jobs', icon: 'clipboard' },
-  { to: '/more', label: 'More', icon: 'menu' },
 ] as const
 
 function Icon({ name }: { name: string }) {
@@ -25,6 +30,9 @@ function Icon({ name }: { name: string }) {
   if (name === 'clipboard') return <svg {...common} aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2" /><path d="M9 4V3h6v1" /><path d="M9 10h6M9 14h6M9 18h3" /></svg>
   if (name === 'target') return <svg {...common} aria-hidden="true"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.2" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2" /></svg>
   if (name === 'map') return <svg {...common} aria-hidden="true"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" /><line x1="9" y1="3" x2="9" y2="18" /><line x1="15" y1="6" x2="15" y2="21" /></svg>
+  if (name === 'storm') return <CloudLightning {...common} />
+  if (name === 'users') return <Users {...common} />
+  if (name === 'settings') return <Settings {...common} />
   return <svg {...common} aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" /></svg>
 }
 
@@ -146,6 +154,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const { ref: navRef, height: navHeight } = useMeasuredHeight(!immersive)
   const { ref: headerRef, height: headerHeight } = useMeasuredHeight(!pathname.startsWith('/evidence/'))
   const [assistantOpen, setAssistantOpen] = useState(false)
+  const { membership } = useSession()
+
+  const role = membership?.role?.toLowerCase() || 'rep'
+  const isManager = role === 'admin' || role === 'manager'
+  const navItems = isManager ? MANAGER_NAV : REP_NAV
 
   return (
     <div
@@ -197,8 +210,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
       {!immersive && (
         <nav ref={navRef} className="mobile-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border-subtle/80 bg-bg-app/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
-          <div className="mx-auto grid max-w-screen-sm grid-cols-5">
-            {NAV.map((item) => (
+          <div className="mx-auto grid max-w-screen-sm" style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}>
+            {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

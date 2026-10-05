@@ -61,8 +61,8 @@ create or replace view omnichannel_timeline as
     ca.created_at, 
     ca.direction, 
     ca.transcript as content, 
-    ca.ai_generated, 
-    ca.status 
+    false as ai_generated, 
+    null as status 
   from calls ca
   join conversations c on c.id = ca.conversation_id
   union all
@@ -75,9 +75,12 @@ create or replace view omnichannel_timeline as
     a.activity_type as subtype, 
     a.created_at, 
     null as direction, 
-    a.note as content, 
+    a.body as content, 
     false as ai_generated, 
     null as status 
   from activities a;
 
 commit;
+
+
+
