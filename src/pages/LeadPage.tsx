@@ -115,28 +115,47 @@ function AIStrategyPanel({ history, address }: { history: ContactEvent[], addres
 
 type TabID = 'overview' | 'homeowner_contact' | 'property' | 'permits_roof_age' | 'storm_history' | 'communications' | 'visits' | 'appointments' | 'inspections' | 'eagleview' | 'estimate' | 'proposal' | 'insurance' | 'documents' | 'ai_intelligence' | 'audit'
 
-const TABS: { id: TabID, label: string }[] = [
+type PrimaryTabID = 'overview' | 'contact' | 'property' | 'sales' | 'more'
+
+const PRIMARY_TABS: { id: PrimaryTabID, label: string }[] = [
   { id: 'overview', label: 'OVERVIEW' },
-  { id: 'homeowner_contact', label: 'HOMEOWNER / CONTACT' },
+  { id: 'contact', label: 'CONTACT' },
   { id: 'property', label: 'PROPERTY' },
-  { id: 'permits_roof_age', label: 'PERMITS / ROOF AGE' },
-  { id: 'storm_history', label: 'STORM HISTORY' },
-  { id: 'communications', label: 'COMMUNICATIONS' },
-  { id: 'visits', label: 'VISITS' },
-  { id: 'appointments', label: 'APPOINTMENTS' },
-  { id: 'inspections', label: 'INSPECTIONS' },
-  { id: 'eagleview', label: 'EAGLEVIEW' },
-  { id: 'estimate', label: 'ESTIMATE' },
-  { id: 'proposal', label: 'PROPOSAL' },
-  { id: 'insurance', label: 'INSURANCE' },
-  { id: 'documents', label: 'DOCUMENTS' },
-  { id: 'ai_intelligence', label: 'AI INTELLIGENCE' },
-  { id: 'audit', label: 'AUDIT' },
+  { id: 'sales', label: 'SALES' },
+  { id: 'more', label: 'MORE' },
 ]
+
+const SUB_TABS: Record<PrimaryTabID, { id: TabID, label: string }[]> = {
+  overview: [],
+  contact: [
+    { id: 'homeowner_contact', label: 'Homeowner' },
+    { id: 'communications', label: 'Communications' },
+    { id: 'visits', label: 'Visits' },
+  ],
+  property: [
+    { id: 'property', label: 'Details' },
+    { id: 'permits_roof_age', label: 'Permits & Roof Age' },
+    { id: 'storm_history', label: 'Storm History' },
+    { id: 'eagleview', label: 'EagleView' },
+  ],
+  sales: [
+    { id: 'appointments', label: 'Appointments' },
+    { id: 'inspections', label: 'Inspections' },
+    { id: 'estimate', label: 'Estimate' },
+    { id: 'proposal', label: 'Proposal' },
+  ],
+  more: [
+    { id: 'ai_intelligence', label: 'AI Intelligence' },
+    { id: 'insurance', label: 'Insurance' },
+    { id: 'documents', label: 'Documents' },
+    { id: 'audit', label: 'Audit Log' },
+  ],
+}
 
 export default function LeadPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [activePrimaryTab, setActivePrimaryTab] = useState<PrimaryTabID>('overview')
   const [activeTab, setActiveTab] = useState<TabID>('overview')
 
   const [lead, setLead] = useState<ManagedLead | null>(null)
@@ -438,6 +457,7 @@ export default function LeadPage() {
       : null
 
   const handleOutcomeClick = () => {
+    setActivePrimaryTab('contact')
     setActiveTab('visits')
     setTimeout(() => {
       document.getElementById('outcome-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -467,16 +487,37 @@ export default function LeadPage() {
         </div>
         
         <div className="mt-4 -mx-4 px-4 overflow-x-auto no-scrollbar flex gap-4">
-          {TABS.map(t => (
+          {PRIMARY_TABS.map(pt => (
             <button 
-              key={t.id} 
-              onClick={() => setActiveTab(t.id)} 
-              className={`pb-3 text-[12px] whitespace-nowrap font-bold uppercase tracking-wider border-b-2 transition-colors ${activeTab === t.id ? 'border-brand-500 text-brand-500' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
+              key={pt.id} 
+              onClick={() => {
+                setActivePrimaryTab(pt.id)
+                const firstSub = SUB_TABS[pt.id][0]
+                if (firstSub) {
+                  setActiveTab(firstSub.id)
+                } else {
+                  setActiveTab('overview')
+                }
+              }} 
+              className={`pb-3 text-[12px] whitespace-nowrap font-bold uppercase tracking-wider border-b-2 transition-colors ${activePrimaryTab === pt.id ? 'border-brand-500 text-brand-500' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
             >
-              {t.label}
+              {pt.label}
             </button>
           ))}
         </div>
+        {SUB_TABS[activePrimaryTab].length > 0 && (
+          <div className="-mx-4 px-4 py-2 bg-bg-elevated/50 overflow-x-auto no-scrollbar flex gap-3 border-b border-border-subtle">
+            {SUB_TABS[activePrimaryTab].map(st => (
+              <button
+                key={st.id}
+                onClick={() => setActiveTab(st.id)}
+                className={`px-3 py-1.5 rounded-full text-[11.5px] whitespace-nowrap font-medium transition-colors ${activeTab === st.id ? 'bg-brand-500 text-white shadow-sm' : 'bg-transparent text-text-secondary hover:bg-bg-app hover:text-text-primary'}`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tab Content */}
