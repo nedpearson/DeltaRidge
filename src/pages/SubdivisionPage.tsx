@@ -98,7 +98,7 @@ export default function SubdivisionPage() {
   const buildRoute = () => {
     if (properties.length === 0) return;
     const waypoints = properties.slice(0, 9).map(p => `${p.lat},${p.lng}`).join('|');
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${properties[properties.length-1].lat},${properties[properties.length-1].lng}&waypoints=${waypoints}`, '_blank');
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${properties[properties.length-1]?.lat},${properties[properties.length-1]?.lng}&waypoints=${waypoints}`, '_blank');
   }
 
   return (

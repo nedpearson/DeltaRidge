@@ -281,7 +281,8 @@ export default function LeadsPage() {
                 />
              ) : (
                 subdivisions.map((s, i) => (
-                  <Card key={s.subdivision_name} className="flex flex-col overflow-hidden hover:border-brand-primary/30 transition-colors cursor-pointer" onClick={() => navigate('/subdivisions/' + encodeURIComponent(s.subdivision_name))}>
+                  <div key={s.subdivision_name} onClick={() => navigate('/subdivisions/' + encodeURIComponent(s.subdivision_name))} className="cursor-pointer">
+                  <Card className="flex flex-col overflow-hidden hover:border-brand-primary/30 transition-colors">
                     <div className="p-4">
                       <div className="flex justify-between items-start gap-4">
                          <div className="flex-1 min-w-0">
