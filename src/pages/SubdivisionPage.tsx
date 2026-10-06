@@ -107,7 +107,7 @@ export default function SubdivisionPage() {
         <button onClick={() => navigate(-1)} className="text-sm font-semibold text-brand-primary mb-4">&larr; Back to Leads</button>
         <PageHeader 
           title={decodedName || 'Subdivision'} 
-          description={\`Coverage: \${coverage.visited} / \${coverage.total} homes visited\`} 
+          description={`Coverage: ${coverage.visited} / ${coverage.total} homes visited`} 
         />
         
         <div className="mt-4 mb-6 flex gap-3">
@@ -174,7 +174,7 @@ export default function SubdivisionPage() {
                   <button onClick={() => navigate('/leads/' + (p.lead_id || p.property_id))} className="flex-1 py-3 text-xs font-semibold text-text-primary hover:bg-bg-elevated transition-colors">
                     Open Lead
                   </button>
-                  <a href={p.primary_phone ? \`tel:\${p.primary_phone.replace(/[^0-9]/g, '')}\` : undefined} className={\`flex-1 py-3 text-xs font-semibold transition-colors text-center \${p.primary_phone ? 'text-brand-primary hover:bg-brand-primary/5' : 'text-text-muted cursor-not-allowed opacity-50'}\`} onClick={(e) => { if (!p.primary_phone) e.preventDefault(); }}>Call</a>
+                  <a href={p.primary_phone ? `tel:${p.primary_phone.replace(/[^0-9]/g, '')}` : undefined} className={`flex-1 py-3 text-xs font-semibold transition-colors text-center ${p.primary_phone ? 'text-brand-primary hover:bg-brand-primary/5' : 'text-text-muted cursor-not-allowed opacity-50'}`} onClick={(e) => { if (!p.primary_phone) e.preventDefault(); }}>Call</a>
                 </div>
               </Card>
             ))
