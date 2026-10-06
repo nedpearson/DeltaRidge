@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export type GPSStatus = 'REQUESTING_PERMISSION' | 'LIVE_GPS' | 'PERMISSION_DENIED' | 'POSITION_UNAVAILABLE' | 'TIMEOUT' | 'ERROR' | 'IDLE';
+export type GPSStatus = 'REQUESTING_PERMISSION' | 'LIVE_GPS' | 'IP_FALLBACK' | 'PERMISSION_DENIED' | 'POSITION_UNAVAILABLE' | 'TIMEOUT' | 'ERROR' | 'IDLE';
 
 export interface GPSCoords {
   lat: number;
@@ -19,8 +19,31 @@ export function useLiveGPS(enabled: boolean = true) {
       return;
     }
 
+    let settled = false;
+
+    const fallback = async () => {
+      try {
+        const res = await fetch('https://get.geojs.io/v1/ip/geo.json', { method: 'GET', mode: 'cors' })
+        if (!res.ok) {
+          if (!settled) setStatus('ERROR')
+          return
+        }
+        const data = await res.json()
+        setCoords({
+          lat: parseFloat(data.latitude),
+          lon: parseFloat(data.longitude)
+        });
+        setAccuracy(10000);
+        setTimestamp(Date.now());
+        setStatus('IP_FALLBACK');
+        settled = true;
+      } catch {
+        if (!settled) setStatus('ERROR')
+      }
+    }
+
     if (!('geolocation' in navigator)) {
-      setStatus('ERROR');
+      void fallback();
       return;
     }
 
@@ -28,6 +51,7 @@ export function useLiveGPS(enabled: boolean = true) {
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
+        settled = true;
         setCoords({
           lat: pos.coords.latitude,
           lon: pos.coords.longitude
@@ -37,10 +61,15 @@ export function useLiveGPS(enabled: boolean = true) {
         setStatus('LIVE_GPS');
       },
       (err) => {
-        if (err.code === err.PERMISSION_DENIED) setStatus('PERMISSION_DENIED');
-        else if (err.code === err.POSITION_UNAVAILABLE) setStatus('POSITION_UNAVAILABLE');
-        else if (err.code === err.TIMEOUT) setStatus('TIMEOUT');
-        else setStatus('ERROR');
+        if (!settled) {
+          void fallback();
+        } else {
+          // If we already settled on a fallback or GPS but GPS fails later, don't fallback again here
+          if (err.code === err.PERMISSION_DENIED) setStatus('PERMISSION_DENIED');
+          else if (err.code === err.POSITION_UNAVAILABLE) setStatus('POSITION_UNAVAILABLE');
+          else if (err.code === err.TIMEOUT) setStatus('TIMEOUT');
+          else setStatus('ERROR');
+        }
       },
       {
         enableHighAccuracy: true,
@@ -49,7 +78,15 @@ export function useLiveGPS(enabled: boolean = true) {
       }
     );
 
+    // Initial timeout for permission prompt ignoring
+    const timer = setTimeout(() => {
+      if (!settled) {
+        void fallback();
+      }
+    }, 10000);
+
     return () => {
+      clearTimeout(timer);
       navigator.geolocation.clearWatch(watchId);
     };
   }, [enabled]);

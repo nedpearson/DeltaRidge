@@ -232,7 +232,7 @@ export default function LeadsPage() {
                           <span className="text-text-secondary">📍</span>
                           <span className="font-medium text-text-primary text-sm">
                             {p.distance_miles !== null && p.distance_miles !== undefined ? (
-                              <>{p.distance_miles < 1.0 ? p.distance_miles.toFixed(1) : Math.round(p.distance_miles * 10)/10} mi away <span className="text-xs text-text-muted font-normal">· {status === 'LIVE_GPS' ? 'Live GPS' : 'Approximate'}</span></>
+                              <>{p.distance_miles < 1.0 ? p.distance_miles.toFixed(1) : Math.round(p.distance_miles * 10)/10} mi away <span className="text-xs text-text-muted font-normal">· {status === 'LIVE_GPS' ? 'Live GPS' : status === 'IP_FALLBACK' ? 'IP Fallback' : 'Approximate'}</span></>
                             ) : (
                               status === 'REQUESTING_PERMISSION' ? <span className="text-text-muted italic">Locating...</span> : <span className="text-text-muted italic">Distance unavailable &middot; {status === 'PERMISSION_DENIED' ? 'Location permission denied' : status === 'TIMEOUT' ? 'GPS timed out' : status === 'POSITION_UNAVAILABLE' ? 'GPS unavailable' : !p.lat || !p.lng ? 'Property coordinates missing' : 'Location unknown'}</span>
                             )}

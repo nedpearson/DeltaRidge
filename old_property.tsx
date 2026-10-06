@@ -1,0 +1,486 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { OwnerLine, occupancyEvidence } from '@/components/OwnerLine'
+import { Button, Card, Empty, SectionTitle } from '@/components/ui'
+import { type ManagedLead } from '@/features/leads/pipeline'
+import ResidentPhoneCard from '@/components/ResidentPhoneCard'
+import { saveResidentContact } from '@/features/leads/contact-enrichment'
+import { findByAddress } from '@/features/leads/lead-store'
+
+import { readCachedRun, type LeadRun } from '@/features/leads/engine'
+import { buildPropertyProfile, type PropertyProfile } from '@/features/leads/property-profile'
+import type { ScoredLead } from '@/features/leads/scoring'
+import { EbrPermitProvider } from '@/integrations/permits/ebr'
+import type { PermitRecord } from '@/integrations/permits/types'
+import { streetLineOf } from '@/integrations/geocode/ebr'
+import { distanceMiles } from '@/features/leads/scoring'
+import type { Fact } from '@/lib/provenance'
+import type { ParcelRecord } from '@/integrations/parcel'
+import type { StormEvent } from '@/integrations/storm'
+import RoofImageryPanel from '@/features/imagery/RoofImageryPanel'
+
+/**
+ * Everything known about one address, with the source of every claim on screen.
+ *
+ * The door card answers "is this worth walking up to". This screen answers the
+ * questions that come after yes: who owns it, do they live there, how old is
+ * the roof really, who worked on this house before, what actually hit it.
+ *
+ * Two rules run through the whole page.
+ *
+ * Every fact shows where it came from and how certain it is. A rep is going to
+ * repeat these numbers to a homeowner, and a number he cannot attribute is a
+ * number he should not say out loud.
+ *
+ * A field we cannot source is NAMED, with the reason. The parish publishes no
+ * bedrooms, no square footage, no sale history — so this page says that, rather
+ * than showing an empty row that reads like a loading state or, worse, a zero.
+ */
+
+type Tab = 'property' | 'owner' | 'roof' | 'storms' | 'permits'
+
+const TABS: readonly { key: Tab; label: string }[] = [
+  { key: 'property', label: 'Property' },
+  { key: 'owner', label: 'Owner' },
+  { key: 'roof', label: 'Roof' },
+  { key: 'storms', label: 'Storms' },
+  { key: 'permits', label: 'Permits' },
+]
+
+/** Miles either side of the parcel that count as "this storm hit here". */
+const STORM_RADIUS_MILES = 5
+
+export default function PropertyPage() {
+  const { addressKey = '' } = useParams()
+  const navigate = useNavigate()
+  const [run, setRun] = useState<LeadRun | null>(null)
+  const [permits, setPermits] = useState<PermitRecord[] | null>(null)
+  const [permitError, setPermitError] = useState(false)
+  const [tab, setTab] = useState<Tab>('property')
+  /*
+   * The managed lead for this address, if the rep has already worked it.
+   *
+   * This screen is parcel research and holds no contact details of its own —
+   * that is deliberate and stays true. But once a homeowner has actually given
+   * a number at the door, it lives on the lead, and making the rep navigate
+   * back to the door list to dial it is the friction this whole change is
+   * about. Null simply means nobody has knocked here yet.
+   */
+  const [managed, setManaged] = useState<ManagedLead | null>(null)
+
+  useEffect(() => {
+    if (addressKey === '') return
+    void findByAddress(addressKey).then(setManaged)
+  }, [addressKey])
+
+  useEffect(() => {
+    void readCachedRun().then(setRun)
+  }, [])
+
+  const lead: ScoredLead | undefined = useMemo(
+    () => run?.leads.find((l) => l.addressKey === decodeURIComponent(addressKey)),
+    [run, addressKey],
+  )
+
+  const loadPermits = useCallback(async (address: string) => {
+    setPermitError(false)
+    try {
+      // The whole permit history for this one address, not just roofing: a pool
+      // permit dates the back yard, a generator permit says somebody spends
+      // money on this house, and both are worth a rep knowing at the door.
+      const rows = await new EbrPermitProvider().search({
+        kinds: ['reroof', 'new_build', 'other'],
+        addressLike: streetLineOf(address),
+        limit: 100,
+      })
+      setPermits(rows)
+    } catch {
+      setPermitError(true)
+      setPermits([])
+    }
+  }, [])
+
+  useEffect(() => {
+    if (lead) void loadPermits(lead.address)
+  }, [lead, loadPermits])
+
+  const profile: PropertyProfile | null = useMemo(() => {
+    if (!lead) return null
+    const nearby = (run?.stormEvents ?? []).filter(
+      (s) => distanceMiles(lead.latitude, lead.longitude, s.latitude, s.longitude) <= STORM_RADIUS_MILES,
+    )
+    return buildPropertyProfile({
+      address: lead.address,
+      addressKey: lead.addressKey,
+      ...(lead.parcel ? { parcel: lead.parcel } : {}),
+      permits: permits ?? [lead.roofPermit],
+      storms: nearby,
+      now: new Date(),
+    })
+  }, [lead, permits, run])
+
+  if (!run) {
+    return <p className="mt-8 text-center text-[13px] text-text-secondary">Opening the property…</p>
+  }
+
+  if (!lead || !profile) {
+    return (
+      <Empty
+        title="Not on the current list"
+        body="This address is not in the door list as it stands. Rebuild the list on the Leads screen and open it again."
+      />
+    )
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => navigate('/leads')}
+        className="!min-h-0 py-1 text-[12px] text-text-secondary"
+      >
+        ← Doors
+      </button>
+
+      {/* EagleView imagery as the hero — auto-fetched on mount */}
+      <RoofImageryPanel
+        latitude={lead.latitude}
+        longitude={lead.longitude}
+        storms={profile?.storms ?? []}
+        autoFetch
+      />
+
+      <Card className="mt-2">
+        <p className="text-[17px] font-semibold leading-tight">{lead.address}</p>
+        <p className="mt-0.5 text-[12px] text-text-secondary">
+          {[lead.subdivision, lead.city].filter(Boolean).join(' · ') || 'East Baton Rouge Parish'}
+        </p>
+        <OwnerLine parcel={lead.parcel} />
+      </Card>
+
+      {/*
+        Actions first, tabs second. The rep's highest-frequency needs — reach
+        this person, drive to this house — sit above the drill-down, because
+        scrolling through ownership metadata to find a phone number is the
+        friction that stops an app being used on a driveway.
+      */}
+      <div className="mt-3 flex items-start gap-2">
+        <a
+          href={`https://www.google.com/maps/dir/?api=1&destination=${lead.latitude},${lead.longitude}`}
+          target="_blank"
+          rel="noreferrer"
+          className="contents"
+        >
+          <Button variant="secondary" className="mt-2.5 shrink-0">Navigate</Button>
+        </a>
+        <div className="min-w-0 flex-1">
+          <ResidentPhoneCard
+            address={lead.address}
+            city={lead.city || 'Baton Rouge'}
+            zip={lead.postalCode}
+            ownerName={lead.parcel?.ownerName}
+            phone={managed?.contactPhone}
+            email={managed?.contactEmail}
+            onPhoneSaved={async (phone, email, name) => {
+              // Ensure we save the phone number to the lead record.
+              // If it's managed, update it. If not, saveResidentContact will promote it.
+              await saveResidentContact(managed || lead, phone, email, name)
+              void findByAddress(addressKey).then(setManaged)
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] ${
+              tab === t.key ? 'bg-gold-500/20 text-gold-300' : 'bg-bg-elevated text-text-secondary'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3">
+        {tab === 'property' && <PropertyTab profile={profile} />}
+        {tab === 'owner' && (
+          <OwnerTab
+            profile={profile}
+            parcel={lead?.parcel}
+            address={lead?.address || decodeURIComponent(addressKey)}
+            managed={managed}
+            lead={lead}
+            onPhoneSaved={() => void findByAddress(addressKey).then(setManaged)}
+          />
+        )}
+        {tab === 'roof' && (
+          <RoofTab
+            profile={profile}
+            
+            
+          />
+        )}
+        {tab === 'storms' && <StormsTab profile={profile} />}
+        {tab === 'permits' && (
+          <PermitsTab profile={profile} permits={permits} failed={permitError} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * One fact, with its provenance under it.
+ *
+ * The certainty word is the point. "Verified" means a record says so;
+ * "estimated" means we derived it by a rule we can state; "unknown" means we
+ * looked and there was nothing — which is why the basis line still prints.
+ */
+function FactRow<T>({
+  label,
+  fact,
+  format = (v: T) => String(v),
+}: {
+  label: string
+  fact: Fact<T>
+  format?: (value: T) => string
+}) {
+  const known = fact.value !== null && fact.certainty !== 'unknown'
+  return (
+    <div className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
+      {/*
+        `min-w-0` on both children, and it is not cosmetic. A flex item defaults
+        to `min-width: auto`, which refuses to shrink below its content — so a
+        long value such as a full mailing address pushed the row wider than the
+        card and out of the viewport instead of wrapping. `break-words` then
+        lets a long unbroken token break rather than doing the same thing again.
+
+        No ellipsis: a truncated address is worse than a wrapped one, because a
+        rep cannot tell what was cut off.
+      */}
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="min-w-0 shrink-0 text-[12.5px] text-text-secondary">{label}</p>
+        <p
+          className={`min-w-0 break-words text-right text-[13.5px] ${known ? 'text-text-secondary' : 'text-text-secondary'}`}
+        >
+          {known ? format(fact.value as T) : 'Not on record'}
+        </p>
+      </div>
+      <p className="mt-0.5 text-[10.5px] leading-relaxed text-text-secondary">
+        {known && (
+          <span className="uppercase tracking-wider text-text-secondary">{fact.certainty} · </span>
+        )}
+        {fact.source.label}
+        {fact.basis ? ` — ${fact.basis}` : ''}
+      </p>
+    </div>
+  )
+}
+
+const money = (n: number) => `$${n.toLocaleString()}`
+const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+
+function PropertyTab({ 
+  profile,
+}: { 
+  profile: PropertyProfile
+}) {
+  return (
+    <>
+      <Card>
+        <FactRow label="Parcel number" fact={profile.parcelNumber} />
+        <FactRow label="Subdivision" fact={profile.subdivision} />
+        <FactRow label="Flood zone" fact={profile.floodZone} />
+        <FactRow label="Assessed value" fact={profile.assessedValue} format={money} />
+        <FactRow label="Land value" fact={profile.landValue} format={money} />
+      </Card>
+
+      <SectionTitle>NOT AVAILABLE</SectionTitle>
+      <Card className="!py-3">
+        {/* Named, with a reason each. An empty row reads as a loading state or
+            a zero; a stated gap reads as a gap, and tells Ned exactly what a
+            licensed data contract would buy him. */}
+        <p className="text-[11.5px] leading-relaxed text-text-secondary">
+          These are not published by the parish and are not in the permit feed. Filling them needs a
+          licensed property-data provider under contract.
+        </p>
+        <ul className="mt-2 space-y-1">
+          {profile.unavailable.map((f) => (
+            <li key={f.field} className="flex justify-between gap-3 text-[12px]">
+              <span className="text-text-secondary">{f.label}</span>
+              <span className="text-right text-[11px] text-text-secondary">{f.reason}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </>
+  )
+}
+
+function OwnerTab({
+  profile,
+  parcel,
+  address,
+  managed,
+  lead,
+  onPhoneSaved,
+}: {
+  profile: PropertyProfile
+  parcel?: ParcelRecord | undefined
+  address: string
+  managed: ManagedLead | null
+  lead?: ScoredLead | undefined
+  onPhoneSaved?: (() => void) | undefined
+}) {
+  return (
+    <Card>
+      <FactRow label="Recorded owner" fact={profile.owner.name} />
+      <FactRow label="Mailing address" fact={profile.owner.mailingAddress} />
+      <FactRow
+        label="Occupancy"
+        fact={profile.owner.occupancy}
+        format={(v) =>
+          v === 'owner_occupied'
+            ? 'Owner occupied'
+            : v === 'likely_absentee'
+              ? 'Likely absentee'
+              : 'Unknown'
+        }
+      />
+      {parcel && (
+        <p className="mt-2 border-t border-border-subtle pt-2 text-[11.5px] leading-relaxed text-text-secondary">
+          {occupancyEvidence(parcel)}
+        </p>
+      )}
+
+      <ResidentPhoneCard
+        address={address}
+        city={lead?.city || 'Baton Rouge'}
+        zip={lead?.postalCode}
+        ownerName={typeof profile.owner.name.value === 'string' ? profile.owner.name.value : parcel?.ownerName}
+        phone={managed?.contactPhone}
+        email={managed?.contactEmail}
+        onPhoneSaved={async (phone, email, name) => {
+          if (lead) {
+            await saveResidentContact(lead, phone, email, name)
+          } else if (managed) {
+            await saveResidentContact(managed, phone, email, name)
+          }
+          onPhoneSaved?.()
+        }}
+      />
+    </Card>
+  )
+}
+
+function RoofTab({
+  profile,
+}: {
+  profile: PropertyProfile
+}) {
+  return (
+    <>
+      <Card>
+        <FactRow label="Year built" fact={profile.roof.yearBuilt} />
+        <FactRow label="Last re-roof permit" fact={profile.roof.lastReroofAt} format={shortDate} />
+        <FactRow label="Roof age" fact={profile.roof.ageYears} format={(y) => `about ${y} years`} />
+        <FactRow label="Last roofing contractor" fact={profile.roof.lastContractor} />
+      </Card>
+    </>
+  )
+}
+
+function StormsTab({ profile }: { profile: PropertyProfile }) {
+  if (profile.storms.length === 0) {
+    return (
+      <Empty
+        title="No qualifying storms nearby"
+        body={`No hail report in the current window fell within ${STORM_RADIUS_MILES} miles of this parcel.`}
+      />
+    )
+  }
+  return (
+    <Card>
+      {profile.storms.map((s: StormEvent) => (
+        <div key={s.externalId} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-[13px] text-text-secondary">
+              {[s.city, s.countyParish].filter(Boolean).join(', ') || 'Unnamed location'}
+            </p>
+            <p className="shrink-0 font-display text-[15px] text-gold-400">
+              {s.hailSizeInches !== undefined ? `${s.hailSizeInches}"` : '—'}
+            </p>
+          </div>
+          <p className="mt-0.5 text-[10.5px] text-text-secondary">
+            {shortDate(s.occurredAt)} · official ground report · NWS
+          </p>
+        </div>
+      ))}
+    </Card>
+  )
+}
+
+function PermitsTab({
+  profile,
+  permits,
+  failed,
+}: {
+  profile: PropertyProfile
+  permits: PermitRecord[] | null
+  failed: boolean
+}) {
+  if (failed) {
+    return (
+      <Empty
+        title="Permit history unavailable"
+        body="The parish permit service could not be reached. What is on the roof tab came from the list you already downloaded."
+      />
+    )
+  }
+  if (permits === null) {
+    return <p className="text-center text-[13px] text-text-secondary">Reading the permit record…</p>
+  }
+  if (permits.length === 0) {
+    return (
+      <Empty
+        title="No permits on file"
+        body="East Baton Rouge has no permit records for this address. That is the parish answering, not a failure to look."
+      />
+    )
+  }
+
+  return (
+    <Card>
+      {[...permits]
+        .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))
+        .map((p) => (
+          <div key={p.externalId} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="min-w-0 text-[13px] text-text-secondary">{p.permitType}</p>
+              <p className="shrink-0 text-[11.5px] text-text-secondary">{shortDate(p.issuedAt)}</p>
+            </div>
+            {p.contractorName && (
+              <p className="mt-0.5 truncate text-[11px] text-text-secondary">{p.contractorName}</p>
+            )}
+          </div>
+        ))}
+      <p className="mt-2 border-t border-border-subtle pt-2 text-[10.5px] leading-relaxed text-text-secondary">
+        {profile.roof.lastReroofAt.value === null
+          ? 'No re-roof permit appears above. A roof replaced without a permit leaves no record here, so this is strong evidence rather than proof.'
+          : 'A re-roof permit records that work was authorised, not that it was finished.'}
+      </p>
+    </Card>
+  )
+}
+
+
+/**
+ * The lead screen's contact gates, applied on the property screen.
+ *
+ * Imported wholesale rather than reimplemented. Two copies of "may this number
+ * be dialled" is how one of them quietly stops matching the law.
+ */
