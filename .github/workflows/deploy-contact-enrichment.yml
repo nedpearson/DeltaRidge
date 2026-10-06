@@ -1,0 +1,63 @@
+name: Deploy Contact Enrichment
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_backfill:
+        description: "Run production lead contact backfill after deployment"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v1
+
+      - name: Validate required secrets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BATCHDATA_API_KEY: ${{ secrets.BATCHDATA_API_KEY }}
+          REALESTATE_API_KEY: ${{ secrets.REALESTATE_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "Missing SUPABASE_ACCESS_TOKEN"; exit 1; }
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo "Missing SUPABASE_SERVICE_ROLE_KEY"; exit 1; }
+          if [ -z "$BATCHDATA_API_KEY" ] && [ -z "$REALESTATE_API_KEY" ]; then
+            echo "Configure BATCHDATA_API_KEY or REALESTATE_API_KEY as a GitHub Actions secret."
+            exit 1
+          fi
+
+      - name: Push provider secret to Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          BATCHDATA_API_KEY: ${{ secrets.BATCHDATA_API_KEY }}
+          REALESTATE_API_KEY: ${{ secrets.REALESTATE_API_KEY }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ -n "$BATCHDATA_API_KEY" ]; then args+=("BATCHDATA_API_KEY=$BATCHDATA_API_KEY"); fi
+          if [ -n "$REALESTATE_API_KEY" ]; then args+=("REALESTATE_API_KEY=$REALESTATE_API_KEY"); fi
+          supabase secrets set --project-ref udrxvpkihkbrudvwggpr "${args[@]}"
+
+      - name: Deploy contact functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          supabase functions deploy lookup-contact --project-ref udrxvpkihkbrudvwggpr
+          supabase functions deploy backfill-leads --project-ref udrxvpkihkbrudvwggpr
+
+      - name: Run production contact backfill
+        if: ${{ inputs.run_backfill }}
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body             -X POST             "https://udrxvpkihkbrudvwggpr.supabase.co/functions/v1/backfill-leads"             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY"             -H "Content-Type: application/json"             -d '{"mode":"contacts"}'
