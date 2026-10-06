@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, Empty, PageHeader } from '@/components/ui'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { getSupabase } from '@/lib/supabase'
 import { useLiveGPS } from '@/hooks/useLiveGPS'
 import { calculateDistanceMiles } from '@/lib/distance'
@@ -124,6 +125,7 @@ export default function LeadsPage() {
   }, [serverSubdivisions, radius]);
 
   return (
+    <ErrorBoundary>
     <div className="mx-auto max-w-screen-sm pb-24 pt-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="px-3 sm:px-4">
         <PageHeader 
@@ -297,7 +299,7 @@ export default function LeadsPage() {
                                  <p className="text-xs text-text-secondary">Opportunities</p>
                               </div>
                               <div>
-                                 <p className="font-bold text-text-primary">{s.distance_miles < 1 ? s.distance_miles.toFixed(1) : Math.round(s.distance_miles * 10) / 10} mi</p>
+                                 <p className="font-bold text-text-primary">{s.distance_miles !== null && s.distance_miles !== undefined ? (s.distance_miles < 1 ? s.distance_miles.toFixed(1) : Math.round(s.distance_miles * 10) / 10) : '--'} mi</p>
                                  <p className="text-xs text-text-secondary">Distance</p>
                               </div>
                               <div>
@@ -336,5 +338,6 @@ export default function LeadsPage() {
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   )
 }
