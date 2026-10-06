@@ -5,6 +5,18 @@ import { getSupabase } from '@/lib/supabase'
 import { useLiveGPS } from '@/hooks/useLiveGPS'
 import { calculateDistanceMiles } from '@/lib/distance'
 
+type StormEvidenceRow = {
+  property_id: string;
+  hazard_type: string;
+  event_time?: string | null;
+  event_source?: string | null;
+  measurement?: number | null;
+  units?: string | null;
+  property_distance?: number | null;
+  confidence?: string | null;
+  evidence_type?: string | null;
+};
+
 type PropertyIntelligence = {
   property_id: string;
   lead_id?: string;
@@ -37,6 +49,7 @@ export default function SubdivisionPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [serverProperties, setServerProperties] = useState<PropertyIntelligence[]>([])
+  const [stormEvidence, setStormEvidence] = useState<Record<string, StormEvidenceRow[]>>({})
 
   const { coords, status } = useLiveGPS(true)
 
@@ -58,7 +71,29 @@ export default function SubdivisionPage() {
       })
       
       if (!error && data) {
-        setServerProperties(data)
+        const rows = data as PropertyIntelligence[]
+        setServerProperties(rows)
+
+        const propertyIds = rows.map((row) => row.property_id).filter(Boolean)
+        if (propertyIds.length > 0) {
+          const { data: evidenceRows } = await supabase
+            .from('property_storm_evidence')
+            .select('property_id, hazard_type, event_time, event_source, measurement, units, property_distance, confidence, evidence_type')
+            .in('property_id', propertyIds)
+            .order('event_time', { ascending: false })
+
+          const grouped: Record<string, StormEvidenceRow[]> = {}
+          for (const raw of (evidenceRows ?? []) as StormEvidenceRow[]) {
+            if (!grouped[raw.property_id]) grouped[raw.property_id] = []
+            grouped[raw.property_id]?.push(raw)
+          }
+          setStormEvidence(grouped)
+        } else {
+          setStormEvidence({})
+        }
+      } else {
+        setServerProperties([])
+        setStormEvidence({})
       }
       setLoading(false)
     }
@@ -145,6 +180,62 @@ export default function SubdivisionPage() {
                       </span>
                     </div>
                     
+                    {(() => {
+                      const evidence = stormEvidence[p.property_id] ?? []
+                      const damage = evidence.find((item) => item.evidence_type === 'DAMAGE_REPORT' || item.hazard_type === 'DAMAGE')
+                      const ground = evidence.find((item) => item.evidence_type === 'GROUND_REPORT' || item.evidence_type === 'MEASURED')
+                      const radar = evidence.find((item) => item.evidence_type === 'RADAR')
+                      const best = damage ?? ground ?? radar
+                      if (!best) return null
+
+                      const distanceMi =
+                        best.property_distance !== null && best.property_distance !== undefined
+                          ? best.property_distance < 100
+                            ? best.property_distance
+                            : best.property_distance * 0.000621371
+                          : null
+
+                      const measurement =
+                        best.measurement !== null && best.measurement !== undefined
+                          ? `${best.measurement}${best.units ? ` ${best.units}` : ''}`
+                          : null
+
+                      const label =
+                        best.evidence_type === 'DAMAGE_REPORT' || best.hazard_type === 'DAMAGE'
+                          ? 'DAMAGE REPORTED NEARBY'
+                          : best.evidence_type === 'RADAR'
+                            ? 'RADAR EVIDENCE'
+                            : 'GROUND REPORT'
+
+                      return (
+                        <div className="mt-3 rounded-lg border border-border-subtle bg-bg-elevated/50 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-[11px] font-bold uppercase tracking-wide text-status-warning">{label}</span>
+                            {best.confidence && (
+                              <span className="text-[10px] uppercase font-semibold text-text-muted">{best.confidence}</span>
+                            )}
+                          </div>
+                          <div className="mt-1 text-sm font-semibold text-text-primary">
+                            {best.hazard_type}{measurement ? ` · ${measurement}` : ''}
+                          </div>
+                          <div className="mt-0.5 text-xs text-text-secondary">
+                            {best.event_source || 'Storm evidence source'}
+                            {distanceMi !== null ? ` · ${distanceMi.toFixed(distanceMi < 1 ? 1 : 2)} mi from property` : ''}
+                          </div>
+                          {best.event_time && (
+                            <div className="mt-0.5 text-xs text-text-muted">
+                              {new Date(best.event_time).toLocaleString()}
+                            </div>
+                          )}
+                          {(best.evidence_type === 'DAMAGE_REPORT' || best.hazard_type === 'DAMAGE') && (
+                            <div className="mt-2 text-[11px] text-text-secondary">
+                              Nearby damage report — this does not confirm damage to this specific property.
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+
                     <div className="mt-3 space-y-1.5 text-sm">
                       <div className="flex items-center gap-2">
                         <span className="text-text-secondary">📞</span>
