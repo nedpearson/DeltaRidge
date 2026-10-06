@@ -106,7 +106,8 @@ serve(async (req) => {
         trace.PermitLookup = { source: 'Open Data BR (Permits)', status: 'PROVIDER_ERROR', error: String(e) };
       }
 
-      // 3. Contact Enrichment (LexisNexis / Clearbit)
+      // 3. Contact Enrichment through the canonical lookup-contact Edge Function
+      // Never erase previously verified contact data because a provider is unavailable.
       let targetCustId = lead?.customer_id;
       if (!targetCustId && ownerName) {
         const parts = ownerName.split(',');
@@ -123,17 +124,102 @@ serve(async (req) => {
         }
       }
 
-      // We explicitly mark as PROVIDER_NOT_CONFIGURED because we do not have LexisNexis keys
-      trace.ContactLookup = { source: 'LexisNexis', status: 'PROVIDER_NOT_CONFIGURED' };
       if (targetCustId) {
-        await supabaseClient.from('customers').update({ 
-          primary_phone: null, 
-          phone_source: 'LexisNexis',
-          phone_verification_status: 'PROVIDER_NOT_CONFIGURED',
-          email: null,
-          email_source: 'LexisNexis',
-          email_verification_status: 'PROVIDER_NOT_CONFIGURED'
-        }).eq('id', targetCustId);
+        const { data: existingCustomer } = await supabaseClient
+          .from('customers')
+          .select('primary_phone, email, phone_verification_status, email_verification_status')
+          .eq('id', targetCustId)
+          .maybeSingle();
+
+        try {
+          const contactResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/lookup-contact`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''}`,
+              'apikey': Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              street: prop.address_line1,
+              city: prop.city || 'Baton Rouge',
+              state: prop.state || 'LA',
+              zip: prop.postal_code || '70810',
+              ownerName,
+            }),
+          });
+
+          const contactData = await contactResponse.json().catch(() => ({}));
+
+          if (contactResponse.ok && contactData?.success && (contactData?.phone || contactData?.email)) {
+            const update: Record<string, unknown> = {};
+
+            if (contactData.phone) {
+              update.primary_phone = contactData.phone;
+              update.phone_source = contactData.configuredProvider || contactData.source || 'contact_provider';
+              update.phone_confidence = 1;
+              update.phone_verified_at = new Date().toISOString();
+              update.phone_verification_status = 'VERIFIED';
+            }
+
+            if (contactData.email) {
+              update.email = contactData.email;
+              update.email_source = contactData.configuredProvider || contactData.source || 'contact_provider';
+              update.email_confidence = 1;
+              update.email_verified_at = new Date().toISOString();
+              update.email_verification_status = 'VERIFIED';
+            }
+
+            if (Object.keys(update).length > 0) {
+              await supabaseClient.from('customers').update(update).eq('id', targetCustId);
+            }
+
+            trace.ContactLookup = {
+              source: contactData.configuredProvider || contactData.source || 'contact_provider',
+              status: 'PASS',
+              phone_found: Boolean(contactData.phone),
+              email_found: Boolean(contactData.email),
+            };
+          } else {
+            const providerStatus =
+              contactData?.status === 'PROVIDER_NOT_CONFIGURED'
+                ? 'PROVIDER_NOT_CONFIGURED'
+                : contactResponse.ok
+                  ? 'NOT_FOUND'
+                  : 'PROVIDER_ERROR';
+
+            const update: Record<string, unknown> = {};
+            if (!existingCustomer?.primary_phone) update.phone_verification_status = providerStatus;
+            if (!existingCustomer?.email) update.email_verification_status = providerStatus;
+
+            if (Object.keys(update).length > 0) {
+              await supabaseClient.from('customers').update(update).eq('id', targetCustId);
+            }
+
+            trace.ContactLookup = {
+              source: contactData?.configuredProvider || 'lookup-contact',
+              status: providerStatus,
+              message: contactData?.message || `Lookup HTTP ${contactResponse.status}`,
+            };
+          }
+        } catch (e) {
+          const update: Record<string, unknown> = {};
+          if (!existingCustomer?.primary_phone) update.phone_verification_status = 'PROVIDER_ERROR';
+          if (!existingCustomer?.email) update.email_verification_status = 'PROVIDER_ERROR';
+          if (Object.keys(update).length > 0) {
+            await supabaseClient.from('customers').update(update).eq('id', targetCustId);
+          }
+          trace.ContactLookup = {
+            source: 'lookup-contact',
+            status: 'PROVIDER_ERROR',
+            error: String(e),
+          };
+        }
+      } else {
+        trace.ContactLookup = {
+          source: 'lookup-contact',
+          status: 'NOT_FOUND',
+          message: 'No customer record was available to attach enriched contact data.',
+        };
       }
 
       // 4. Storm Data (NOAA NCEI SWDI)

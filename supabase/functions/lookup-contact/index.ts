@@ -258,18 +258,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
       const { data: cached } = await db
         .from('leads')
-        .select('contact_name, contact_phone')
+        .select('contact_name, contact_phone, contact_email')
         .ilike('address_line1', street)
-        .not('contact_phone', 'is', null)
         .limit(1)
         .maybeSingle()
 
-      if (cached?.contact_phone) {
+      if (cached?.contact_phone || cached?.contact_email) {
         return json({
           success: true,
           residentName: cached.contact_name ?? null,
-          phone: cleanPhone(cached.contact_phone),
-          phoneType: 'Wireless',
+          phone: cached.contact_phone ? cleanPhone(cached.contact_phone) : null,
+          email: cached.contact_email ?? null,
+          phoneType: cached.contact_phone ? 'Wireless' : 'Unknown',
           carrier: null,
           secondaryPhones: [],
           source: 'public_record',
@@ -281,7 +281,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     let ownerFromBatch: string | null = null
     if (BATCHDATA_API_KEY) {
       const batchResult = await lookupBatchData(street, city, state, zip, BATCHDATA_API_KEY)
-      if (batchResult && batchResult.phone) {
+      if (batchResult && (batchResult.phone || batchResult.email)) {
         return json({ success: true, ...batchResult })
       }
       ownerFromBatch = await lookupBatchDataOwner(street, city, state, BATCHDATA_API_KEY)
@@ -290,7 +290,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // 3. Automated Skip-Tracing via RealEstateAPI
     if (REALESTATE_API_KEY) {
       const reResult = await lookupRealEstateApi(street, city, state, zip, REALESTATE_API_KEY)
-      if (reResult && reResult.phone) {
+      if (reResult && (reResult.phone || reResult.email)) {
         return json({ success: true, ...reResult })
       }
     }
@@ -298,7 +298,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!BATCHDATA_API_KEY && !REALESTATE_API_KEY) {
       return json({
         success: false,
-        message: 'API keys for skip-tracing are not configured.',
+        status: 'PROVIDER_NOT_CONFIGURED',
+        configuredProvider: 'none',
+        message: 'No approved contact-enrichment provider credential is configured on the server.',
       })
     }
 
