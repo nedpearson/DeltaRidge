@@ -149,14 +149,14 @@ export default function SubdivisionPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-text-secondary">📞</span>
                         <span className="font-medium text-text-primary">
-                          {p.primary_phone ? p.primary_phone : <span className="text-text-muted italic">Phone not found</span>}
+                          {p.primary_phone ? p.primary_phone : <span className="text-text-muted italic">Phone {p.phone_status ? p.phone_status.toLowerCase().replace(/_/g, ' ') : 'not checked'}</span>}
                         </span>
                       </div>
                       
                       <div className="flex items-center gap-2">
                         <span className="text-text-secondary">📧</span>
                         <span className="font-medium text-text-primary">
-                          {p.primary_email ? p.primary_email : <span className="text-text-muted italic">Email not found</span>}
+                          {p.primary_email ? p.primary_email : <span className="text-text-muted italic">Email {p.email_status ? p.email_status.toLowerCase().replace(/_/g, ' ') : 'not checked'}</span>}
                         </span>
                       </div>
                     </div>
