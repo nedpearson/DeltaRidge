@@ -138,17 +138,20 @@ function asObject(value: unknown, fallback: JsonObject): JsonObject {
     : fallback
 }
 
-function valueString(object: JsonObject, key: string, fallback = ''): string {
+function valueString(object: JsonObject | undefined, key: string, fallback = ''): string {
+  if (!object) return fallback
   const value = object[key]
   return typeof value === 'string' ? value : fallback
 }
 
-function valueNumber(object: JsonObject, key: string, fallback = 0): number {
+function valueNumber(object: JsonObject | undefined, key: string, fallback = 0): number {
+  if (!object) return fallback
   const value = object[key]
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback
 }
 
-function valueBool(object: JsonObject, key: string, fallback = false): boolean {
+function valueBool(object: JsonObject | undefined, key: string, fallback = false): boolean {
+  if (!object) return fallback
   const value = object[key]
   return typeof value === 'boolean' ? value : fallback
 }
@@ -970,14 +973,14 @@ export default function SettingsPage() {
           {activeTab === 'notifications' && (
             <>
               <Card className="grid gap-3 p-5 sm:grid-cols-2">
-                {[
+                {([
                   ['notify_on_new_lead', 'New lead'],
                   ['notify_on_storm', 'Qualifying storm'],
                   ['notify_on_failed_job', 'Failed background job'],
                   ['notify_on_customer_reply', 'Customer reply'],
                   ['notify_on_assignment', 'Lead assignment'],
                   ['notify_on_gps_stale', 'Rep GPS stale'],
-                ].map(([key, label]) => (
+                ] as const).map(([key, label]) => (
                   <Toggle
                     key={key}
                     checked={valueBool(settings['notifications_settings'], key, true)}
