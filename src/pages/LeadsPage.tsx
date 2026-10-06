@@ -47,7 +47,6 @@ export default function LeadsPage() {
   const [serverProperties, setServerProperties] = useState<PropertyIntelligence[]>([])
   const [filter, setFilter] = useState<FilterType>('STORM')
   const [radius, setRadius] = useState<RadiusType>('ALL')
-  const [lastFetchedCoords, setLastFetchedCoords] = useState<{lat: number, lon: number} | null>(null)
 
   const { coords, status, accuracy } = useLiveGPS(true)
 
@@ -76,7 +75,6 @@ export default function LeadsPage() {
       if (!error && data) {
         setServerProperties(data)
       }
-      if (coords) setLastFetchedCoords(coords);
       setLoading(false)
     }
     
