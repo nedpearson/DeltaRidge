@@ -20,8 +20,8 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
 
     // Function to run the actual enrichment
-    const runEnrichment = async (prop: any, lead: any) => {
-      const trace: any = {
+    const runEnrichment = async (prop: Record<string, unknown>, lead: Record<string, unknown> | null) => {
+      const trace: Record<string, unknown> = {
         LeadID: lead?.id,
         PropertyID: prop.id,
         PropertyRecord: prop,
@@ -66,7 +66,7 @@ serve(async (req) => {
         if (permitRes.ok) {
           const permitData = await permitRes.json();
           // Find Roof or New Building
-          const roofPermit = permitData.find((p: any) => {
+          const roofPermit = permitData.find((p: Record<string, string>) => {
             const desc = (p.projectdescription || '').toUpperCase();
             const type = (p.permittype || '').toUpperCase();
             return desc.includes('ROOF') || type.includes('ROOF') || desc.includes('NEW BUILDING');
