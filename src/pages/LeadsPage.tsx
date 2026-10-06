@@ -49,19 +49,10 @@ export default function LeadsPage() {
   const [radius, setRadius] = useState<RadiusType>('ALL')
   const [lastFetchedCoords, setLastFetchedCoords] = useState<{lat: number, lon: number} | null>(null)
 
-  const { coords, status, accuracy, timestamp } = useLiveGPS(true)
+  const { coords, status, accuracy } = useLiveGPS(true)
 
   useEffect(() => {
     async function load() {
-      // Throttle DB calls: Only fetch if we haven't fetched yet, or if radius changed, or if we moved > 1 mile
-      let shouldFetch = false;
-      if (!lastFetchedCoords && coords) shouldFetch = true;
-      if (!coords && !lastFetchedCoords) shouldFetch = true; // initial load without coords
-      if (coords && lastFetchedCoords) {
-        const dist = calculateDistanceMiles(coords.lat, coords.lon, lastFetchedCoords.lat, lastFetchedCoords.lon);
-        if (dist > 1.0) shouldFetch = true;
-      }
-      
       // We always fetch when filter changes or when radius changes.
       // We'll manage radius client side for small tweaks, but server side is better for big datasets.
       // Actually, we'll fetch whenever filter or radius changes, just to be safe, but we also refine client-side.
@@ -191,7 +182,7 @@ export default function LeadsPage() {
           ) : filteredProperties.length === 0 ? (
             <Empty 
               title="No leads found" 
-              description="No properties match your current filters and radius."
+              body="No properties match your current filters and radius."
             />
           ) : (
             filteredProperties.map((p) => (
