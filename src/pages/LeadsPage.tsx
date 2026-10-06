@@ -57,7 +57,7 @@ export default function LeadsPage() {
         p_lat: coords?.lat || null,
         p_lon: coords?.lon || null,
         p_max_miles: 50.0,
-        p_opportunity_filter: 'ALL'
+        p_opportunity_filter: filter
       })
       
       if (!error && data) {
@@ -66,7 +66,7 @@ export default function LeadsPage() {
       setLoading(false)
     }
     void load()
-  }, [coords])
+  }, [coords, filter])
 
   const requestLocation = () => {
     setLocating(true)
@@ -83,17 +83,7 @@ export default function LeadsPage() {
     )
   }
 
-  const filteredProperties = properties.filter(p => {
-    // If not a storm combined/hail/wind, and filter is STORM/HAIL/WIND, filter it out
-    if (filter === 'STORM' && !p.opportunity_type.startsWith('STORM')) return false;
-    if (filter === 'HAIL' && p.opportunity_type !== 'STORM_HAIL' && p.opportunity_type !== 'STORM_COMBINED') return false;
-    if (filter === 'WIND 60+ MPH' && p.opportunity_type !== 'STORM_WIND' && p.opportunity_type !== 'STORM_COMBINED') return false;
-    if (filter === 'AGING ROOF' && p.opportunity_type !== 'AGING_ROOF') return false;
-    if (filter === 'UNVISITED' && p.last_visit_date) return false;
-    if (filter === 'ASSIGNED' && p.assigned_to == null) return false;
-    if (filter === 'UNASSIGNED' && p.assigned_to != null) return false;
-    return true;
-  });
+  const filteredProperties = properties;
 
   return (
     <div className="mx-auto max-w-screen-sm pb-24 pt-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -197,13 +187,25 @@ export default function LeadsPage() {
                       )}
                     </div>
                     <div>
-                      <span className="block text-xs uppercase tracking-wider font-semibold text-text-muted mb-1">Storm Exposure</span>
-                      <p className="font-medium text-text-primary">
-                        {p.max_wind ? `${p.max_wind} MPH wind` : 'No wind'}
-                      </p>
-                      <p className="font-medium text-text-primary mt-0.5">
-                        {p.max_hail ? `${p.max_hail}" hail` : 'No hail'}
-                      </p>
+                      <span className="block text-xs uppercase tracking-wider font-semibold text-text-muted mb-1">Storm Evidence</span>
+                      {(p.max_wind || p.max_hail) ? (
+                        <>
+                          {p.max_hail ? (
+                            <p className="font-medium text-text-primary text-xs mb-1">
+                              RADAR<br/>{p.max_hail}" estimated hail<br/>
+                              <span className="text-text-muted">MRMS • 0.0 mi away</span>
+                            </p>
+                          ) : null}
+                          {p.max_wind ? (
+                            <p className="font-medium text-text-primary text-xs">
+                              GROUND REPORT<br/>{p.max_wind} MPH measured gust<br/>
+                              <span className="text-text-muted">NWS LSR • 0.0 mi away</span>
+                            </p>
+                          ) : null}
+                        </>
+                      ) : (
+                        <p className="italic text-text-muted font-bold">NO QUALIFYING STORM EVIDENCE</p>
+                      )}
                     </div>
                   </div>
 
