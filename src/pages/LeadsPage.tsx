@@ -329,6 +329,7 @@ export default function LeadsPage() {
                       </div>
                     </div>
                   </Card>
+                  </div>
                 ))
              )
           )}
