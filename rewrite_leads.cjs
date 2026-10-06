@@ -1,4 +1,7 @@
-import { useEffect, useState, useMemo } from 'react'
+const fs = require('fs');
+let c = fs.readFileSync('src/pages/LeadsPage.tsx', 'utf8');
+
+c = `import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, Empty, PageHeader } from '@/components/ui'
 import { getSupabase } from '@/lib/supabase'
@@ -151,20 +154,13 @@ export default function LeadsPage() {
           )}
         </div>
 
-        {status === 'PERMISSION_DENIED' && (
-          <div className="mb-4 bg-brand-primary/10 border border-brand-primary/20 rounded-lg p-3">
-            <h4 className="font-bold text-brand-primary text-sm mb-1">Enable Location for Nearby Leads</h4>
-            <p className="text-xs text-text-secondary">Location is used to calculate your distance to properties and build efficient field routes.</p>
-          </div>
-        )}
-
         <div className="mt-4 flex flex-col gap-3">
           <div className="flex flex-wrap gap-2">
             {(['ALL', 'STORM', 'HAIL', 'WIND 60+ MPH', 'AGING ROOF', 'UNVISITED', 'ASSIGNED', 'UNASSIGNED'] as FilterType[]).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${filter === f ? 'bg-text-primary text-bg-base' : 'bg-bg-elevated text-text-secondary hover:bg-border-subtle'}`}
+                className={\`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors \${filter === f ? 'bg-text-primary text-bg-base' : 'bg-bg-elevated text-text-secondary hover:bg-border-subtle'}\`}
               >
                 {f}
               </button>
@@ -177,9 +173,9 @@ export default function LeadsPage() {
               <button
                 key={r}
                 onClick={() => setRadius(r)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${radius === r ? 'bg-brand-primary text-white' : 'bg-bg-elevated text-text-secondary hover:bg-border-subtle'}`}
+                className={\`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors \${radius === r ? 'bg-brand-primary text-white' : 'bg-bg-elevated text-text-secondary hover:bg-border-subtle'}\`}
               >
-                {r === 'ALL' ? 'All' : `${r} mi`}
+                {r === 'ALL' ? 'All' : \`\${r} mi\`}
               </button>
             ))}
           </div>
@@ -203,18 +199,18 @@ export default function LeadsPage() {
                     </h3>
                     <p className="text-sm text-text-secondary truncate mt-0.5">{p.address_line1}</p>
                     
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-text-secondary">📍</span>
-                      <span className="font-medium text-text-primary text-sm">
-                        {p.distance_miles !== null && p.distance_miles !== undefined ? (
-                          <>{p.distance_miles < 1.0 ? p.distance_miles.toFixed(1) : Math.round(p.distance_miles * 10)/10} mi away <span className="text-xs text-text-muted font-normal">· {status === 'LIVE_GPS' ? 'Live GPS' : 'Approximate'}</span></>
-                        ) : (
-                          <span className="text-text-muted italic">Distance unavailable</span>
-                        )}
-                      </span>
-                    </div>
-
                     <div className="mt-3 space-y-1.5 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-text-secondary">📍</span>
+                        <span className="font-medium text-text-primary">
+                          {p.distance_miles !== null && p.distance_miles !== undefined ? (
+                            <>{p.distance_miles < 1.0 ? p.distance_miles.toFixed(1) : Math.round(p.distance_miles * 10)/10} mi away <span className="text-xs text-text-muted font-normal">· {status === 'LIVE_GPS' ? 'Live GPS' : 'Approximate'}</span></>
+                          ) : (
+                            <span className="text-text-muted italic">Distance unavailable</span>
+                          )}
+                        </span>
+                      </div>
+                      
                       <div className="flex items-center gap-2">
                         <span className="text-text-secondary">📞</span>
                         <span className="font-medium text-text-primary">
@@ -251,7 +247,7 @@ export default function LeadsPage() {
                       {p.roof_age_years ? (
                         <>
                           <p className="font-medium text-text-primary">~{p.roof_age_years} yrs old</p>
-                          <p className="text-xs text-text-muted mt-0.5 truncate">{p.last_roof_permit_date ? `Last reroof: ${p.last_roof_permit_date.split('-')[0]}` : ''}</p>
+                          <p className="text-xs text-text-muted mt-0.5 truncate">{p.last_roof_permit_date ? \`Last reroof: \${p.last_roof_permit_date.split('-')[0]}\` : ''}</p>
                         </>
                       ) : (
                         <p className="italic text-text-muted">Unknown • no permit found</p>
@@ -289,28 +285,28 @@ export default function LeadsPage() {
                     Open Lead
                   </button>
                   <a 
-                    href={p.primary_phone ? `tel:${p.primary_phone.replace(/[^0-9]/g, '')}` : undefined}
-                    className={`flex-1 py-3 text-xs font-semibold transition-colors text-center ${p.primary_phone ? 'text-brand-primary hover:bg-brand-primary/5' : 'text-text-muted cursor-not-allowed opacity-50'}`}
+                    href={p.primary_phone ? \`tel:\${p.primary_phone.replace(/[^0-9]/g, '')}\` : undefined}
+                    className={\`flex-1 py-3 text-xs font-semibold transition-colors text-center \${p.primary_phone ? 'text-brand-primary hover:bg-brand-primary/5' : 'text-text-muted cursor-not-allowed opacity-50'}\`}
                     onClick={(e) => { if (!p.primary_phone) e.preventDefault(); }}
                   >
                     Call
                   </a>
                   <a 
-                    href={p.primary_phone ? `sms:${p.primary_phone.replace(/[^0-9]/g, '')}` : undefined}
-                    className={`flex-1 py-3 text-xs font-semibold transition-colors text-center ${p.primary_phone ? 'text-brand-primary hover:bg-brand-primary/5' : 'text-text-muted cursor-not-allowed opacity-50'}`}
+                    href={p.primary_phone ? \`sms:\${p.primary_phone.replace(/[^0-9]/g, '')}\` : undefined}
+                    className={\`flex-1 py-3 text-xs font-semibold transition-colors text-center \${p.primary_phone ? 'text-brand-primary hover:bg-brand-primary/5' : 'text-text-muted cursor-not-allowed opacity-50'}\`}
                     onClick={(e) => { if (!p.primary_phone) e.preventDefault(); }}
                   >
                     Text
                   </a>
                   <a 
-                    href={p.primary_email ? `mailto:${p.primary_email}` : undefined}
-                    className={`flex-1 py-3 text-xs font-semibold transition-colors text-center ${p.primary_email ? 'text-brand-primary hover:bg-brand-primary/5' : 'text-text-muted cursor-not-allowed opacity-50'}`}
+                    href={p.primary_email ? \`mailto:\${p.primary_email}\` : undefined}
+                    className={\`flex-1 py-3 text-xs font-semibold transition-colors text-center \${p.primary_email ? 'text-brand-primary hover:bg-brand-primary/5' : 'text-text-muted cursor-not-allowed opacity-50'}\`}
                     onClick={(e) => { if (!p.primary_email) e.preventDefault(); }}
                   >
                     Email
                   </a>
                   <a 
-                    href={p.lat && p.lng ? `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}` : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.address_line1 + ', ' + p.city)}`}
+                    href={p.lat && p.lng ? \`https://www.google.com/maps/dir/?api=1&destination=\${p.lat},\${p.lng}\` : \`https://www.google.com/maps/dir/?api=1&destination=\${encodeURIComponent(p.address_line1 + ', ' + p.city)}\`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 py-3 text-xs font-semibold text-text-secondary hover:bg-bg-elevated transition-colors text-center"
@@ -326,3 +322,5 @@ export default function LeadsPage() {
     </div>
   )
 }
+`
+fs.writeFileSync('src/pages/LeadsPage.tsx', c);
