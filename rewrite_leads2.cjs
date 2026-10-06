@@ -1,4 +1,6 @@
-import { useEffect, useState, useMemo } from 'react'
+const fs = require('fs');
+
+const code = `import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, Empty, PageHeader } from '@/components/ui'
 import { getSupabase } from '@/lib/supabase'
@@ -133,13 +135,13 @@ export default function LeadsPage() {
         
         <div className="mt-4 mb-4 flex bg-bg-elevated p-1 rounded-lg border border-border-subtle">
           <button 
-            className={`flex-1 py-1.5 text-xs font-bold uppercase rounded-md transition-colors ${viewMode === 'SUBDIVISIONS' ? 'bg-bg-base shadow text-brand-primary' : 'text-text-secondary hover:text-text-primary'}`}
+            className={\`flex-1 py-1.5 text-xs font-bold uppercase rounded-md transition-colors \${viewMode === 'SUBDIVISIONS' ? 'bg-bg-base shadow text-brand-primary' : 'text-text-secondary hover:text-text-primary'}\`}
             onClick={() => setViewMode('SUBDIVISIONS')}
           >
             Subdivisions
           </button>
           <button 
-            className={`flex-1 py-1.5 text-xs font-bold uppercase rounded-md transition-colors ${viewMode === 'PROPERTIES' ? 'bg-bg-base shadow text-brand-primary' : 'text-text-secondary hover:text-text-primary'}`}
+            className={\`flex-1 py-1.5 text-xs font-bold uppercase rounded-md transition-colors \${viewMode === 'PROPERTIES' ? 'bg-bg-base shadow text-brand-primary' : 'text-text-secondary hover:text-text-primary'}\`}
             onClick={() => setViewMode('PROPERTIES')}
           >
             Properties
@@ -178,9 +180,9 @@ export default function LeadsPage() {
               <button
                 key={r}
                 onClick={() => setRadius(r)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${radius === r ? 'bg-brand-primary text-white' : 'bg-bg-elevated text-text-secondary hover:bg-border-subtle hover:text-text-primary'}`}
+                className={\`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors \${radius === r ? 'bg-brand-primary text-white' : 'bg-bg-elevated text-text-secondary hover:bg-border-subtle'}\`}
               >
-                {r === 'ALL' ? 'All' : `${r} mi`}
+                {r === 'ALL' ? 'All' : \`\${r} mi\`}
               </button>
             ))}
           </div>
@@ -190,7 +192,7 @@ export default function LeadsPage() {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${filter === f ? 'bg-brand-primary text-white shadow-sm' : 'bg-bg-elevated text-text-secondary hover:bg-border-subtle'}`}
+                className={\`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors \${filter === f ? 'bg-text-primary text-bg-base' : 'bg-bg-elevated text-text-secondary hover:bg-border-subtle'}\`}
               >
                 {f}
               </button>
@@ -232,7 +234,7 @@ export default function LeadsPage() {
                             {p.distance_miles !== null && p.distance_miles !== undefined ? (
                               <>{p.distance_miles < 1.0 ? p.distance_miles.toFixed(1) : Math.round(p.distance_miles * 10)/10} mi away <span className="text-xs text-text-muted font-normal">· {status === 'LIVE_GPS' ? 'Live GPS' : 'Approximate'}</span></>
                             ) : (
-                              {status === 'REQUESTING_PERMISSION' ? <span className="text-text-muted italic">Locating...</span> : <span className="text-text-muted italic">Distance unavailable &middot; {status === 'PERMISSION_DENIED' ? 'Location permission denied' : status === 'TIMEOUT' ? 'GPS timed out' : status === 'POSITION_UNAVAILABLE' ? 'GPS unavailable' : !p.lat || !p.lng ? 'Property coordinates missing' : 'Location unknown'}</span>}
+                              <span className="text-text-muted italic">Distance unavailable</span>
                             )}
                           </span>
                         </div>
@@ -241,17 +243,17 @@ export default function LeadsPage() {
                           <div className="flex items-center gap-2">
                             <span className="text-text-secondary">📞</span>
                             <span className="font-medium text-text-primary">
-                              {p.primary_phone ? p.primary_phone : <span className="text-text-muted italic">Phone {p.phone_status ? p.phone_status.toLowerCase().replace(/_/g, " ") : "not checked"}</span>}
+                              {p.primary_phone ? p.primary_phone : <span className="text-text-muted italic">Phone not found</span>}
                             </span>
-                            {p.phone_status && p.phone_status !== "NOT_FOUND" && p.phone_status !== "NOT_CHECKED" && p.phone_status !== "PROVIDER_NOT_CONFIGURED" && <span className="text-[10px] uppercase font-bold text-brand-primary/70 bg-brand-primary/10 px-1.5 py-0.5 rounded">{p.phone_status}</span>}
+                            {p.phone_status && <span className="text-[10px] uppercase font-bold text-brand-primary/70 bg-brand-primary/10 px-1.5 py-0.5 rounded">{p.phone_status}</span>}
                           </div>
                           
                           <div className="flex items-center gap-2">
                             <span className="text-text-secondary">📧</span>
                             <span className="font-medium text-text-primary">
-                              {p.primary_email ? p.primary_email : <span className="text-text-muted italic">Email {p.email_status ? p.email_status.toLowerCase().replace(/_/g, " ") : "not checked"}</span>}
+                              {p.primary_email ? p.primary_email : <span className="text-text-muted italic">Email not found</span>}
                             </span>
-                            {p.email_status && p.email_status !== "NOT_FOUND" && p.email_status !== "NOT_CHECKED" && p.email_status !== "PROVIDER_NOT_CONFIGURED" && <span className="text-[10px] uppercase font-bold text-brand-primary/70 bg-brand-primary/10 px-1.5 py-0.5 rounded">{p.email_status}</span>}
+                            {p.email_status && <span className="text-[10px] uppercase font-bold text-brand-primary/70 bg-brand-primary/10 px-1.5 py-0.5 rounded">{p.email_status}</span>}
                           </div>
                         </div>
                       </div>
@@ -268,7 +270,7 @@ export default function LeadsPage() {
                       <button onClick={() => navigate('/leads/' + (p.lead_id || p.property_id))} className="flex-1 py-3 text-xs font-semibold text-text-primary hover:bg-bg-elevated transition-colors">
                         Open Lead
                       </button>
-                      <a href={p.primary_phone ? `tel:${p.primary_phone.replace(/[^0-9]/g, '')}` : undefined} className={`flex-1 py-3 text-xs font-semibold transition-colors text-center ${p.primary_phone ? 'text-brand-primary hover:bg-brand-primary/5' : 'text-text-muted cursor-not-allowed opacity-50'}`} onClick={(e) => { if (!p.primary_phone) e.preventDefault(); }}>Call</a>
+                      <a href={p.primary_phone ? \`tel:\${p.primary_phone.replace(/[^0-9]/g, '')}\` : undefined} className={\`flex-1 py-3 text-xs font-semibold transition-colors text-center \${p.primary_phone ? 'text-brand-primary hover:bg-brand-primary/5' : 'text-text-muted cursor-not-allowed opacity-50'}\`} onClick={(e) => { if (!p.primary_phone) e.preventDefault(); }}>Call</a>
                     </div>
                   </Card>
                 ))
@@ -336,3 +338,6 @@ export default function LeadsPage() {
     </div>
   )
 }
+`
+
+fs.writeFileSync('src/pages/LeadsPage.tsx', code);
