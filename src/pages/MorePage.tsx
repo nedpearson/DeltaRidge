@@ -66,6 +66,7 @@ export default function MorePage() {
 
       <div>
         <SectionTitle>GROWTH OS</SectionTitle>
+        {canManage && <Card className="mb-3 !p-1"><ActionRow icon={<BarChart3 size={19} />} title="Inbound Acquisition" description="Inspection requests, booking, campaign links and measured acquisition cost." trailing={<ChevronRight size={18} />} onClick={() => navigate('/acquisition')} /></Card>}
         <Card className="!p-1">
           <ActionRow
             icon={<Inbox size={19} />}

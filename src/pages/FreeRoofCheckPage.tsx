@@ -1,102 +1,66 @@
-import { useState } from 'react';
-import type { FormEvent } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { useCallback, useState, type FormEvent } from 'react'
+import { getSupabase } from '@/lib/supabase'
+import { CONTACT_DISCLOSURE, captureAttribution, validateIntake, type InspectionIntake } from '@/features/acquisition/intake'
+import SecurityCheck from '@/features/acquisition/SecurityCheck'
 
 export default function FreeRoofCheckPage() {
-  const [address, setAddress] = useState('');
-  const [result, setResult] = useState<'idle' | 'loading' | 'done'>('idle');
-  const [assessmentStatus, setAssessmentStatus] = useState<'exposed' | 'clear' | 'unable_to_determine'>('clear');
-
-  const handleLookup = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!address.trim()) return;
-    setResult('loading');
-    
-    const supabase = getSupabase();
-    if (!supabase) {
-      setAssessmentStatus('unable_to_determine');
-      setResult('done');
-      return;
-    }
-
+  const [step, setStep] = useState<'address'|'request'|'saved'>('address')
+  const [exposure, setExposure] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [token, setToken] = useState('')
+  const [reset, setReset] = useState(0)
+  const onToken = useCallback((value: string) => setToken(value), [])
+  const [input, setInput] = useState<InspectionIntake>(() => ({ requestKey: crypto.randomUUID(), name: '', address: '', phone: '', email: '', preferredDay: '', notes: '', contactConsent: false, website: '', attribution: captureAttribution(window.location.search) }))
+  const update = (key: keyof InspectionIntake, value: string | boolean) => setInput(prev => ({ ...prev, [key]: value }))
+  const resetSecurity = () => { setToken(''); setReset(n => n + 1) }
+  async function lookup(event: FormEvent) {
+    event.preventDefault()
+    setBusy(true); setError('')
     try {
-      // Organization ID must come from tenant configuration (domain mapping or env)
-      const orgId = import.meta.env.VITE_PUBLIC_ORG_ID;
-      if (!orgId) {
-        setAssessmentStatus('unable_to_determine');
-        setResult('done');
-        return;
-      }
-
-      const { data, error } = await supabase.rpc('check_storm_exposure_for_address', {
-        org_id: orgId,
-        search_address: address
-      });
-        
-      if (error) throw error;
-      
-      setAssessmentStatus(data?.status || 'unable_to_determine');
-    } catch (err) {
-      console.error(err);
-      setAssessmentStatus('unable_to_determine');
-    }
-    
-    setResult('done');
-  };
-
-  return (
-    <div className="min-h-screen bg-white flex flex-col items-center p-6 justify-center">
-      <div className="max-w-md w-full">
-        <h1 className="text-3xl font-bold mb-2 text-center text-slate-900">Free Roof Check</h1>
-        <p className="text-slate-600 text-center mb-8">Enter your address to see if your property is in an area with recorded storm activity.</p>
-        
-        {result === 'idle' && (
-          <form onSubmit={handleLookup} className="flex flex-col gap-4">
-            <input 
-              type="text" 
-              className="border border-slate-300 rounded p-3 text-lg w-full"
-              placeholder="Enter your property address"
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-            />
-            <button type="submit" className="bg-blue-600 text-white font-bold py-3 px-4 rounded text-lg">
-              Check Address
-            </button>
-          </form>
-        )}
-
-        {result === 'loading' && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-slate-500 font-medium">Analyzing historical storm data...</p>
-          </div>
-        )}
-
-        {result === 'done' && (
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 text-center">
-            <h2 className="text-xl font-semibold mb-2">Assessment Complete</h2>
-            <p className="text-slate-700 mb-6">
-              {assessmentStatus === 'exposed'
-                ? 'Your property is within an area with recorded storm activity.'
-                : assessmentStatus === 'unable_to_determine'
-                  ? 'We are unable to automatically determine storm exposure for this location right now, but a check is still recommended.'
-                  : 'We checked your area. No severe recent storm activity was recorded, but a check is still recommended.'}
-            </p>
-            <button className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded text-lg mb-3">
-              Schedule Free Inspection
-            </button>
-            <button 
-              className="w-full bg-transparent text-slate-500 font-medium py-2"
-              onClick={() => {
-                setResult('idle');
-                setAddress('');
-              }}
-            >
-              Check another address
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+      const db = getSupabase()
+      if (!db || !token) throw new Error('Complete the security check before looking up your address.')
+      const { data, error: lookupError } = await db.functions.invoke('public-inspection-request', { body: { action: 'lookup', address: input.address, captchaToken: token } })
+      if (lookupError || data?.error) throw new Error('Storm data is unavailable. You can still request an inspection.')
+      setExposure(data?.status === 'exposed' ? 'Recorded storm activity overlaps this property’s location. This does not establish roof damage.' : 'We cannot determine storm exposure from the available records. An inspection can assess your roof.')
+      setStep('request')
+    } catch (err) { setError(err instanceof Error ? err.message : 'Unable to check this address.') }
+    finally { setBusy(false); resetSecurity() }
+  }
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    const validation = validateIntake(input)
+    if (validation) { setError(validation); return }
+    const db = getSupabase()
+    if (!db || !token) { setError('Complete the security check before submitting.'); return }
+    setBusy(true); setError('')
+    try {
+      const { data, error: saveError } = await db.functions.invoke('public-inspection-request', { body: { ...input, captchaToken: token } })
+      if (saveError || data?.success !== true) throw new Error(data?.error || 'We could not save your request. Please retry or contact the office.')
+      setStep('saved')
+    } catch (err) { setError(err instanceof Error ? err.message : 'Unable to save your request.') }
+    finally { setBusy(false); resetSecurity() }
+  }
+  const field = (key: 'name'|'address'|'phone'|'email'|'preferredDay', label: string, type = 'text', required = false) => <label className="block text-sm font-medium text-slate-800">{label}<input className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900" type={type} value={input[key]} required={required} maxLength={key === 'address' ? 300 : 254} min={type === 'date' ? new Date().toISOString().slice(0,10) : undefined} onChange={e => update(key,e.target.value)} /></label>
+  return <main className="min-h-screen bg-slate-100 px-4 py-12 text-slate-900"><div className="mx-auto max-w-xl rounded-2xl bg-white p-6 shadow-lg sm:p-10">
+    <p className="mb-3 text-xs font-bold uppercase tracking-widest text-blue-700">Delta Ridge Roofing</p>
+    <h1 className="text-3xl font-bold">Free roof inspection</h1>
+    <p className="mt-3 mb-6 text-slate-600">Check available storm records and request a visit. Roof damage and insurance coverage require separate verification.</p>
+    {step === 'saved' ? <section role="status"><h2 className="text-xl font-bold">Your request is saved</h2><p className="mt-3">Our team will contact you to confirm the date and time. Your preferred day is a request, and no appointment is booked yet.</p><a className="mt-6 inline-block text-blue-700 underline" href="/free-roof-check">Request another inspection</a></section> : <>
+      {exposure && <p className="mb-5 rounded-lg bg-blue-50 p-4 text-sm">{exposure}</p>}
+      {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-800">{error}</p>}
+      <form onSubmit={step === 'address' ? lookup : submit} className="space-y-4">
+        {field('address','Property address, city and ZIP','text',true)}
+        {step === 'request' && <>{field('name','Your name','text',true)}{field('phone','Phone','tel')}{field('email','Email','email')}{field('preferredDay','Preferred day (team will confirm)','date')}
+          <label className="block text-sm font-medium">What would you like checked?<textarea value={input.notes} maxLength={2000} onChange={e => update('notes',e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-3" /></label>
+          <label className="flex items-start gap-3 text-sm"><input className="mt-1" type="checkbox" checked={input.contactConsent} onChange={e => update('contactConsent',e.target.checked)} />{CONTACT_DISCLOSURE}</label>
+          <p className="text-xs text-slate-600">Your name, address and contact details are stored by Delta Ridge to respond to this inspection request. We do not add you to a marketing list through this form.</p>
+          <label className="hidden" aria-hidden="true">Website<input tabIndex={-1} autoComplete="off" value={input.website} onChange={e=>update('website',e.target.value)} /></label>
+        </>}
+        <SecurityCheck onToken={onToken} reset={reset} />
+        <button disabled={busy || !token} className="w-full rounded-lg bg-blue-700 p-3 font-bold text-white disabled:opacity-50">{busy ? 'Saving…' : step === 'address' ? 'Check storm records' : 'Request free inspection'}</button>
+        {step === 'address' && <button type="button" disabled={busy} onClick={()=>{setStep('request');setError('');resetSecurity()}} className="w-full p-3 text-blue-700 underline">Request an inspection without storm lookup</button>}
+      </form>
+    </>}
+  </div></main>
 }

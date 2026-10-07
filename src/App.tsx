@@ -25,6 +25,7 @@ import MorePage from '@/pages/MorePage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
 // Lazy-loaded heavy/manager routes
+const AcquisitionPage = lazy(() => import('@/pages/AcquisitionPage'))
 const ManagerPage = lazy(() => import('@/pages/ManagerPage'))
 const DiagnosticsPage = lazy(() => import('@/pages/DiagnosticsPage'))
 const CostBookPage = lazy(() => import('@/pages/CostBookPage'))
@@ -102,6 +103,7 @@ export default function App() {
                       <Route path="/costs" element={<CostBookPage />} />
                       <Route path="/diagnostics" element={<DiagnosticsPage />} />
                       <Route path="/manager" element={<ManagerPage />} />
+                      <Route path="/acquisition" element={<AcquisitionPage />} />
                       <Route path="/routes" element={<RouteHistoryPage />} />
                       <Route path="/inbox" element={<InboxPage />} />
                       <Route path="/brain" element={<BrandBrainPage />} />

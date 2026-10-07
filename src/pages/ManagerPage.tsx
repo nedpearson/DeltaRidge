@@ -1507,7 +1507,7 @@ function LeadEconomicsPanel() {
         </div>
         <div className="border-t border-border-subtle pt-3 grid grid-cols-2 gap-2">
           <Stat value={`$${data.contractValue.toLocaleString()}`} label="Contract Value" />
-          <Stat value={`$${data.estimatedGp.toLocaleString()}`} label="Estimated GP" />
+          <Stat value={`$${data.estimatedGp.toLocaleString()}`} label="Estimated GP (assumed margin)" />
         </div>
       </Card>
     </div>
@@ -1517,7 +1517,9 @@ function LeadEconomicsPanel() {
 import { useSourceAttribution } from '@/features/dashboard/useSourceAttribution';
 
 function SourceAttributionPanel() {
-  const { data, loading } = useSourceAttribution();
+  const { data, loading, error } = useSourceAttribution();
+
+  if (error) return <Card><p role="alert" className="text-status-critical">{error}</p></Card>;
 
   if (loading || !data) {
     return <div className="text-[13px] text-text-secondary py-4 text-center">Loading sources...</div>;
@@ -1527,7 +1529,7 @@ function SourceAttributionPanel() {
     <div className="space-y-2">
       <Card>
         <p className="text-[12px] leading-relaxed text-text-secondary mb-3">
-          Performance breakdown by lead source (Server-backed). The ultimate metric is GROSS PROFIT PER GENERATED OPPORTUNITY.
+          Source breakdown from actual appointment records. Close rate is sold leads divided by generated leads. Proposal value requires one verified proposal; gross profit is not measured without actual job costs.
         </p>
         <div className="space-y-3">
           {data.map(src => (

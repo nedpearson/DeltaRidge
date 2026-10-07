@@ -45,3 +45,9 @@ max_namespaces = 10
 [storage.image_transformation]
 enabled = true
 
+
+[functions.public-inspection-request]
+verify_jwt = false
+
+[functions.confirm-inspection-request]
+verify_jwt = false
