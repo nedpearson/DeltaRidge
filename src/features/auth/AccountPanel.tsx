@@ -3,60 +3,54 @@ import { Button, Card, Field, SectionTitle, TextInput } from '@/components/ui'
 import { useSession } from './session'
 import { supabaseConfigured } from '@/lib/supabase'
 
-/**
- * Sign-in and account state.
- *
- * Magic link rather than a password: there is no password for the app to
- * store, nothing for a rep to forget on a roof, and one less credential to
- * handle anywhere in this system.
- */
 export default function AccountPanel() {
-  const { session, membership, awaitingAccess, ready, signInWithEmail, signOut } = useSession()
+  const { session, membership, awaitingAccess, ready, signInWithPassword, signOut } = useSession()
   const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
+  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   if (!supabaseConfigured()) return null
   if (!ready) return null
 
-  async function send() {
+  async function signin() {
     setBusy(true)
     setError(null)
-    const { error: e } = await signInWithEmail(email)
+    const { error: e } = await signInWithPassword(email, password)
     setBusy(false)
     if (e) setError(e)
-    else setSent(true)
   }
 
   if (!session) {
     return (
       <div className="space-y-3 px-1 py-1">
-        {sent ? (
-          <p className="text-[13px] leading-relaxed text-status-success font-medium">
-            Check your email — the sign-in link is on its way!
-          </p>
-        ) : (
-          <>
-            <Field label="Work email">
-              <TextInput
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@delta-ridge.com"
-                inputMode="email"
-                autoComplete="email"
-              />
-            </Field>
-            {error && <p className="text-[12px] text-status-critical">{error}</p>}
-            <Button full variant="primary" onClick={() => void send()} disabled={busy || !email.includes('@')}>
-              {busy ? 'Sending…' : 'Sign In with Magic Link'}
-            </Button>
-            <p className="text-[11px] text-text-secondary text-center mt-3 leading-relaxed">
-              <span className="font-semibold block mb-0.5">Looking for a password?</span>
-              Delta Ridge uses secure, passwordless authentication. Enter your email above to receive a magic link, or check your phone messages.
-            </p>
-          </>
-        )}
+        <Field label="Work email">
+          <TextInput
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@delta-ridge.com"
+            inputMode="email"
+            autoComplete="email"
+          />
+        </Field>
+        <Field label="Password">
+          <TextInput
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            type="password"
+            autoComplete="current-password"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && email.includes('@') && password) {
+                void signin();
+              }
+            }}
+          />
+        </Field>
+        {error && <p className="text-[12px] text-status-critical">{error}</p>}
+        <Button full variant="primary" onClick={() => void signin()} disabled={busy || !email.includes('@') || !password}>
+          {busy ? 'Signing In…' : 'Sign In'}
+        </Button>
       </div>
     )
   }
@@ -83,4 +77,3 @@ export default function AccountPanel() {
     </>
   )
 }
-

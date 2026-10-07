@@ -25,7 +25,7 @@ interface SessionState {
   profile: UserProfile | null
   /** True only when the membership query succeeded and returned no row. */
   awaitingAccess: boolean
-  signInWithEmail: (email: string) => Promise<{ error: string | null }>
+  signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshMembership: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: string | null }>
@@ -143,16 +143,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase, loadMembership])
 
-  const signInWithEmail = useCallback(
-    async (email: string) => {
+  const signInWithPassword = useCallback(
+    async (email: string, password: string) => {
       if (!supabase) return { error: 'The server is not configured for this build.' }
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
-        options: { emailRedirectTo: window.location.origin },
+        password,
       })
-      return { error: error?.message ?? null }
+      if (error) return { error: error.message }
+      return { error: null }
     },
-    [supabase],
+    [],
   )
 
   const signOut = useCallback(async () => {
@@ -200,12 +201,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       membershipError,
       profile,
       awaitingAccess: Boolean(session) && membership === null && membershipError === null,
-      signInWithEmail,
+      signInWithPassword,
       signOut,
       refreshMembership: () => loadMembership(session),
       updateProfile,
     }),
-    [ready, session, membership, membershipError, profile, signInWithEmail, signOut, loadMembership, updateProfile],
+    [ready, session, membership, membershipError, profile, signInWithPassword, signOut, loadMembership, updateProfile],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
