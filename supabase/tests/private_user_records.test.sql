@@ -22,7 +22,8 @@ grant all on all tables in schema public to authenticated;
 set local role authenticated;
 set local request.jwt.claim.sub='bbbbbbbb-0808-0000-0000-000000000001';
 select is((select count(*)::integer from leads where organization_id='aaaaaaaa-0808-0000-0000-000000000001'),1,'Rep A sees only assigned lead');
-select is((with changed as (update leads set next_action_note='not allowed' where id='dddddddd-0808-0000-0000-000000000002' returning id) select count(*)::integer from changed),0,'Rep A cannot update rep B lead');
+with changed as (update leads set next_action_note='not allowed' where id='dddddddd-0808-0000-0000-000000000002' returning id)
+select is((select count(*)::integer from changed),0,'Rep A cannot update rep B lead');
 select is((select count(*)::integer from get_property_intelligence(null,null,50,'ALL',null) where lead_id='dddddddd-0808-0000-0000-000000000002'),0,'Map RPC hides peer lead');
 select is((select count(*)::integer from get_property_intelligence(null,null,50,'ALL',null) where lead_id='dddddddd-0808-0000-0000-000000000001'),1,'Map RPC preserves own lead');
 set local request.jwt.claim.sub='bbbbbbbb-0808-0000-0000-000000000002';
