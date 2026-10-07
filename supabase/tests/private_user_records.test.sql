@@ -10,10 +10,13 @@ insert into organization_members(organization_id,user_id,role) values
 ('aaaaaaaa-0808-0000-0000-000000000001','bbbbbbbb-0808-0000-0000-000000000001','salesperson'),
 ('aaaaaaaa-0808-0000-0000-000000000001','bbbbbbbb-0808-0000-0000-000000000002','salesperson'),
 ('aaaaaaaa-0808-0000-0000-000000000001','bbbbbbbb-0808-0000-0000-000000000003','manager');
-insert into properties(id,organization_id,address_line1) values ('cccccccc-0808-0000-0000-000000000001','aaaaaaaa-0808-0000-0000-000000000001','Scope Test');
+-- One open lead per property is a production invariant; use distinct homes.
+insert into properties(id,organization_id,address_line1) values
+('cccccccc-0808-0000-0000-000000000001','aaaaaaaa-0808-0000-0000-000000000001','101 Scope Test Street'),
+('cccccccc-0808-0000-0000-000000000002','aaaaaaaa-0808-0000-0000-000000000001','102 Scope Test Street');
 insert into leads(id,organization_id,property_id,assigned_to,created_by) values
 ('dddddddd-0808-0000-0000-000000000001','aaaaaaaa-0808-0000-0000-000000000001','cccccccc-0808-0000-0000-000000000001','bbbbbbbb-0808-0000-0000-000000000001','bbbbbbbb-0808-0000-0000-000000000003'),
-('dddddddd-0808-0000-0000-000000000002','aaaaaaaa-0808-0000-0000-000000000001','cccccccc-0808-0000-0000-000000000001','bbbbbbbb-0808-0000-0000-000000000002','bbbbbbbb-0808-0000-0000-000000000003');
+('dddddddd-0808-0000-0000-000000000002','aaaaaaaa-0808-0000-0000-000000000001','cccccccc-0808-0000-0000-000000000002','bbbbbbbb-0808-0000-0000-000000000002','bbbbbbbb-0808-0000-0000-000000000003');
 grant usage on schema public, app to authenticated;
 grant all on all tables in schema public to authenticated;
 set local role authenticated;
