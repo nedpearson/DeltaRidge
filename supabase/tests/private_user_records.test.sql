@@ -1,6 +1,6 @@
 begin;
 \set ON_ERROR_STOP on
-select plan(4);
+select plan(7);
 insert into organizations(id,name,slug) values ('aaaaaaaa-0808-0000-0000-000000000001','Private scope test','private-scope-test');
 insert into auth.users(id,email) values
 ('bbbbbbbb-0808-0000-0000-000000000001','private-a@example.com'),
@@ -20,10 +20,13 @@ set local role authenticated;
 set local request.jwt.claim.sub='bbbbbbbb-0808-0000-0000-000000000001';
 select is((select count(*)::integer from leads where organization_id='aaaaaaaa-0808-0000-0000-000000000001'),1,'Rep A sees only assigned lead');
 select is((with changed as (update leads set next_action_note='not allowed' where id='dddddddd-0808-0000-0000-000000000002' returning id) select count(*)::integer from changed),0,'Rep A cannot update rep B lead');
+select is((select count(*)::integer from get_property_intelligence(null,null,50,'ALL',null) where lead_id='dddddddd-0808-0000-0000-000000000002'),0,'Map RPC hides peer lead');
+select is((select count(*)::integer from get_property_intelligence(null,null,50,'ALL',null) where lead_id='dddddddd-0808-0000-0000-000000000001'),1,'Map RPC preserves own lead');
 set local request.jwt.claim.sub='bbbbbbbb-0808-0000-0000-000000000002';
 select is((select count(*)::integer from leads where organization_id='aaaaaaaa-0808-0000-0000-000000000001'),1,'Rep B sees only assigned lead');
 set local request.jwt.claim.sub='bbbbbbbb-0808-0000-0000-000000000003';
 select is((select count(*)::integer from leads where organization_id='aaaaaaaa-0808-0000-0000-000000000001'),2,'Manager sees both company leads');
+select is((select count(*)::integer from get_property_intelligence(null,null,50,'ALL',null) where lead_id is not null),2,'Manager map RPC retains both leads');
 reset role;
 select * from finish();
 rollback;
