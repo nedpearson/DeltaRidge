@@ -875,12 +875,6 @@ export default function LeadPage() {
           </div>
         )}
 
-        {activeTab === 'proposal' && (
-          <div className="space-y-6">
-            <ProposalOptionsPanel />
-          </div>
-        )}
-
         {activeTab === 'documents' && (
           <div className="space-y-6">
             <SectionTitle>DOCUMENT CENTER</SectionTitle>
@@ -935,6 +929,8 @@ export default function LeadPage() {
     </div>
   )
 }
+
+
 
 
 
