@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useRef } from 'react'
 import type { ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import type { Session } from '@supabase/supabase-js'
 import { setOutboxOwnerSource } from '@/lib/db'
 import { getSupabase } from '@/lib/supabase'
@@ -25,7 +26,10 @@ interface SessionState {
   profile: UserProfile | null
   /** True only when the membership query succeeded and returned no row. */
   awaitingAccess: boolean
-  signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
+  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>
+  recoveringPassword: boolean
+  resetPassword: (email: string) => Promise<{ error: string | null }>
+  savePassword: (password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshMembership: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: string | null }>
@@ -40,7 +44,10 @@ export function useSession(): SessionState {
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
+  const lastUserId = useRef<string | null>(null)
   const supabase = getSupabase()
+  const [recoveringPassword, setRecoveringPassword] = useState(false)
   const [ready, setReady] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const [membership, setMembership] = useState<Membership | null>(null)
@@ -127,12 +134,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     void supabase.auth.getSession().then(async ({ data }) => {
       if (cancelled) return
+      lastUserId.current = data.session?.user.id ?? null
       setSession(data.session)
       await loadMembership(data.session)
       setReady(true)
     })
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      const nextUserId = s?.user.id ?? null
+      if (lastUserId.current !== nextUserId) queryClient.clear()
+      lastUserId.current = nextUserId
+      if (event === 'PASSWORD_RECOVERY') setRecoveringPassword(true)
       setSession(s)
       void loadMembership(s)
     })
@@ -141,20 +153,32 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       cancelled = true
       sub.subscription.unsubscribe()
     }
-  }, [supabase, loadMembership])
+  }, [supabase, loadMembership, queryClient])
 
-  const signInWithPassword = useCallback(
+  const signInWithEmail = useCallback(
     async (email: string, password: string) => {
       if (!supabase) return { error: 'The server is not configured for this build.' }
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       })
-      if (error) return { error: error.message }
-      return { error: null }
+      return { error: error?.message ?? null }
     },
-    [],
+    [supabase],
   )
+
+  const resetPassword = useCallback(async (email: string) => {
+    if (!supabase) return { error: 'The server is not configured for this build.' }
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin })
+    return { error: error?.message ?? null }
+  }, [supabase])
+
+  const savePassword = useCallback(async (password: string) => {
+    if (!supabase) return { error: 'The server is not configured for this build.' }
+    const { error } = await supabase.auth.updateUser({ password })
+    if (!error) setRecoveringPassword(false)
+    return { error: error?.message ?? null }
+  }, [supabase])
 
   const signOut = useCallback(async () => {
     await supabase?.auth.signOut()
@@ -201,12 +225,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       membershipError,
       profile,
       awaitingAccess: Boolean(session) && membership === null && membershipError === null,
-      signInWithPassword,
+      recoveringPassword, resetPassword, savePassword,
+      signInWithEmail,
       signOut,
       refreshMembership: () => loadMembership(session),
       updateProfile,
     }),
-    [ready, session, membership, membershipError, profile, signInWithPassword, signOut, loadMembership, updateProfile],
+    [recoveringPassword, resetPassword, savePassword, ready, session, membership, membershipError, profile, signInWithEmail, signOut, loadMembership, updateProfile],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
