@@ -76,6 +76,13 @@ export async function lookupResidentContact(params: {
           searchUrl: buildFreeSearchUrl(street, city, state, zip),
         }
       }
+      return {
+        success: false,
+        message: data?.message ?? data?.error ?? error?.message ?? 'Contact provider returned no result.',
+        residentName: data?.residentName ?? null,
+        searchUrl: buildFreeSearchUrl(street, city, state, zip),
+      }
+
     }
   } catch (err) {
     // Network or edge function failure fallback

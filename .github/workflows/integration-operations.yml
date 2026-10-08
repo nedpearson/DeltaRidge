@@ -1,0 +1,121 @@
+name: Integration Operations
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/integration-operations.yml'
+      - 'scripts/integration_worker.py'
+      - 'scripts/deploy-integration-schema.py'
+      - 'scripts/integration-worker-requirements.txt'
+      - 'supabase/functions/integration-status/**'
+      - 'supabase/functions/push-notifications/**'
+      - 'supabase/functions/eagleview-imagery/**'
+      - 'supabase/functions/lookup-contact/**'
+      - 'supabase/functions/_shared/**'
+      - 'supabase/migrations/20261008010000_integration_operations.sql'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/integration-operations.yml'
+      - 'scripts/integration_worker.py'
+      - 'tests/integration_worker/**'
+      - 'supabase/migrations/20261008010000_integration_operations.sql'
+  workflow_dispatch:
+    inputs:
+      task:
+        type: choice
+        options: [deploy, mrms, push]
+        default: deploy
+        description: Integration task
+  schedule:
+    - cron: '*/10 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: integration-operations-${{ github.event_name }}-${{ inputs.task || 'all' }}
+  cancel-in-progress: false
+env:
+  SUPABASE_PROJECT_REF: udrxvpkihkbrudvwggpr
+  SUPABASE_URL: https://udrxvpkihkbrudvwggpr.supabase.co
+jobs:
+  validate:
+    name: Validate integration services
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pip install -r scripts/integration-worker-requirements.txt
+      - run: python -m unittest discover -s tests/integration_worker -v
+  deploy:
+    name: Deploy integration backend
+    needs: validate
+    if: github.event_name == 'push' || inputs.task == 'deploy'
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      EAGLEVIEW_CLIENT_ID: ${{ secrets.EAGLEVIEW_CLIENT_ID }}
+      EAGLEVIEW_CLIENT_SECRET: ${{ secrets.EAGLEVIEW_CLIENT_SECRET }}
+      EAGLEVIEW_ENV: ${{ secrets.EAGLEVIEW_ENV }}
+      ZAPIER_ROOFR_HOOK_URL: ${{ secrets.ZAPIER_ROOFR_HOOK_URL }}
+      BATCHDATA_API_KEY: ${{ secrets.BATCHDATA_API_KEY }}
+      REALESTATE_API_KEY: ${{ secrets.REALESTATE_API_KEY }}
+      VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v1
+      - name: Validate deployment access
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo '::error::SUPABASE_ACCESS_TOKEN is missing. Backend deployment is blocked.'; exit 1; }
+      - name: Deploy integration schema
+        run: python3 scripts/deploy-integration-schema.py
+      - name: Sync available provider secrets without clearing existing values
+        run: |
+          python3 - <<'PY'
+          import os
+          import subprocess
+          names = ['EAGLEVIEW_CLIENT_ID','EAGLEVIEW_CLIENT_SECRET','EAGLEVIEW_ENV','ZAPIER_ROOFR_HOOK_URL','BATCHDATA_API_KEY','REALESTATE_API_KEY','VAPID_PUBLIC_KEY','VAPID_PRIVATE_KEY','VAPID_SUBJECT']
+          values = [f'{name}={os.environ[name]}' for name in names if os.environ.get(name)]
+          if values:
+              result = subprocess.run(['supabase','secrets','set','--project-ref',os.environ['SUPABASE_PROJECT_REF'],*values],stdout=subprocess.DEVNULL)
+              if result.returncode:
+                  raise SystemExit('Provider secret setup failed; existing values were not cleared.')
+          print('Available provider secrets synchronized; existing secrets were not cleared.')
+          PY
+      - name: Deploy authenticated integration functions
+        run: |
+          set -euo pipefail
+          for function in integration-status push-notifications eagleview-imagery lookup-contact roofr-push roofr-events ingest-mrms; do
+            supabase functions deploy "$function" --project-ref "$SUPABASE_PROJECT_REF"
+          done
+      - name: Deployment summary
+        run: echo 'Backend deployed. Provider credentials, active Roofr Zaps, device opt-in and actual successful traffic are still required.' >> "$GITHUB_STEP_SUMMARY"
+  worker:
+    name: Import MRMS grids and deliver device alerts
+    needs: deploy
+    if: always() && (github.event_name == 'schedule' || ((github.event_name == 'push' || inputs.task == 'deploy') && needs.deploy.result == 'success') || inputs.task == 'mrms' || inputs.task == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+      MRMS_BOUNDS: ${{ vars.MRMS_BOUNDS || '[-91.7,29.9,-90.5,31.1]' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Validate worker access
+        run: test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo '::error::SUPABASE_SERVICE_ROLE_KEY is missing. The integration worker cannot run.'; exit 1; }
+      - run: pip install -r scripts/integration-worker-requirements.txt
+      - name: Import decoded MRMS grid
+        if: github.event_name == 'schedule' || github.event_name == 'push' || inputs.task == 'deploy' || inputs.task == 'mrms'
+        run: python scripts/integration_worker.py --mrms
+      - name: Deliver opted-in notifications
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'push' || inputs.task == 'deploy' || inputs.task == 'push')
+        run: python scripts/integration_worker.py --push

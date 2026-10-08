@@ -28,6 +28,7 @@
     "tests",
     "src",
     "supabase/functions/*/events.ts",
-    "supabase/functions/*/payload.ts"
+    "supabase/functions/*/payload.ts",
+    "supabase/functions/_shared/imagery-retry.ts"
   ]
 }

@@ -21,6 +21,7 @@
 
 export type HealthState =
   /** No credential, no traffic, nothing set up. Not a fault. */
+  | 'unknown'
   | 'not_configured'
   /** Configured, but nothing has ever gone through. Unproven, not healthy. */
   | 'never_used'
@@ -155,6 +156,7 @@ export function assessHealth(window: TrafficWindow, now: number = Date.now()): H
 
 /** Ordered worst-first, because a health screen is read for its problems. */
 const SEVERITY: Record<HealthState, number> = {
+  unknown: 0,
   down: 0,
   degraded: 1,
   stale: 2,

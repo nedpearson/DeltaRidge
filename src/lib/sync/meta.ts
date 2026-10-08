@@ -51,3 +51,25 @@ export function recordDrain(pushed: number, failed: number, at: string = new Dat
   if (pushed > 0) write(PUSH_KEY, at)
   if (failed === 0) write(DRAIN_KEY, at)
 }
+
+
+export interface SyncTraffic { successes: number; failures: number; lastSuccessAt: string | null; lastFailureAt: string | null }
+interface Sample { pushed: number; failed: number; at: string }
+function readSamples(scope: string): Sample[] {
+ try {
+  const raw: unknown = JSON.parse(read('delta-ridge.sync-traffic.' + scope) ?? '[]')
+  return Array.isArray(raw) ? raw.filter((r: Sample)=>typeof r.pushed==='number' && typeof r.failed==='number' && Date.parse(r.at)>=Date.now()-7*86400000) : []
+ } catch { return [] }
+}
+export function readSyncTraffic(scope: string): SyncTraffic {
+ const samples=readSamples(scope)
+ return {
+  successes:samples.reduce((n,r)=>n+r.pushed,0),failures:samples.reduce((n,r)=>n+r.failed,0),
+  lastSuccessAt:[...samples].reverse().find(r=>r.pushed>0)?.at??null,
+  lastFailureAt:[...samples].reverse().find(r=>r.failed>0)?.at??null,
+ }
+}
+export function recordSyncTraffic(scope: string, pushed: number, failed: number, at = new Date().toISOString()): void {
+ if (!pushed && !failed) return
+ write('delta-ridge.sync-traffic.' + scope,JSON.stringify([...readSamples(scope),{pushed,failed,at}].slice(-1000)))
+}

@@ -10,7 +10,8 @@ import {
   setRemoteIdScope,
   unblockAuthOutbox,
 } from '../sync-store'
-import { recordDrain } from './meta'
+import { recordDrain, recordSyncTraffic } from './meta'
+import { pushPropertyVisit } from './visits'
 import { inspectionResolver } from './resolve'
 import { pushObservation, pushPhoto, pushVoiceNote } from './push'
 import { pushHandoff } from './handoff'
@@ -102,6 +103,8 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
       else if (item.entity === 'leadActivity') await pushLeadActivity(item.entityId, orgId, userId)
       else if (item.entity === 'leadAttachment') await pushLeadAttachment(item.entityId, orgId, userId)
       else if (item.entity === 'routeSession') await pushRouteSession(item.entityId, orgId, userId)
+      else if (item.entity === 'propertyVisit') await pushPropertyVisit(item.entityId, orgId, userId)
+      else throw new Error(`No sync handler for ${item.entity}; the item remains saved on this device.`)
       // routePoint is not handled here; see drainRoutePoints below.
       await clearOutboxItem(item.id)
       result.pushed += 1
@@ -150,6 +153,7 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
   result.stalled = (await listStalledOutbox()).length
   result.foreign = await countForeign(userId)
   recordDrain(result.pushed, result.failed)
+  recordSyncTraffic(`${orgId}:${userId}`, result.pushed, result.failed)
 
   /*
    * Traces ride out on the same connectivity the work did.
