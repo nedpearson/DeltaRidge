@@ -4,7 +4,6 @@ import RoofcareManagerDashboard from '@/features/membership/RoofcareManagerDashb
 import RevenueLeakagePanel from '@/features/dashboard/RevenueLeakagePanel'
 import { useManagerCommandCenter } from '@/features/dashboard/useManagerCommandCenter';
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { StormWarRoomPanel } from '@/components/StormWarRoomPanel'
 import { StormCommandCenter } from '@/features/manager/StormCommandCenter'
 import { Button, Card, Empty, PageHeader, SectionTitle, SegmentedTabs } from '@/components/ui'
 import { useSession } from '@/features/auth/session'
@@ -384,10 +383,6 @@ export default function ManagerPage() {
 
       {tab === 'war_room' && (
         <div className="space-y-8">
-          <div>
-            <div className="mb-3"><SectionTitle>ACTIVE STORM CAMPAIGNS</SectionTitle></div>
-            <StormWarRoomPanel />
-          </div>
         </div>
       )}
 
@@ -1611,3 +1606,4 @@ function SalesFunnelPanel() {
     </Card>
   )
 }
+

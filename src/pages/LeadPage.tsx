@@ -8,10 +8,6 @@ import { ALL_SOLICITATION_RULES } from '@/features/compliance/solicitation'
 import { Button, Card, Empty, Field, SectionTitle, TextInput } from '@/components/ui'
 import DocumentCenter from '@/features/documents/DocumentCenter'
 import ContactActions from '@/components/ContactActions'
-import { StructuredFollowUpPanel, LostReasonIntelligence } from '@/components/StructuredFollowUpPanel'
-import { SalesPlaybookPanel } from '@/components/SalesPlaybookPanel'
-import { ReferralEnginePanel } from '@/components/ReferralEnginePanel'
-import { ProposalOptionsPanel } from '@/components/ProposalOptionsPanel'
 import NextBestActionPanel from '@/components/NextBestActionPanel'
 import { ConversationTimeline } from '@/features/leads/ConversationTimeline'
 import RoofrPanel from '@/features/integrations/roofr/RoofrPanel'
@@ -85,33 +81,6 @@ function toIso(local: string): string | undefined {
 
 import { Bot } from 'lucide-react'
 
-function AIStrategyPanel({ history, address }: { history: ContactEvent[], address: string }) {
-  const latestNote = history.find(e => e.note && e.note.length > 5)?.note
-  if (!latestNote) return null
-
-  return (
-    <div className="mb-6">
-      <SectionTitle>AI NEXT VISIT STRATEGY</SectionTitle>
-      <Card className="mt-2 border-l-4 border-l-brand-400 bg-brand-primary/5 p-4 relative overflow-hidden">
-        <div className="absolute top-2 right-2 opacity-20"><Bot size={40} /></div>
-        <div className="relative z-10">
-          <p className="text-[11px] uppercase font-bold tracking-widest text-brand-400 mb-2">Objection Analysis</p>
-          <p className="text-[13px] text-text-primary leading-relaxed">
-            Based on the last note: <span className="italic text-text-secondary">"{latestNote}"</span>
-          </p>
-          <div className="mt-3 bg-bg-app p-3 rounded-xl ring-1 ring-border-subtle">
-            <h4 className="text-[12px] font-bold text-text-primary mb-1">Recommended Script:</h4>
-            <p className="text-[12.5px] text-text-secondary">"I know you mentioned your hesitation. A lot of your neighbors on {address.split(' ')[1] || 'your street'} felt the same way until we showed them how Act of God claims are handled. Do you have 3 minutes to see the photos of the roof next door?"</p>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <span className="bg-brand-primary/20 text-brand-400 px-2 py-1 rounded-md text-[10px] font-bold">Focus: Education</span>
-            <span className="bg-brand-primary/20 text-brand-400 px-2 py-1 rounded-md text-[10px] font-bold">Tone: Helpful</span>
-          </div>
-        </div>
-      </Card>
-    </div>
-  )
-}
 
 type TabID = 'overview' | 'homeowner_contact' | 'property' | 'permits_roof_age' | 'storm_history' | 'communications' | 'visits' | 'appointments' | 'inspections' | 'eagleview' | 'estimate' | 'proposal' | 'insurance' | 'documents' | 'ai_intelligence' | 'audit'
 
@@ -136,17 +105,14 @@ const SUB_TABS: Record<PrimaryTabID, { id: TabID, label: string }[]> = {
     { id: 'property', label: 'Details' },
     { id: 'permits_roof_age', label: 'Permits & Roof Age' },
     { id: 'storm_history', label: 'Storm History' },
-    { id: 'eagleview', label: 'EagleView' },
   ],
   sales: [
     { id: 'appointments', label: 'Appointments' },
     { id: 'inspections', label: 'Inspections' },
     { id: 'estimate', label: 'Estimate' },
-    { id: 'proposal', label: 'Proposal' },
   ],
   more: [
     { id: 'ai_intelligence', label: 'AI Intelligence' },
-    { id: 'insurance', label: 'Insurance' },
     { id: 'documents', label: 'Documents' },
     { id: 'audit', label: 'Audit Log' },
   ],
@@ -543,21 +509,6 @@ export default function LeadPage() {
               </>
             )}
 
-            <SectionTitle>SMART FOLLOW-UP AUTOMATION</SectionTitle>
-            <Card>
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                <Button variant="secondary" onClick={() => void logAttempt('text_initiated')}>
-                  Send Intro SMS
-                </Button>
-                <Button variant="secondary" onClick={() => void logAttempt('text_initiated')}>
-                  Send Proposal Follow-up
-                </Button>
-              </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-text-secondary">
-                1-tap quick templates. Sends automatically using your configured timeline.
-              </p>
-            </Card>
-
             <SectionTitle>WHY IT WAS ON THE LIST</SectionTitle>
             <Card>
               <ul className="space-y-1">
@@ -918,13 +869,6 @@ export default function LeadPage() {
           </div>
         )}
 
-        {activeTab === 'eagleview' && (
-          <Card>
-            <h3 className="text-sm font-semibold">EagleView</h3>
-            <Empty title="No EagleView Data" body="No measurements or reports found." />
-          </Card>
-        )}
-
         {activeTab === 'estimate' && (
           <div className="space-y-6">
             <RoofrPanel leadId={lead.id} />
@@ -935,13 +879,6 @@ export default function LeadPage() {
           <div className="space-y-6">
             <ProposalOptionsPanel />
           </div>
-        )}
-
-        {activeTab === 'insurance' && (
-          <Card>
-            <h3 className="text-sm font-semibold">Insurance</h3>
-            <Empty title="No Insurance Data" body="No policy info or claims attached." />
-          </Card>
         )}
 
         {activeTab === 'documents' && (
@@ -959,16 +896,11 @@ export default function LeadPage() {
                 <Bot size={24} className="text-brand-400" />
                 <h3 className="text-[13px] font-bold text-text-primary">Claude Analysis</h3>
               </div>
-              <p className="text-[12.5px] text-text-secondary">
-                {/* Normally pulled from properties table e.g. properties.claude_summary */}
-                Based on background intelligence gathering, this property has a high probability of roof damage matching recent weather events. The optimal approach is educational, focusing on Act of God provisions and neighborhood precedence.
+              <p className="text-[12.5px] text-text-secondary whitespace-pre-wrap">
+                {/* Note: In a full app, we'd add 'opportunitySummary' to the ManagedLead type. Using raw property access for now if it were present. */}
+                No AI summary has been generated for this property yet. Run the Property Enrichment pipeline to populate this analysis.
               </p>
             </Card>
-            <AIStrategyPanel history={history} address={lead.address} />
-            <StructuredFollowUpPanel lead={lead} />
-            <LostReasonIntelligence />
-            <ReferralEnginePanel status={lead.status} />
-            <SalesPlaybookPanel />
           </div>
         )}
 
@@ -1003,3 +935,12 @@ export default function LeadPage() {
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
