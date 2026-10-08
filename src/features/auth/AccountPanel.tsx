@@ -4,54 +4,54 @@ import { useSession } from './session'
 import { supabaseConfigured } from '@/lib/supabase'
 
 export default function AccountPanel() {
-  const { session, membership, awaitingAccess, ready, signInWithPassword, signOut } = useSession()
+  const { session, membership, awaitingAccess, ready, signInWithEmail, signOut, resetPassword, savePassword, recoveringPassword } = useSession()
   const [email, setEmail] = useState('')
+  const [notice, setNotice] = useState('')
   const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   if (!supabaseConfigured()) return null
   if (!ready) return null
 
-  async function signin() {
+  async function submit(mode: 'login' | 'reset' | 'save') {
+    if (busy) return
     setBusy(true)
     setError(null)
-    const { error: e } = await signInWithPassword(email, password)
-    setBusy(false)
-    if (e) setError(e)
+    setNotice('')
+    try {
+      const result = mode === 'reset' ? await resetPassword(email) : mode === 'save' ? await savePassword(password) : await signInWithEmail(email, password)
+      if (result.error) setError(mode === 'login' ? 'Unable to sign in. Check your email and password, then try again.' : result.error)
+      else {
+        setPassword('')
+        setConfirm('')
+        if (mode === 'reset') setNotice('If this account exists, check your email to set or reset your password.')
+        if (mode === 'save') setNotice('Password saved.')
+      }
+    } catch {
+      setError('Unable to reach the sign-in service. Please try again.')
+    } finally { setBusy(false) }
   }
 
-  if (!session) {
+  if (!session || recoveringPassword) {
     return (
-      <div className="space-y-3 px-1 py-1">
-        <Field label="Work email">
-          <TextInput
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@delta-ridge.com"
-            inputMode="email"
-            autoComplete="email"
-          />
+      <form className="space-y-3 px-1 py-1" onSubmit={(e) => { e.preventDefault(); void submit(recoveringPassword ? 'save' : 'login') }}>
+        {!recoveringPassword && <Field label="Username (work email)">
+          <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@delta-ridge.com" autoComplete="username" required />
+        </Field>}
+        <Field label={recoveringPassword ? 'New password' : 'Password'}>
+          <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={recoveringPassword ? 'new-password' : 'current-password'} required minLength={recoveringPassword ? 12 : undefined} />
         </Field>
-        <Field label="Password">
-          <TextInput
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            type="password"
-            autoComplete="current-password"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && email.includes('@') && password) {
-                void signin();
-              }
-            }}
-          />
-        </Field>
-        {error && <p className="text-[12px] text-status-critical">{error}</p>}
-        <Button full variant="primary" onClick={() => void signin()} disabled={busy || !email.includes('@') || !password}>
-          {busy ? 'Signing In…' : 'Sign In'}
+        {recoveringPassword && <Field label="Confirm password"><TextInput type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required /></Field>}
+        {error && <p role="alert" className="text-[12px] text-status-critical">{error}</p>}
+        {notice && <p role="status" className="text-[12px] text-status-success">{notice}</p>}
+        <Button type="submit" full variant="primary" disabled={busy || !password || (recoveringPassword ? password.length < 12 || password !== confirm : !email.includes('@'))}>
+          {busy ? 'Please wait…' : recoveringPassword ? 'Save password' : 'Sign in'}
         </Button>
-      </div>
+        {!recoveringPassword && <Button type="button" variant="ghost" full disabled={busy || !email.includes('@')} onClick={() => void submit('reset')}>Set or reset password</Button>}
+        <p className="text-[11px] text-text-secondary">Use your own company account. Contact your administrator if you need access.</p>
+      </form>
     )
   }
 
@@ -77,3 +77,4 @@ export default function AccountPanel() {
     </>
   )
 }
+

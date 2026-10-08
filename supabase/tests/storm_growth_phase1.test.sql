@@ -29,6 +29,13 @@ insert into storm_events (id, provider, external_id, event_type, occurred_at, ha
 insert into property_storm_impacts (organization_id, property_id, storm_event_id, distance_meters, match_method) values
   ('dddddddd-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000001', 'ffffffff-0000-0000-0000-000000000001', 50.0, 'proximity') on conflict do nothing;
 
+
+-- The current score reads evidence rather than the historical impacts table.
+insert into property_storm_evidence(property_id,storm_event_id,hazard_type,event_time,event_source,measurement,units,property_distance,evidence_type)
+values
+ ('eeeeeeee-0000-0000-0000-000000000001','ffffffff-0000-0000-0000-000000000001','HAIL',now(),'test',2.0,'inches',50,'GROUND_REPORT'),
+ ('eeeeeeee-0000-0000-0000-000000000001','ffffffff-0000-0000-0000-000000000001','WIND',now(),'test',75,'mph',50,'MEASURED');
+
 grant usage on schema public, app to authenticated;
 grant all on all tables in schema public to authenticated;
 grant execute on all functions in schema app to authenticated;
@@ -36,17 +43,14 @@ grant execute on all functions in schema app to authenticated;
 \echo '--- TEST 1: Property Opportunity Scoring View ---'
 do $$
 declare
-  score int;
+  score numeric;
 begin
   select opportunity_score into score from property_opportunity_scores where property_id = 'eeeeeeee-0000-0000-0000-000000000001';
-  -- 2.0 hail * 25 = 50
-  -- 75 wind * 0.5 = 37.5
-  -- 50 dist * 0.005 = 0.25
-  -- Total ~ 87
-  if score >= 87 and score <= 88 then
+  -- Current evidence model: 2.0 * 20 + 75 * 0.5 = 77.5
+  if score = 77.5 then
     raise notice 'PASS opportunity score computed correctly: %', score;
   else
-    raise exception 'FAIL opportunity score incorrect. Expected ~87, got %', score;
+    raise exception 'FAIL opportunity score incorrect. Expected 77.5, got %', score;
   end if;
 end $$;
 
