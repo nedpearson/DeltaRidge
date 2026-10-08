@@ -81,7 +81,9 @@ jobs:
           names = ['EAGLEVIEW_CLIENT_ID','EAGLEVIEW_CLIENT_SECRET','EAGLEVIEW_ENV','ZAPIER_ROOFR_HOOK_URL','BATCHDATA_API_KEY','REALESTATE_API_KEY','VAPID_PUBLIC_KEY','VAPID_PRIVATE_KEY','VAPID_SUBJECT']
           values = [f'{name}={os.environ[name]}' for name in names if os.environ.get(name)]
           if values:
-              subprocess.run(['supabase','secrets','set','--project-ref',os.environ['SUPABASE_PROJECT_REF'],*values],check=True,stdout=subprocess.DEVNULL)
+              result = subprocess.run(['supabase','secrets','set','--project-ref',os.environ['SUPABASE_PROJECT_REF'],*values],stdout=subprocess.DEVNULL)
+              if result.returncode:
+                  raise SystemExit('Provider secret setup failed; existing values were not cleared.')
           print('Available provider secrets synchronized; existing secrets were not cleared.')
           PY
       - name: Deploy authenticated integration functions

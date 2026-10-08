@@ -270,6 +270,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
+    const {data:permission,error:permissionError}=await caller.asCaller.from('contact_provider_settings')
+      .select('entitlement,commercial_use_confirmed,secondary_providers_enabled').eq('organization_id',organizationId).maybeSingle()
+    if(permissionError || permission?.entitlement!=='business_api' || permission.commercial_use_confirmed!==true) {
+      await report('not_configured','Confirm the approved business provider agreement in Contact Enrichment settings.')
+      return json({success:false,status:'BUSINESS_USE_NOT_CONFIRMED',message:'Confirm your business provider agreement in Settings → Contact Enrichment before running paid lookups.'})
+    }
     // 2. Automated Skip-Tracing via BatchData API
     let ownerFromBatch: string | null = null
     if (BATCHDATA_API_KEY) {
@@ -282,7 +288,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 3. Automated Skip-Tracing via RealEstateAPI
-    if (REALESTATE_API_KEY) {
+    if (REALESTATE_API_KEY && (!BATCHDATA_API_KEY || permission.secondary_providers_enabled===true)) {
       const reResult = await lookupRealEstateApi(street, city, state, zip, REALESTATE_API_KEY)
       if (reResult && (reResult.phone || reResult.email)) {
         await report('success','Contact details returned by RealEstateAPI.')
