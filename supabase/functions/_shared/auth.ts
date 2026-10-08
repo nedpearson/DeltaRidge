@@ -14,7 +14,7 @@ export async function requireAuth(req: Request) {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  const { data: auth, error } = await asCaller.auth.getUser()
+  const { data: auth, error } = await asCaller.auth.getUser(authorization.replace('Bearer ', '').trim())
   if (error) {
     throw new Error(`Auth Error: ${error.message}`)
   }
@@ -43,3 +43,4 @@ export async function requireOrgMember(req: Request, organizationId: string) {
 
   return { userId, role: membership.role, asCaller }
 }
+
