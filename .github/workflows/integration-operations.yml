@@ -38,6 +38,29 @@ env:
   SUPABASE_PROJECT_REF: udrxvpkihkbrudvwggpr
   SUPABASE_URL: https://udrxvpkihkbrudvwggpr.supabase.co
 jobs:
+  preflight:
+    name: Check repository secrets
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_ready: ${{ steps.check.outputs.deploy_ready }}
+      worker_ready: ${{ steps.check.outputs.worker_ready }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - id: check
+        run: |
+          deploy_ready=false
+          worker_ready=false
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then deploy_ready=true; else echo '::warning::Repository secret SUPABASE_ACCESS_TOKEN is not set. Backend deployment cannot run.'; fi
+          if [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then worker_ready=true; else echo '::warning::Repository secret SUPABASE_SERVICE_ROLE_KEY is not set. The scheduled MRMS/push worker is skipped until it is added (Settings > Secrets and variables > Actions).'; fi
+          echo "deploy_ready=$deploy_ready" >> "$GITHUB_OUTPUT"
+          echo "worker_ready=$worker_ready" >> "$GITHUB_OUTPUT"
+          {
+            echo '## Integration Operations preflight'
+            echo "- Backend deploy ready (SUPABASE_ACCESS_TOKEN): $deploy_ready"
+            echo "- Worker ready (SUPABASE_SERVICE_ROLE_KEY): $worker_ready"
+          } >> "$GITHUB_STEP_SUMMARY"
   validate:
     name: Validate integration services
     if: github.event_name != 'schedule'
@@ -96,8 +119,14 @@ jobs:
         run: echo 'Backend deployed. Provider credentials, active Roofr Zaps, device opt-in and actual successful traffic are still required.' >> "$GITHUB_STEP_SUMMARY"
   worker:
     name: Import MRMS grids and deliver device alerts
-    needs: deploy
-    if: always() && (github.event_name == 'schedule' || ((github.event_name == 'push' || inputs.task == 'deploy') && needs.deploy.result == 'success') || inputs.task == 'mrms' || inputs.task == 'push')
+    needs: [preflight, deploy]
+    if: >-
+      ${{ !cancelled() && (
+        (github.event_name == 'schedule' && needs.preflight.outputs.worker_ready == 'true')
+        || ((github.event_name == 'push' || inputs.task == 'deploy') && needs.deploy.result == 'success')
+        || inputs.task == 'mrms'
+        || inputs.task == 'push'
+      ) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -111,11 +140,16 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate worker access
+        id: access
         run: test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo '::error::SUPABASE_SERVICE_ROLE_KEY is missing. The integration worker cannot run.'; exit 1; }
-      - run: pip install -r scripts/integration-worker-requirements.txt
+      - id: deps
+        run: pip install -r scripts/integration-worker-requirements.txt
       - name: Import decoded MRMS grid
         if: github.event_name == 'schedule' || github.event_name == 'push' || inputs.task == 'deploy' || inputs.task == 'mrms'
         run: python scripts/integration_worker.py --mrms
       - name: Deliver opted-in notifications
-        if: always() && (github.event_name == 'schedule' || github.event_name == 'push' || inputs.task == 'deploy' || inputs.task == 'push')
+        # Still deliver alerts if the MRMS import failed, but never run without access or dependencies.
+        if: >-
+          ${{ !cancelled() && steps.access.conclusion == 'success' && steps.deps.conclusion == 'success'
+          && (github.event_name == 'schedule' || github.event_name == 'push' || inputs.task == 'deploy' || inputs.task == 'push') }}
         run: python scripts/integration_worker.py --push
