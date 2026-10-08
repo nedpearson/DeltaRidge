@@ -1,7 +1,7 @@
 project_id = "udrxvpkihkbrudvwggpr"
 
 [db]
-major_version = 17
+major_version = 15
 
 [db.pooler]
 default_pool_size = 15
