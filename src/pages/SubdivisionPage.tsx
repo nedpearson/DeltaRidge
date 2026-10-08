@@ -63,9 +63,9 @@ export default function SubdivisionPage() {
       }
 
       const { data, error } = await supabase.rpc('get_property_intelligence', {
-        p_lat: null, // we want all in the subdivision
-        p_lon: null,
-        p_max_miles: 50.0,
+        p_lat: coords?.lat || null,
+        p_lon: coords?.lon || null,
+        p_max_miles: 999999.0,
         p_opportunity_filter: 'ALL',
         p_subdivision_name: decodedName
       })
@@ -99,7 +99,7 @@ export default function SubdivisionPage() {
     }
     
     void load()
-  }, [decodedName])
+  }, [decodedName, coords?.lat, coords?.lon])
 
   // Client-side live distance refinement & sorting
   const properties = useMemo(() => {

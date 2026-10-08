@@ -72,7 +72,7 @@ export default function LeadsPage() {
         return
       }
 
-      const p_max_miles = radius === 'ALL' ? 50.0 : radius;
+      const p_max_miles = radius === 'ALL' ? 999999.0 : radius;
 
       if (viewMode === 'PROPERTIES') {
         const { data, error } = await supabase.rpc('get_property_intelligence', {
@@ -224,6 +224,7 @@ export default function LeadsPage() {
                            </h3>
                            {p.has_qualifying_storm_evidence && <span className="text-[10px] uppercase font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded">STORM</span>}
                            {p.opportunity_type === 'AGING_ROOF' && <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">AGING ROOF</span>}
+                           {p.opportunity_type === 'PERMIT_GAP' && <span className="text-[10px] uppercase font-bold text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded">PERMIT GAP</span>}
                            {p.opportunity_type === 'MANUAL_LEAD' && <span className="text-[10px] uppercase font-bold text-blue-500 bg-blue-500/10 px-1.5 py-0.5 rounded">MANUAL</span>}
                         </div>
                         <p className="text-sm text-text-secondary truncate mt-0.5">{p.address_line1}</p>

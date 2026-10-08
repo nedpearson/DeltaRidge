@@ -1,10 +1,24 @@
 import { useState, useEffect } from 'react';
+import { calculateDistanceMiles } from '@/lib/distance';
 
 export type GPSStatus = 'REQUESTING_PERMISSION' | 'LIVE_GPS' | 'IP_FALLBACK' | 'PERMISSION_DENIED' | 'POSITION_UNAVAILABLE' | 'TIMEOUT' | 'ERROR' | 'IDLE';
 
 export interface GPSCoords {
   lat: number;
   lon: number;
+}
+
+// Center of demo area (Baton Rouge)
+const DEMO_LAT = 30.34;
+const DEMO_LON = -91.10;
+
+function adjustCoordsForDemo(lat: number, lon: number): GPSCoords {
+  const dist = calculateDistanceMiles(lat, lon, DEMO_LAT, DEMO_LON);
+  if (dist > 50) {
+    // Snap to demo area if user is more than 50 miles away
+    return { lat: DEMO_LAT, lon: DEMO_LON };
+  }
+  return { lat, lon };
 }
 
 export function useLiveGPS(enabled: boolean = true) {
@@ -23,16 +37,16 @@ export function useLiveGPS(enabled: boolean = true) {
 
     const fallback = async () => {
       try {
-        const res = await fetch('https://get.geojs.io/v1/ip/geo.json', { method: 'GET', mode: 'cors' })
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch('https://get.geojs.io/v1/ip/geo.json', { method: 'GET', mode: 'cors', signal: controller.signal })
+        clearTimeout(timeoutId);
         if (!res.ok) {
           if (!settled) setStatus('ERROR')
           return
         }
         const data = await res.json()
-        setCoords({
-          lat: parseFloat(data.latitude),
-          lon: parseFloat(data.longitude)
-        });
+        setCoords(adjustCoordsForDemo(parseFloat(data.latitude), parseFloat(data.longitude)));
         setAccuracy(10000);
         setTimestamp(Date.now());
         setStatus('IP_FALLBACK');
@@ -52,10 +66,7 @@ export function useLiveGPS(enabled: boolean = true) {
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         settled = true;
-        setCoords({
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude
-        });
+        setCoords(adjustCoordsForDemo(pos.coords.latitude, pos.coords.longitude));
         setAccuracy(pos.coords.accuracy);
         setTimestamp(pos.timestamp);
         setStatus('LIVE_GPS');

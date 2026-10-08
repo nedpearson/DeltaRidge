@@ -105,6 +105,7 @@ AS $$
       when pos.max_hail >= 1.0 then 'STORM_HAIL'
       when pos.max_wind >= 60 then 'STORM_WIND'
       when p.roof_age_years >= 15 then 'AGING_ROOF'
+      when p.last_roof_permit_date is null and p.roof_age_years is not null then 'PERMIT_GAP'
       when l.id is not null then 'MANUAL_LEAD'
       else 'NONE'
     end as opportunity_type,
