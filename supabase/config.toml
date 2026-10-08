@@ -38,9 +38,6 @@ otp_length = 8
 enroll_enabled = true
 verify_enabled = true
 
-[storage.analytics]
-enabled = true
-max_namespaces = 10
 
 [storage.image_transformation]
 enabled = true
