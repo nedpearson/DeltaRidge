@@ -25,7 +25,7 @@ Deno.serve(async(req:Request)=>{
   if(typeof subscription?.endpoint!=='string'||typeof subscription.keys?.p256dh!=='string'||typeof subscription.keys?.auth!=='string') return json({error:'Invalid device subscription'},400)
   const url=new URL(subscription.endpoint)
   // Restrict destinations so the privileged delivery worker cannot become an SSRF proxy.
-  if(url.protocol!=='https:' || (url.port!=='' && url.port!=='443') || url.username!=='' || !['fcm.googleapis.com','updates.push.services.mozilla.com','web.push.apple.com','wns.windows.com'].some(host=>url.hostname===host || (host==='wns.windows.com' && url.hostname.endsWith('.wns.windows.com')))) return json({error:'Unsupported push provider'},400)
+  if(url.protocol!=='https:' || (url.port!=='' && url.port!=='443') || url.username!=='' || !['fcm.googleapis.com','updates.push.services.mozilla.com','web.push.apple.com','wns.windows.com','notify.windows.com'].some(host=>url.hostname===host || (['wns.windows.com','notify.windows.com'].includes(host) && url.hostname.endsWith('.'+host)))) return json({error:'Unsupported push provider'},400)
   const db=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const {data:existing}=await db.from('push_subscriptions').select('id,user_id').eq('endpoint',subscription.endpoint).maybeSingle()
   if(existing && existing.user_id!==userId) return json({error:'This device is registered to another account. Disable its alerts before switching accounts.'},409)

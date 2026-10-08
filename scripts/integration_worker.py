@@ -116,7 +116,7 @@ def ingest_mrms(db):
 def safe_push_endpoint(endpoint):
     parsed = urlparse(endpoint)
     host = parsed.hostname or ''
-    return parsed.scheme == 'https' and parsed.port in (None,443) and parsed.username is None and (host in {'fcm.googleapis.com', 'updates.push.services.mozilla.com', 'web.push.apple.com', 'wns.windows.com'} or host.endswith('.wns.windows.com'))
+    return parsed.scheme == 'https' and parsed.port in (None,443) and parsed.username is None and (host in {'fcm.googleapis.com', 'updates.push.services.mozilla.com', 'web.push.apple.com', 'wns.windows.com', 'notify.windows.com'} or host.endswith(('.wns.windows.com','.notify.windows.com')))
 
 
 def deliver_push(db):

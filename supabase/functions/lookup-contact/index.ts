@@ -222,8 +222,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   let caller: Awaited<ReturnType<typeof requireAuth>>
   try {
     caller = await requireAuth(req);
-    const { data: memberships, error } = await caller.asCaller.from('organization_members').select('organization_id').eq('user_id',caller.userId).eq('is_active',true).limit(2)
-    if(error || memberships?.length !== 1) return json({ error: 'An unambiguous active company account is required.' },403)
+    // Match the application's earliest active membership selection.
+    const { data: memberships, error } = await caller.asCaller.from('organization_members').select('organization_id').eq('user_id',caller.userId).eq('is_active',true).order('created_at',{ascending:true}).limit(1)
+    if(error || !memberships?.length) return json({ error: 'An active company account is required.' },403)
     organizationId=memberships[0].organization_id;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unauthorized'
@@ -306,22 +307,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
       })
     }
 
-    await report('failed','The provider returned no matched phone or email for this property.')
+    await report('success','Provider lookup completed; no matched phone or email for this property.')
     return json({
       success: false,
       residentName: ownerFromBatch,
       configuredProvider: BATCHDATA_API_KEY ? 'batchdata' : REALESTATE_API_KEY ? 'realestateapi' : 'none',
-      message: 'No phone number found yet for this property. If using BatchData, make sure you have sufficient balance.',
+      message: 'The provider completed this lookup but found no matched phone or email for this property.',
       searchUrl: `https://www.fastpeoplesearch.com/address/${street.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')}_${city.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${state.toLowerCase()}-${zip}`,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Lookup failed'
     await report('failed',(/^(BatchData|RealEstateAPI) returned HTTP/.test(message))?message:'Contact provider could not complete the lookup.')
-    // If it's a BatchData API error, return it gracefully so the UI shows the exact error instead of failing silently.
+    // Preserve provider HTTP failures so callers can distinguish them from a valid no-match result.
     if (/^(BatchData|RealEstateAPI) returned HTTP/.test(message)) {
       return json({
         success: false,
-        configuredProvider: 'batchdata',
+        configuredProvider: message.startsWith('RealEstateAPI') ? 'realestateapi' : 'batchdata',
         message: message
       }, 200)
     }

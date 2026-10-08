@@ -24,6 +24,8 @@ class WorkerTests(unittest.TestCase):
   self.assertEqual((cells,count,missing),([],0,1))
  def test_push_destination_restrictions(self):
   self.assertTrue(worker.safe_push_endpoint('https://fcm.googleapis.com/fcm/send/device'))
+  self.assertTrue(worker.safe_push_endpoint('https://wns2-example.notify.windows.com/w/device'))
+  self.assertFalse(worker.safe_push_endpoint('https://notify.windows.com.evil.test/w/device'))
   self.assertFalse(worker.safe_push_endpoint('https://127.0.0.1/private'))
   self.assertFalse(worker.safe_push_endpoint('https://fcm.googleapis.com.evil.test/push'))
  def test_real_grib_decode(self):
