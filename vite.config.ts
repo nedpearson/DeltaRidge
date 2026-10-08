@@ -32,6 +32,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['/push-sw.js'],
         // Without navigateFallback a reload with no signal hits the browser's
         // "No internet" page: workbox only has the precached ASSETS, nothing
         // telling it to answer a navigation with the app shell. Verified by

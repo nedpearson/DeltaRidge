@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import RoofrTab from '@/features/integrations/roofr/RoofrTab'
+import MrmsGridPanel from '@/features/integrations/health/MrmsGridPanel'
+import PushSettings from '@/features/notifications/PushSettings'
 import { Building2, User } from 'lucide-react'
 import { Card, Field, SectionTitle, TextInput } from '@/components/ui'
 import AccountPanel from '@/features/auth/AccountPanel'
@@ -218,7 +222,10 @@ function SaveBar({
 
 export default function SettingsPage() {
   const { session, membership, membershipError, profile, updateProfile } = useSession()
-  const [activeTab, setActiveTab] = useState<TabType>('account')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedTab = searchParams.get('tab')
+  const activeTab: TabType = TABS.find(tab => tab.id === requestedTab)?.id ?? 'account'
+  const setActiveTab = (tab: TabType) => setSearchParams({ tab })
   const [settings, setSettings] = useState<Record<string, JsonObject>>(DEFAULT_SETTINGS)
   const [orgName, setOrgName] = useState('')
   const [orgTimezone, setOrgTimezone] = useState('America/Chicago')
@@ -967,11 +974,14 @@ export default function SettingsPage() {
                 </p>
               </Card>
               <IntegrationHealthPanel organizationId={orgId} />
+              <RoofrTab organizationId={orgId} canManage={canManage} />
+              <MrmsGridPanel />
             </div>
           )}
 
           {activeTab === 'notifications' && (
             <>
+              <PushSettings />
               <Card className="grid gap-3 p-5 sm:grid-cols-2">
                 {([
                   ['notify_on_new_lead', 'New lead'],

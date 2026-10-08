@@ -45,3 +45,14 @@ max_namespaces = 10
 [storage.image_transformation]
 enabled = true
 
+
+[functions.integration-status]
+verify_jwt = false
+[functions.push-notifications]
+verify_jwt = false
+[functions.roofr-push]
+verify_jwt = false
+[functions.lookup-contact]
+verify_jwt = false
+[functions.ingest-mrms]
+verify_jwt = false

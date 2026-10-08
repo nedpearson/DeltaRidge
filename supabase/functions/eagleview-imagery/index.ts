@@ -6,6 +6,7 @@
  * normalized capture metadata and image bytes, never a provider credential or
  * a reusable EagleView URL.
  */
+import { imageryRequest } from '../_shared/imagery-retry.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
@@ -33,7 +34,8 @@ function json(body: unknown, status = 200): Response {
   })
 }
 
-async function accessToken(): Promise<string> {
+async function accessToken(refresh = false): Promise<string> {
+  if (refresh) token = null
   if (token !== null && token.expiresAt > Date.now() + 60_000) return token.value
   const basic = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`)
   const response = await fetch(TOKEN_URL, {
@@ -215,7 +217,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const bearer = await accessToken()
+    const request = (url: string, init: RequestInit) => imageryRequest(async refresh => {
+      const bearer = await accessToken(refresh)
+      return fetch(url, { ...init, signal: AbortSignal.timeout(20_000), headers: { ...init.headers, authorization: `Bearer ${bearer}` } })
+    })
     if (body['action'] === 'search') {
       const filter: Record<string, unknown> = {}
       const from = string(body['from'])
@@ -228,9 +233,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const point = JSON.stringify({
         type: 'Feature', geometry: { type: 'Point', coordinates: [longitude, latitude] }, properties: null,
       })
-      const response = await fetch(`${API}/imagery/v3/discovery/rank/location`, {
+      const response = await request(`${API}/imagery/v3/discovery/rank/location`, {
         method: 'POST',
-        headers: { authorization: `Bearer ${bearer}`, 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           center: { point: { geojson: { value: point, epsg: 'EPSG:4326' } }, radius_in_meters: 50 },
           view: { orthos: {}, obliques: {}, max_images_per_view: 3 },
@@ -294,17 +299,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
         quality: '90',
         scale: 'IMAGE_SCALE_AUTO',
       })
-      const response = await fetch(`${API}/imagery/v3/images/${encodeURIComponent(urn)}/location?${params}`, {
-        headers: { authorization: `Bearer ${bearer}` },
+      const response = await request(`${API}/imagery/v3/images/${encodeURIComponent(urn)}/location?${params}`, {
+        headers: {},
         signal: AbortSignal.timeout(20_000),
       })
       if (!response.ok) throw new Error(`EagleView image returned ${response.status}`)
+      const image = await response.blob()
+      if (!image.type.startsWith('image/') || image.size === 0) throw new Error('EagleView returned no usable image bytes')
       if (requestId !== undefined) {
         await db.from('imagery_requests').update({
           status: 'succeeded', response_count: 1, completed_at: new Date().toISOString(),
         }).eq('id', requestId)
       }
-      return new Response(response.body, {
+      return new Response(image, {
         status: 200,
         headers: {
           ...cors,
