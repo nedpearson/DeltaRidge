@@ -156,7 +156,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const { ref: navRef, height: navHeight } = useMeasuredHeight(!immersive)
   const { ref: headerRef, height: headerHeight } = useMeasuredHeight(!pathname.startsWith('/evidence/'))
   const [assistantOpen, setAssistantOpen] = useState(false)
-  const { membership } = useSession()
+  const { membership, recoveringPassword } = useSession()
+
+  if (recoveringPassword) return (
+    <main className="min-h-dvh bg-bg-app flex items-center justify-center px-4">
+      <section className="w-full max-w-md rounded-2xl border border-border-subtle bg-bg-card p-6 shadow-xl">
+        <h1 className="text-2xl font-semibold text-text-primary">Reset your password</h1>
+        <p className="mt-2 mb-5 text-sm text-text-secondary">Choose a new password of at least 12 characters.</p>
+        <AccountPanel />
+      </section>
+    </main>
+  )
 
   const role = membership?.role?.toLowerCase() || 'rep'
   const isManager = role === 'admin' || role === 'manager'

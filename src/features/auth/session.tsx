@@ -47,7 +47,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const lastUserId = useRef<string | null>(null)
   const supabase = getSupabase()
-  const [recoveringPassword, setRecoveringPassword] = useState(false)
+  const [recoveringPassword, setRecoveringPassword] = useState(() => window.location.pathname === '/reset-password' || new URLSearchParams(window.location.hash.slice(1)).get('type') === 'recovery')
   const [ready, setReady] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const [membership, setMembership] = useState<Membership | null>(null)
@@ -169,14 +169,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = useCallback(async (email: string) => {
     if (!supabase) return { error: 'The server is not configured for this build.' }
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin })
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/` })
     return { error: error?.message ?? null }
   }, [supabase])
 
   const savePassword = useCallback(async (password: string) => {
     if (!supabase) return { error: 'The server is not configured for this build.' }
     const { error } = await supabase.auth.updateUser({ password })
-    if (!error) setRecoveringPassword(false)
+    if (!error) {
+      setRecoveringPassword(false)
+      if (window.location.pathname === '/reset-password') window.location.replace('/')
+    }
     return { error: error?.message ?? null }
   }, [supabase])
 
