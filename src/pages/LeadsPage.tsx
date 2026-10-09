@@ -96,6 +96,7 @@ export default function LeadsPage() {
     }
     
     void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, radius, viewMode, coords?.lat ? Math.round(coords.lat * 10) : null, coords?.lon ? Math.round(coords.lon * 10) : null])
 
   const properties = useMemo(() => {
