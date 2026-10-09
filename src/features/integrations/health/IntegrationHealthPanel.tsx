@@ -82,7 +82,7 @@ export default function HealthTab({ organizationId }: { organizationId: string |
       const runs = status.data.runs.filter(r=>r.integration===key)
       const configured = key==='mrms' ? runs.some(r=>r.status!=='not_configured') : status.data.configured[key]
       const health = traffic(runs,configured,['success'],['failed'],key==='mrms'?2:null)
-      add(key,label,detail,key==='mrms' && runs[0]?.detail.startsWith('Grid imported: 0 valid cells') ? unknown('The grid was imported, but NOAA reports missing radar data in this territory.') : runs[0]?.status==='failed' ? { ...health, summary: `${health.summary} ${runs[0].detail}` } : health,tab)
+      add(key,label,detail,runs[0]?.status==='failed' ? { ...health, summary: `${health.summary} ${runs[0].detail}` } : health,tab)
      }
     }
    } catch {
@@ -115,3 +115,4 @@ export default function HealthTab({ organizationId }: { organizationId: string |
   </>}
  </Card>
 }
+
