@@ -51,7 +51,7 @@ export function UniversalSearch() {
   const handleSelect = (result: SearchResult) => {
     setOpen(false)
     if (result.result_type === 'lead') {
-      navigate(`/lead/${result.id}`)
+      navigate(`/leads/${result.id}`)
     } else if (result.result_type === 'property') {
       navigate(`/property/${result.id}`)
     }

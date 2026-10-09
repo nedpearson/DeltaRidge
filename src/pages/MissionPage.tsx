@@ -160,7 +160,7 @@ export default function MissionPage() {
                 <Navigation size={20} />
                 Open on Map
               </button>
-              <Link to={`/lead/${currentLead.id}`} className="bg-[var(--color-bg-elevated)] hover:bg-[var(--color-border-strong)] text-white font-semibold min-h-11 rounded-xl-lg border border-[var(--color-border-subtle)] flex items-center justify-center gap-2 text-base">
+              <Link to={`/leads/${currentLead.id}`} className="bg-[var(--color-bg-elevated)] hover:bg-[var(--color-border-strong)] text-white font-semibold min-h-11 rounded-xl-lg border border-[var(--color-border-subtle)] flex items-center justify-center gap-2 text-base">
                 <User size={18} />
                 Lead 360
               </Link>

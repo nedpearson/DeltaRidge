@@ -89,7 +89,6 @@ serve(async (req) => {
         .insert({
           organization_id: orgId,
           address_line1: address,
-          provenance: 'inbound-webhook',
         })
         .select('id')
         .single()

@@ -4,7 +4,7 @@ import HomeownerPortal from '@/pages/HomeownerPortal'
 import MissionPage from '@/pages/MissionPage'
 import FreeRoofCheckPage from '@/pages/FreeRoofCheckPage'
 import { Suspense, lazy, useEffect } from 'react'
-import { Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import AppShell from '@/components/AppShell'
 import UpdateBanner from '@/components/UpdateBanner'
 import HomePage from '@/pages/HomePage'
@@ -45,6 +45,12 @@ import { trackEvent } from '@/lib/analytics'
 function SyncRunner() {
   useSync()
   return null
+}
+
+/** Old links (map markers, search, push notifications) used /lead/:id. */
+function LegacyLeadRedirect() {
+  const { id } = useParams()
+  return <Navigate to={`/leads/${id ?? ''}`} replace />
 }
 
 function RouteAnalytics() {
@@ -95,6 +101,7 @@ export default function App() {
                       <Route path="/storm-os" element={<StormOSPage />} />
                       <Route path="/team" element={<TeamPage />} />
                       <Route path="/leads/:id" element={<LeadPage />} />
+                      <Route path="/lead/:id" element={<LegacyLeadRedirect />} />
                       <Route path="/evidence/:id" element={<EvidencePackagePage />} />
                       <Route path="/property/:addressKey" element={<PropertyPage />} />
                       <Route path="/estimate" element={<EstimatePage />} />
