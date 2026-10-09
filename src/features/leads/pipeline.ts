@@ -596,6 +596,7 @@ export interface ApplyOptions {
   stormSource?: string | null
   stormEventAt?: string | null
   imageryCapturedAt?: string | null
+  opportunitySummary?: string | null
 }
 
 /**

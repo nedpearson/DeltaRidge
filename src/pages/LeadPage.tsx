@@ -164,18 +164,32 @@ export default function LeadPage() {
   }, [run, lead])
 
   useEffect(() => {
-    if (lead && permits && run && scoredLead) {
-      const nearby = (run.stormEvents ?? []).filter(
-        (s) => distanceMiles(lead.latitude, lead.longitude, s.latitude, s.longitude) <= 5,
-      )
-      setProfile(buildPropertyProfile({
-        address: lead.address,
-        addressKey: lead.addressKey,
-        ...(scoredLead.parcel ? { parcel: scoredLead.parcel } : {}),
-        permits,
-        storms: nearby,
-        now: new Date(),
-      }))
+    if (lead && permits) {
+      const loadProfile = async () => {
+        let nearby = (run?.stormEvents ?? []).filter(
+          (s) => distanceMiles(lead.latitude, lead.longitude, s.latitude, s.longitude) <= 5,
+        )
+        if (!run) {
+          const { createStormProvider } = await import('@/integrations/storm')
+          const provider = createStormProvider('swdi')
+          const yearAgo = new Date()
+          yearAgo.setFullYear(yearAgo.getFullYear() - 1)
+          nearby = await provider.searchEvents({
+            bbox: [lead.longitude - 0.1, lead.latitude - 0.1, lead.longitude + 0.1, lead.latitude + 0.1],
+            from: yearAgo.toISOString(),
+            to: new Date().toISOString()
+          }).catch(() => [])
+        }
+        setProfile(buildPropertyProfile({
+          address: lead.address,
+          addressKey: lead.addressKey,
+          ...(scoredLead?.parcel ? { parcel: scoredLead.parcel } : {}),
+          permits,
+          storms: nearby,
+          now: new Date(),
+        }))
+      }
+      loadProfile()
     }
   }, [lead, permits, run, scoredLead])
 
@@ -210,7 +224,12 @@ export default function LeadPage() {
               contactName: leadData.customers?.first_name ? `${leadData.customers.first_name} ${leadData.customers.last_name || ''}`.trim() : undefined,
               contactPhone: leadData.customers?.primary_phone,
               contactEmail: leadData.customers?.email,
-              contactSource: leadData.customers?.phone_source || 'third_party_lookup'
+              contactSource: leadData.customers?.phone_source || 'third_party_lookup',
+              roofAgeSource: leadData.properties.roof_age_source,
+              ownerSource: leadData.properties.owner_source,
+              permitSource: leadData.properties.last_roof_permit_source,
+              subdivisionSource: leadData.properties.subdivision_source,
+              opportunitySummary: leadData.properties.opportunity_summary,
             } as ManagedLead;
           } else {
             const { data: pData } = await supa.from('properties').select('*, leads(*, customers(*))').eq('id', leadId).maybeSingle();
@@ -231,7 +250,12 @@ export default function LeadPage() {
                 contactName: l?.customers?.first_name ? `${l.customers.first_name} ${l.customers.last_name || ''}`.trim() : undefined,
                 contactPhone: l?.customers?.primary_phone,
                 contactEmail: l?.customers?.email,
-                contactSource: l?.customers?.phone_source || 'third_party_lookup'
+                contactSource: l?.customers?.phone_source || 'third_party_lookup',
+                roofAgeSource: pData.roof_age_source,
+                ownerSource: pData.owner_source,
+                permitSource: pData.last_roof_permit_source,
+                subdivisionSource: pData.subdivision_source,
+                opportunitySummary: pData.opportunity_summary,
               } as ManagedLead;
             }
           }
@@ -750,9 +774,28 @@ export default function LeadPage() {
             <Card>
               {permits && permits.length > 0 ? (
                 permits.map(p => (
-                  <div key={p.externalId} className="border-t border-border-subtle py-2 first:border-t-0 first:pt-0">
-                    <p className="font-semibold text-text-primary text-[13px]">{p.issuedAt.slice(0, 10)} - {p.kind}</p>
-                    <p className="text-[12px] text-text-secondary">{p.externalId}</p>
+                  <div key={p.externalId} className="border-t border-border-subtle py-3 first:border-t-0 first:pt-0">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-text-primary text-[13px]">{p.issuedAt.slice(0, 10)} - {p.permitType || p.kind}</p>
+                        <p className="text-[12px] text-text-secondary mt-0.5">Permit #{p.externalId}</p>
+                      </div>
+                      {p.projectValue ? (
+                        <span className="text-[12.5px] font-medium text-status-success">
+                          ${p.projectValue.toLocaleString()}
+                        </span>
+                      ) : null}
+                    </div>
+                    {p.contractorName && (
+                      <p className="text-[12.5px] text-text-primary mt-2 flex items-center gap-1.5">
+                        <span className="text-text-secondary">Contractor:</span> <span className="font-medium text-gold-400">{p.contractorName}</span>
+                      </p>
+                    )}
+                    {p.ownerName && (
+                      <p className="text-[12.5px] text-text-secondary mt-0.5">
+                        Listed Owner: {p.ownerName}
+                      </p>
+                    )}
                   </div>
                 ))
               ) : (
@@ -899,8 +942,7 @@ export default function LeadPage() {
                 <h3 className="text-[13px] font-bold text-text-primary">Claude Analysis</h3>
               </div>
               <p className="text-[12.5px] text-text-secondary whitespace-pre-wrap">
-                {/* Note: In a full app, we'd add 'opportunitySummary' to the ManagedLead type. Using raw property access for now if it were present. */}
-                No AI summary has been generated for this property yet. Run the Property Enrichment pipeline to populate this analysis.
+                {lead.opportunitySummary || "No AI summary has been generated for this property yet. Run the Property Enrichment pipeline to populate this analysis."}
               </p>
             </Card>
           </div>
@@ -917,13 +959,13 @@ export default function LeadPage() {
                 smsConsentAt: lead.consent?.sms?.at ?? null,
                 callWindowRuleIds: callWindow.ruleIds,
                 optedOut: lead.optedOutAt !== undefined,
-                stormSource: lead.stormSource || null,
-                stormEventAt: lead.stormEventAt || null,
-                imageryCapturedAt: lead.imageryCapturedAt || null,
-                roofAgeSource: lead.roofAgeSource || null,
-                ownerSource: lead.ownerSource || null,
-                permitSource: lead.permitSource || null,
-                subdivisionSource: lead.subdivisionSource || null,
+                stormSource: profile?.storms?.[0]?.provider ?? lead.stormSource ?? null,
+                stormEventAt: profile?.storms?.[0]?.occurredAt ?? lead.stormEventAt ?? null,
+                imageryCapturedAt: lead.imageryCapturedAt ?? null,
+                roofAgeSource: (profile?.roof?.ageYears?.certainty !== 'unknown' ? profile?.roof?.ageYears?.source?.label : null) ?? lead.roofAgeSource ?? null,
+                ownerSource: (profile?.owner?.name?.certainty !== 'unknown' ? profile?.owner?.name?.source?.label : null) ?? lead.ownerSource ?? null,
+                permitSource: (profile?.roof?.permits?.length ? profile?.roof?.permits[0]?.source?.label : null) ?? lead.permitSource ?? null,
+                subdivisionSource: (profile?.subdivision?.certainty !== 'unknown' ? profile?.subdivision?.source?.label : null) ?? lead.subdivisionSource ?? null,
                 gpsVerifiedKnocks: history.filter((e) => e.gps?.verification === 'verified').length,
                 totalKnocks: history.filter((e) => e.gps !== undefined).length,
                 voiceNotes: attachments.filter((a) => a.kind === 'voice').length,
