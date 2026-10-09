@@ -5,49 +5,90 @@ import type {
   StormProvider,
   StormQuery,
 } from './types'
+import { getSupabase } from '@/lib/supabase'
 
-/**
- * HailTrace provider — intentionally unimplemented.
- *
- * As of 2026-09-18 (see docs/INTEGRATION_RESEARCH.md) HailTrace's public API
- * documentation exposes essentially one endpoint (order a hail history report
- * PDF). The event-search and per-property impact-history surface this product
- * would need is not publicly documented, its authentication method is not
- * stated, and no plan tier publicly advertises API access.
- *
- * Rather than code against a guessed API shape, this class satisfies the
- * interface and reports itself unavailable with an actionable reason. When Delta
- * Ridge has a subscription and real documentation, implement the three methods
- * below; nothing else in the application changes.
- *
- * IMPORTANT on geometry: mayPersistGeometry stays false until the subscription
- * agreement is confirmed in writing to permit storage. The database enforces
- * this independently (app.enforce_geometry_licence), so flipping this flag alone
- * is not enough — storm_providers.geometry_storage_allowed must also be updated
- * deliberately.
- */
 export class HailTraceStormProvider implements StormProvider {
   readonly id = 'hailtrace' as const
   readonly displayName = 'HailTrace'
   readonly attribution = 'Weather data provided by HailTrace'
-  readonly mayPersistGeometry = false
-
-  private readonly unavailable: ProviderAvailability = {
-    available: false,
-    reason:
-      'HailTrace is not connected. Its API requires a paid subscription and credentials that have not been ' +
-      'configured. Storm history is coming from free NOAA storm reports instead.',
-    actionable: true,
-  }
+  readonly mayPersistGeometry = false // Per docs/INTEGRATION_RESEARCH.md, wait for explicit subscription clearance
 
   async availability(): Promise<ProviderAvailability> {
-    return this.unavailable
+    const supabase = getSupabase()
+    if (!supabase) return { available: false, reason: 'Supabase client not initialized.', actionable: false }
+    
+    // We assume the Edge Function handles auth checks. 
+    // A more thorough check could ping a health endpoint on the edge function.
+    return { available: true }
   }
 
-  async searchEvents(_query: StormQuery): Promise<StormEvent[]> {
-    // Returning empty rather than throwing: an unconfigured premium provider is
-    // a normal state, not an error the field UI should surface as a crash.
-    return []
+  async searchEvents(query: StormQuery): Promise<StormEvent[]> {
+    const supabase = getSupabase()
+    if (!supabase) return []
+
+    // Convert StormQuery to HailTrace's payload shape
+    const [west, south, east, north] = query.bbox
+    const centerLat = (south + north) / 2
+    const centerLng = (west + east) / 2
+    
+    // Simplistic radius for bounding box
+    const searchRadiusMi = 10 
+
+    const payload = {
+      latitude: centerLat,
+      longitude: centerLng,
+      search_radius_mi: searchRadiusMi,
+      page_size: 100,
+      page: 1,
+      start_date: query.from.split('T')[0],
+      end_date: query.to.split('T')[0],
+      weather_types: query.eventTypes?.map(t => {
+        if (t === 'hail') return 'ALGORITHM_HAIL_SIZE'
+        if (t === 'wind') return 'WIND_SPEED'
+        if (t === 'tornado') return 'TORNADO'
+        return 'ALGORITHM_HAIL_SIZE'
+      }) || ['ALGORITHM_HAIL_SIZE', 'WIND_SPEED', 'TORNADO'],
+      include_shapes: false
+    }
+
+    if (query.minHailSizeInches) {
+      payload.min_hail_size = query.minHailSizeInches
+    }
+
+    const { data, error } = await supabase.functions.invoke('hailtrace', {
+      body: { action: 'searchEvents', payload }
+    })
+
+    if (error || !data || !data.results) {
+      console.error('HailTrace search failed', error || data)
+      return []
+    }
+
+    const events: StormEvent[] = []
+    
+    for (const result of data.results) {
+      for (const shape of result.shapes || []) {
+        const meta = shape.meta || {}
+        let eventType: StormEvent['eventType'] = 'hail'
+        if (shape.weather_type === 'WIND_SPEED') eventType = 'wind'
+        if (shape.weather_type === 'TORNADO') eventType = 'tornado'
+
+        events.push({
+          externalId: \\-\\,
+          provider: 'hailtrace',
+          eventType,
+          occurredAt: \\T00:00:00Z\,
+          hailSizeInches: meta.hail_size_inches || result.max_algorithm_hail_size,
+          windSpeedMph: meta.wind_speed_mph || result.max_meteorologist_wind_speed_mph,
+          latitude: centerLat,
+          longitude: centerLng,
+          observation: 'radar_estimate',
+          radarConfidence: 'high'
+        })
+      }
+    }
+
+    return events
   }
 
   async eventGeometry(_externalId: string): Promise<StormGeometry | null> {

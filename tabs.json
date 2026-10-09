@@ -1,0 +1,110 @@
+[
+  {
+    "description": "",
+    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@b859317bf11f6be47f9b7799ec690a0a42a1fb33/inspector.html?ws=localhost:9222/devtools/page/52F74503109C850DA50D4E1ED528E42C",
+    "faviconUrl": "https://platform.openai.com/favicon-platform-alt.svg",
+    "id": "52F74503109C850DA50D4E1ED528E42C",
+    "title": "Just a moment...",
+    "type": "page",
+    "url": "https://platform.openai.com/api-keys",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/52F74503109C850DA50D4E1ED528E42C"
+  },
+  {
+    "description": "",
+    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@b859317bf11f6be47f9b7799ec690a0a42a1fb33/inspector.html?ws=localhost:9222/devtools/page/6015F8EAEF7E5073C25D4FA27F2A74AE",
+    "faviconUrl": "https://deltaridge.bridgebox.ai/favicon.svg",
+    "id": "6015F8EAEF7E5073C25D4FA27F2A74AE",
+    "title": "Delta Ridge Field",
+    "type": "page",
+    "url": "https://deltaridge.bridgebox.ai/settings?tab=integrations",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/6015F8EAEF7E5073C25D4FA27F2A74AE"
+  },
+  {
+    "description": "",
+    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@b859317bf11f6be47f9b7799ec690a0a42a1fb33/inspector.html?ws=localhost:9222/devtools/page/A232B756F8942CD6BFDC4D95537AE436",
+    "faviconUrl": "https://cdn.zapier.com/zapier/images/favicon.ico",
+    "id": "A232B756F8942CD6BFDC4D95537AE436",
+    "title": "Login | Zapier",
+    "type": "page",
+    "url": "https://zapier.com/app/login",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/A232B756F8942CD6BFDC4D95537AE436"
+  },
+  {
+    "description": "",
+    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@b859317bf11f6be47f9b7799ec690a0a42a1fb33/inspector.html?ws=localhost:9222/devtools/page/1A019B8F34604F92801E97FCF3BA48FE",
+    "faviconUrl": "https://cdn.zapier.com/zapier/images/favicon.ico",
+    "id": "1A019B8F34604F92801E97FCF3BA48FE",
+    "parentId": "A232B756F8942CD6BFDC4D95537AE436",
+    "title": "https://a5860566053421056.cdn.optimizely.com/client_storage/a5860566053421056.html",
+    "type": "iframe",
+    "url": "https://a5860566053421056.cdn.optimizely.com/client_storage/a5860566053421056.html",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/1A019B8F34604F92801E97FCF3BA48FE"
+  },
+  {
+    "description": "",
+    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@b859317bf11f6be47f9b7799ec690a0a42a1fb33/inspector.html?ws=localhost:9222/devtools/page/A103131814606DF62B6CD6BC6BD8BA8B",
+    "faviconUrl": "https://app.batchdata.com/favicon.ico",
+    "id": "A103131814606DF62B6CD6BC6BD8BA8B",
+    "title": "BatchData",
+    "type": "page",
+    "url": "https://app.batchdata.com/dashboard",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/A103131814606DF62B6CD6BC6BD8BA8B"
+  },
+  {
+    "description": "",
+    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@b859317bf11f6be47f9b7799ec690a0a42a1fb33/inspector.html?ws=localhost:9222/devtools/page/5A019AD519FD02AF66356FE201FA09A4",
+    "faviconUrl": "https://app.batchdata.com/favicon.ico",
+    "id": "5A019AD519FD02AF66356FE201FA09A4",
+    "title": "BatchData",
+    "type": "page",
+    "url": "https://app.batchdata.com/dashboard",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/5A019AD519FD02AF66356FE201FA09A4"
+  },
+  {
+    "description": "",
+    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@b859317bf11f6be47f9b7799ec690a0a42a1fb33/inspector.html?ws=localhost:9222/devtools/page/F65CF3EDD59954AE10CD78FB9B17A3A8",
+    "id": "F65CF3EDD59954AE10CD78FB9B17A3A8",
+    "title": "Tab Search",
+    "type": "browser_ui",
+    "url": "chrome://tab-search.top-chrome/",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/F65CF3EDD59954AE10CD78FB9B17A3A8"
+  },
+  {
+    "description": "",
+    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@b859317bf11f6be47f9b7799ec690a0a42a1fb33/inspector.html?ws=localhost:9222/devtools/page/4ACC2FC8ED98EB9AECA31B5D601CD488",
+    "faviconUrl": "https://www.gstatic.com/images/branding/searchlogo/ico/favicon.ico",
+    "id": "4ACC2FC8ED98EB9AECA31B5D601CD488",
+    "title": "Google",
+    "type": "page",
+    "url": "https://www.google.com/?zx=1791507326447",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/4ACC2FC8ED98EB9AECA31B5D601CD488"
+  },
+  {
+    "description": "",
+    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@b859317bf11f6be47f9b7799ec690a0a42a1fb33/inspector.html?ws=localhost:9222/devtools/page/717BEB2A0EE42B6A008FC12FCCA96168",
+    "id": "717BEB2A0EE42B6A008FC12FCCA96168",
+    "title": "Omnibox Popup",
+    "type": "browser_ui",
+    "url": "chrome://omnibox-popup.top-chrome/",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/717BEB2A0EE42B6A008FC12FCCA96168"
+  },
+  {
+    "description": "",
+    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@b859317bf11f6be47f9b7799ec690a0a42a1fb33/inspector.html?ws=localhost:9222/devtools/page/81B690CC89EDAFBB924076ABCCC6C629",
+    "id": "81B690CC89EDAFBB924076ABCCC6C629",
+    "title": "Omnibox Popup",
+    "type": "browser_ui",
+    "url": "chrome://omnibox-popup.top-chrome/omnibox_popup_aim.html",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/81B690CC89EDAFBB924076ABCCC6C629"
+  },
+  {
+    "description": "",
+    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@b859317bf11f6be47f9b7799ec690a0a42a1fb33/inspector.html?ws=localhost:9222/devtools/page/21BAA6ABFEEC63D31A002F5133663D6C",
+    "id": "21BAA6ABFEEC63D31A002F5133663D6C",
+    "parentId": "A232B756F8942CD6BFDC4D95537AE436",
+    "title": "blob:https://zapier.com/714ea43f-33ec-4acf-b98e-c29d6bf3e36b",
+    "type": "worker",
+    "url": "blob:https://zapier.com/714ea43f-33ec-4acf-b98e-c29d6bf3e36b",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/21BAA6ABFEEC63D31A002F5133663D6C"
+  }
+]
