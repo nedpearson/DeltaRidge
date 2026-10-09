@@ -13,7 +13,7 @@ import AccountPanel from '@/features/auth/AccountPanel'
 
 // Five tabs each, the most a bottom bar should carry (Material: 3–5).
 // Everything else lives under More, grouped by job, with live/not-set-up badges.
-const MANAGER_NAV = [
+export const MANAGER_NAV = [
   { to: '/', label: 'Today', icon: 'home' },
   { to: '/leads', label: 'Pipeline', icon: 'target' },
   { to: '/manager', label: 'Team', icon: 'users' },
@@ -21,7 +21,7 @@ const MANAGER_NAV = [
   { to: '/more', label: 'More', icon: 'more' },
 ] as const
 
-const REP_NAV = [
+export const REP_NAV = [
   { to: '/', label: 'Today', icon: 'home' },
   { to: '/map', label: 'Map', icon: 'map' },
   { to: '/leads', label: 'Leads', icon: 'target' },

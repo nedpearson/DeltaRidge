@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-const ROUTES = ['/', '/leads', '/map', '/inspections', '/more', '/mission']
+const ROUTES = ['/', '/leads', '/map', '/inspections', '/more', '/status', '/mission', '/free-roof-check']
 
 for (const width of [320, 375, 430]) {
   test.describe('Mobile layout contract @ ' + width + 'px', () => {
@@ -27,7 +27,7 @@ for (const width of [320, 375, 430]) {
       const nav = page.locator('nav.mobile-tabbar')
       await expect(nav).toBeVisible()
 
-      for (const label of ['Home', 'Map', 'Jobs']) {
+      for (const label of ['Today', 'Map', 'Leads', 'Jobs', 'More']) {
         const link = nav.getByText(label, { exact: true })
         await expect(link).toBeVisible()
       }
