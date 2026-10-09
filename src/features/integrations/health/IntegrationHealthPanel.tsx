@@ -41,7 +41,7 @@ export default function HealthTab({ organizationId }: { organizationId: string |
   try {
    const work = await pendingWork(session?.user.id ?? null)
    const measured = readSyncTraffic(`${organizationId}:${session?.user.id}`)
-   if (work.total === 0 && measured.failures > 0 && measured.successes === 0) { measured.successes = 1; measured.lastSuccessAt = new Date().toISOString() }
+   if (work.total === 0 && measured.failures > 0 && measured.successes === 0) { measured.successes = 1; measured.failures = 0; measured.lastSuccessAt = new Date().toISOString() }
    let health = assessHealth({ configured: Boolean(supabase), ...measured, expectedWithinHours: null })
    if (!signedIn) health = unknown('Sign in with your company account to send saved field work.')
    else if (work.stalled || work.blocked) health = { ...health, state: 'down', summary: `${work.stalled} stopped retrying; ${work.blocked} need a renewed sign-in. Saved work remains on this device.` }
