@@ -104,20 +104,22 @@ begin
 end;
 $$;
 
--- `ingest-lead` has called this since 2026-09-29 and it never existed, so every
--- inbound webhook lead failed before writing anything. The funnel uses it too.
--- Service role only: it is an address lookup across an org's properties.
--- Plain-SQL normalisation rather than app.normalize_address: service_role
--- has no USAGE on schema app, and making this SECURITY DEFINER to reach it
--- would widen what it can do. Matches the street line only.
-create or replace function public.resolve_property_from_address(org_id uuid, address_query text)
-returns table (id uuid)
+-- Replaces the 20260927230000 resolver, which production never received (so
+-- ingest-lead, resolve-property, auto-book-appointment and assign-social-lead
+-- all failed on it) and which was SECURITY DEFINER granted to `authenticated`:
+-- any signed-in user could pass another org's id and read its properties.
+-- Same signature and columns; now SECURITY INVOKER, so RLS applies to users
+-- and service_role sees everything as before. Plain-SQL normalisation because
+-- invoker callers have no USAGE on schema app. Matches the street line.
+drop function if exists public.resolve_property_from_address(uuid, text);
+create function public.resolve_property_from_address(org_id uuid, address_query text)
+returns table (id uuid, normalized_address text, location geography)
 language sql
 stable
 security invoker
 set search_path = public, pg_temp
 as $$
-  select p.id
+  select p.id, p.normalized_address, p.location
   from public.properties p
   where p.organization_id = org_id
     and p.deleted_at is null
@@ -127,8 +129,8 @@ as $$
   limit 1
 $$;
 
-revoke execute on function public.resolve_property_from_address(uuid, text) from public, anon, authenticated;
-grant execute on function public.resolve_property_from_address(uuid, text) to service_role;
+revoke execute on function public.resolve_property_from_address(uuid, text) from public, anon;
+grant execute on function public.resolve_property_from_address(uuid, text) to authenticated, service_role;
 
 comment on table public.inspection_requests is
   'Homeowner-submitted inspection requests from the public storm-check funnel. Written only by the storm-inspection-request edge function.';
