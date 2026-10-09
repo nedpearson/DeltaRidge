@@ -193,7 +193,7 @@ export default function LeadPage() {
       if (supa) {
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(leadId);
         if (isUUID) {
-          const { data: leadData } = await supa.from('leads').select('*, properties(*)').eq('id', leadId).maybeSingle();
+          const { data: leadData } = await supa.from('leads').select('*, properties(*), customers(*)').eq('id', leadId).maybeSingle();
           if (leadData && leadData.properties) {
             found = {
               id: leadData.id,
@@ -206,10 +206,14 @@ export default function LeadPage() {
               score: leadData.score || 0,
               createdAt: leadData.created_at || new Date().toISOString(),
               updatedAt: leadData.updated_at || new Date().toISOString(),
-              knockCount: leadData.knock_count || 0
+              knockCount: leadData.knock_count || 0,
+              contactName: leadData.customers?.first_name ? `${leadData.customers.first_name} ${leadData.customers.last_name || ''}`.trim() : undefined,
+              contactPhone: leadData.customers?.primary_phone,
+              contactEmail: leadData.customers?.email,
+              contactSource: leadData.customers?.phone_source || 'third_party_lookup'
             } as ManagedLead;
           } else {
-            const { data: pData } = await supa.from('properties').select('*, leads(*)').eq('id', leadId).maybeSingle();
+            const { data: pData } = await supa.from('properties').select('*, leads(*, customers(*))').eq('id', leadId).maybeSingle();
             if (pData) {
               const l = pData.leads?.[0];
               found = {
@@ -223,7 +227,11 @@ export default function LeadPage() {
                 score: l?.score || 0,
                 createdAt: l?.created_at || new Date().toISOString(),
                 updatedAt: l?.updated_at || new Date().toISOString(),
-                knockCount: l?.knock_count || 0
+                knockCount: l?.knock_count || 0,
+                contactName: l?.customers?.first_name ? `${l.customers.first_name} ${l.customers.last_name || ''}`.trim() : undefined,
+                contactPhone: l?.customers?.primary_phone,
+                contactEmail: l?.customers?.email,
+                contactSource: l?.customers?.phone_source || 'third_party_lookup'
               } as ManagedLead;
             }
           }
