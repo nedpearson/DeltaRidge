@@ -156,7 +156,7 @@ export default function MapPage() {
         {focusLead === null && filteredLeads.length > 0 && <FitToMarkers leads={filteredLeads} />}
 
         {filteredLeads.map(lead => (
-          <Marker eventHandlers={{ click: () => navigate('/lead/' + lead.id) }}
+          <Marker eventHandlers={{ click: () => navigate('/leads/' + lead.id) }}
             key={lead.id}
             position={[lead.latitude, lead.longitude]}
             icon={lead.status === 'won' ? JobPin : LeadPin}
@@ -175,7 +175,7 @@ export default function MapPage() {
                   <Button
                     variant="secondary"
                     className="w-full text-[11px]"
-                    onClick={() => navigate('/lead/' + lead.id)}
+                    onClick={() => navigate('/leads/' + lead.id)}
                   >
                     Open Lead 360
                   </Button>

@@ -1,17 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-const MANAGER_NAV = [
-  { to: '/', label: 'Home', icon: 'home' },
-  { to: '/storm-os', label: 'Storm OS', icon: 'storm' },
-  { to: '/team', label: 'Team', icon: 'users' },
-  { to: '/settings', label: 'Settings', icon: 'settings' },
-] as const
-
-const REP_NAV = [
-  { to: '/', label: 'Home', icon: 'home' },
-  { to: '/map', label: 'Map', icon: 'map' },
-  { to: '/inspections', label: 'Jobs', icon: 'clipboard' },
-] as const
+// The real arrays, not a copy: a copied list tests nothing.
+import { MANAGER_NAV, REP_NAV } from '@/components/AppShell'
+import appSource from '../../src/App.tsx?raw'
 
 const ALL_NAVS = [MANAGER_NAV, REP_NAV]
 
@@ -34,6 +25,13 @@ describe('bottom navigation', () => {
       for (const item of NAV) {
         expect(item.label.length).toBeLessThanOrEqual(8)
       }
+    }
+  })
+  it('gives both roles a More tab and routes that exist in the app', () => {
+    const app = appSource
+    for (const NAV of ALL_NAVS) {
+      expect(NAV.some((item) => item.to === '/more')).toBe(true)
+      for (const item of NAV) expect(app).toContain(`path="${item.to}"`)
     }
   })
 })

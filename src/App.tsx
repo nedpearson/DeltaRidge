@@ -4,7 +4,7 @@ import HomeownerPortal from '@/pages/HomeownerPortal'
 import MissionPage from '@/pages/MissionPage'
 import FreeRoofCheckPage from '@/pages/FreeRoofCheckPage'
 import { Suspense, lazy, useEffect } from 'react'
-import { Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import AppShell from '@/components/AppShell'
 import UpdateBanner from '@/components/UpdateBanner'
 import HomePage from '@/pages/HomePage'
@@ -14,7 +14,6 @@ import InspectionPage from '@/pages/InspectionPage'
 import LeadsPage from '@/pages/LeadsPage'
 import SubdivisionPage from '@/pages/SubdivisionPage'
 import StormOSPage from '@/pages/StormOSPage'
-import TeamPage from '@/pages/TeamPage'
 import PropertyPage from '@/pages/PropertyPage'
 import LeadPage from '@/pages/LeadPage'
 import EvidencePackagePage from '@/pages/EvidencePackagePage'
@@ -31,6 +30,7 @@ const CostBookPage = lazy(() => import('@/pages/CostBookPage'))
 const TrainingSimulatorPage = lazy(() => import('@/pages/TrainingSimulatorPage'))
 const RouteHistoryPage = lazy(() => import('@/pages/RouteHistoryPage'))
 const InboxPage = lazy(() => import('@/pages/InboxPage'))
+const StatusPage = lazy(() => import('@/pages/StatusPage'))
 const BrandBrainPage = lazy(() => import('@/pages/BrandBrainPage'))
 const CreativeStudioPage = lazy(() => import('@/pages/CreativeStudioPage'))
 const ContentCalendarPage = lazy(() => import('@/pages/ContentCalendarPage'))
@@ -45,6 +45,12 @@ import { trackEvent } from '@/lib/analytics'
 function SyncRunner() {
   useSync()
   return null
+}
+
+/** Old links (map markers, search, push notifications) used /lead/:id. */
+function LegacyLeadRedirect() {
+  const { id } = useParams()
+  return <Navigate to={`/leads/${id ?? ''}`} replace />
 }
 
 function RouteAnalytics() {
@@ -93,8 +99,10 @@ export default function App() {
                       <Route path="/leads" element={<LeadsPage />} />
                         <Route path="/subdivisions/:name" element={<SubdivisionPage />} />
                       <Route path="/storm-os" element={<StormOSPage />} />
-                      <Route path="/team" element={<TeamPage />} />
+                      <Route path="/team" element={<Navigate to="/manager" replace />} />
+                      <Route path="/status" element={<StatusPage />} />
                       <Route path="/leads/:id" element={<LeadPage />} />
+                      <Route path="/lead/:id" element={<LegacyLeadRedirect />} />
                       <Route path="/evidence/:id" element={<EvidencePackagePage />} />
                       <Route path="/property/:addressKey" element={<PropertyPage />} />
                       <Route path="/estimate" element={<EstimatePage />} />

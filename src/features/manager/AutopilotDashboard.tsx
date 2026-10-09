@@ -135,7 +135,7 @@ export function AutopilotDashboard() {
                   </p>
                 </div>
                 <div className="flex-shrink-0">
-                  <Button variant="secondary" onClick={() => navigate(`/lead/${c.lead_id}`)}>
+                  <Button variant="secondary" onClick={() => navigate(`/leads/${c.lead_id}`)}>
                     Review Thread <ArrowRight size={14} className="ml-1" />
                   </Button>
                 </div>

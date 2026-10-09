@@ -34,7 +34,7 @@ export class HailTraceStormProvider implements StormProvider {
     // Simplistic radius for bounding box
     const searchRadiusMi = 10 
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       latitude: centerLat,
       longitude: centerLng,
       search_radius_mi: searchRadiusMi,
@@ -83,7 +83,7 @@ export class HailTraceStormProvider implements StormProvider {
           latitude: centerLat,
           longitude: centerLng,
           observation: 'radar_estimate',
-          radarConfidence: 'high'
+          radarConfidence: 'radar_only'
         })
       }
     }

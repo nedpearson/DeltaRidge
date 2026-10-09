@@ -12,7 +12,7 @@ export function AIAssistant({ isOpen, onClose }: { isOpen: boolean; onClose: () 
       let initialSuggestion = 'How can I help you today?'
       const path = location.pathname
       
-      if (path.startsWith('/lead/')) {
+      if (path.startsWith('/leads/')) {
         initialSuggestion = "Summarize this lead's storm exposure."
       } else if (path.startsWith('/settings')) {
         initialSuggestion = 'Check AI automation readiness.'
