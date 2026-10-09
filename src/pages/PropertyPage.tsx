@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { OwnerLine, occupancyEvidence } from '@/components/OwnerLine'
 import { Button, Card, Empty, SectionTitle } from '@/components/ui'
+import LocalResourcesCard from '@/components/LocalResourcesCard'
 import { type ManagedLead } from '@/features/leads/pipeline'
 import ResidentPhoneCard from '@/components/ResidentPhoneCard'
 import { saveResidentContact } from '@/features/leads/contact-enrichment'
@@ -37,14 +38,17 @@ import RoofImageryPanel from '@/features/imagery/RoofImageryPanel'
  * than showing an empty row that reads like a loading state or, worse, a zero.
  */
 
-type Tab = 'property' | 'owner' | 'roof' | 'storms' | 'permits'
+type Tab = 'property' | 'owner' | 'roof' | 'storms' | 'permits' | 'local'
 
+// Storm evidence first: it is why we are at this door. Local = permit office,
+// assessor, parcel map, flood zone and code for this parish.
 const TABS: readonly { key: Tab; label: string }[] = [
-  { key: 'property', label: 'Property' },
-  { key: 'owner', label: 'Owner' },
-  { key: 'roof', label: 'Roof' },
   { key: 'storms', label: 'Storms' },
+  { key: 'roof', label: 'Roof' },
+  { key: 'owner', label: 'Owner' },
   { key: 'permits', label: 'Permits' },
+  { key: 'property', label: 'Property' },
+  { key: 'local', label: 'Local' },
 ]
 
 /** Miles either side of the parcel that count as "this storm hit here". */
@@ -56,7 +60,7 @@ export default function PropertyPage() {
   const [run, setRun] = useState<LeadRun | null>(null)
   const [permits, setPermits] = useState<PermitRecord[] | null>(null)
   const [permitError, setPermitError] = useState(false)
-  const [tab, setTab] = useState<Tab>('property')
+  const [tab, setTab] = useState<Tab>('storms')
   /*
    * The managed lead for this address, if the rep has already worked it.
    *
@@ -218,7 +222,7 @@ export default function PropertyPage() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] ${
-              tab === t.key ? 'bg-gold-500/20 text-gold-300' : 'bg-bg-elevated text-text-secondary'
+              tab === t.key ? 'bg-brand-gold/20 font-semibold text-brand-gold-highlight ring-1 ring-brand-gold/40' : 'bg-bg-elevated text-text-secondary'
             }`}
           >
             {t.label}
@@ -246,6 +250,9 @@ export default function PropertyPage() {
           />
         )}
         {tab === 'storms' && <StormsTab profile={profile} />}
+        {tab === 'local' && (
+          <LocalResourcesCard address={[lead.address, lead.city, 'LA', lead.postalCode].filter(Boolean).join(', ')} city={lead.city} />
+        )}
         {tab === 'permits' && (
           <PermitsTab profile={profile} permits={permits} failed={permitError} />
         )}

@@ -11,19 +11,22 @@ import { Bot, UserCircle, Settings, LogOut, Sun, CloudLightning, Users } from 'l
 import { useSession } from '@/features/auth/session'
 import AccountPanel from '@/features/auth/AccountPanel'
 
+// Five tabs each, the most a bottom bar should carry (Material: 3–5).
+// Everything else lives under More, grouped by job, with live/not-set-up badges.
 const MANAGER_NAV = [
-  { to: '/', label: 'Home', icon: 'home' },
-  { to: '/storm-os', label: 'Storm OS', icon: 'storm' },
-  { to: '/team', label: 'Team', icon: 'users' },
-  { to: '/leads', label: 'Leads', icon: 'target' },
-  { to: '/settings', label: 'Settings', icon: 'settings' },
+  { to: '/', label: 'Today', icon: 'home' },
+  { to: '/leads', label: 'Pipeline', icon: 'target' },
+  { to: '/manager', label: 'Team', icon: 'users' },
+  { to: '/storm-os', label: 'Storms', icon: 'storm' },
+  { to: '/more', label: 'More', icon: 'more' },
 ] as const
 
 const REP_NAV = [
-  { to: '/', label: 'Home', icon: 'home' },
+  { to: '/', label: 'Today', icon: 'home' },
   { to: '/map', label: 'Map', icon: 'map' },
   { to: '/leads', label: 'Leads', icon: 'target' },
   { to: '/inspections', label: 'Jobs', icon: 'clipboard' },
+  { to: '/more', label: 'More', icon: 'more' },
 ] as const
 
 function Icon({ name }: { name: string }) {
@@ -194,7 +197,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
               <OnlinePill />
               <div className="hidden sm:block"><UniversalSearch /></div>
-              <div className="hidden sm:block"><NotificationCenter /></div>
+              <NotificationCenter />
               <button type="button" onClick={() => setAssistantOpen(true)} className="hidden size-10 place-items-center rounded-xl text-text-secondary hover:bg-bg-elevated sm:grid" aria-label="Open AI assistant">
                 <Bot size={19} />
               </button>

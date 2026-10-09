@@ -1,7 +1,11 @@
-
-import { useNavigate } from 'react-router-dom'
-import { Button, Card, SectionTitle } from '@/components/ui'
+import { Link, useNavigate } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { CalendarClock, ClipboardPlus, CloudLightning, History, Map as MapIcon, Navigation, Route, Target, Users } from 'lucide-react'
 import type { LocalInspection } from '@/lib/db'
+import { useSession } from '@/features/auth/session'
+import { useRepToday } from '@/features/dashboard/useRepToday'
+import HotLeadsPanel from '@/components/HotLeadsPanel'
+import { StatusSummaryCard } from '@/pages/StatusPage'
 
 export function inspectionTitle(i: LocalInspection): string {
   if (i.addressLine1) return i.addressLine1
@@ -9,125 +13,105 @@ export function inspectionTitle(i: LocalInspection): string {
   return name || i.customerCompanyName || 'Untitled inspection'
 }
 
-import { useSession } from '@/features/auth/session'
-import { useRepToday } from '@/features/dashboard/useRepToday'
-import { CalendarClock, Target, MapPin, ChevronRight, Activity, Users } from 'lucide-react'
-import HotLeadsPanel from '@/components/HotLeadsPanel'
+/**
+ * Today — one screen, top to bottom in the order a rep needs it:
+ *   1. homeowners who asked for an inspection (call them first)
+ *   2. the next booked appointment
+ *   3. four big buttons for everything else
+ * Nothing here is a placeholder number: if there is no data, it says so.
+ */
 
-function ManagerDashboard() {
-  const navigate = useNavigate()
-  
+function Greeting({ title }: { title: string }) {
+  const date = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-[clamp(1.35rem,6vw,1.75rem)] font-bold font-display tracking-tight text-text-primary">Manager Overview</h1>
-      </div>
-      <HotLeadsPanel manager />
-
-      <div>
-        <SectionTitle>ACTIVE STORMS</SectionTitle>
-        <div className="mt-2 p-4 flex items-center justify-between rounded-xl ring-1 ring-border-subtle shadow-sm bg-bg-card cursor-pointer hover:bg-bg-elevated transition-colors" onClick={() => navigate('/storm-os')}>
-          <div className="flex items-center gap-3">
-            <Activity className="text-brand-500 w-5 h-5" />
-            <div>
-              <div className="font-bold text-text-primary text-sm">Storm OS</div>
-              <div className="text-xs text-text-secondary">Hail swaths, storm windows and target areas</div>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-text-muted" />
-        </div>
-      </div>
-
-      <div>
-        <SectionTitle>ACTIVE REPS</SectionTitle>
-        <div className="mt-2 p-4 flex items-center justify-between rounded-xl ring-1 ring-border-subtle shadow-sm bg-bg-card cursor-pointer hover:bg-bg-elevated transition-colors" onClick={() => navigate('/team')}>
-          <div className="flex items-center gap-3">
-            <Users className="text-brand-500 w-5 h-5" />
-            <div>
-              <div className="font-bold text-text-primary text-sm">Field Activity</div>
-              <div className="text-xs text-text-secondary">Who is out, where, and what they've logged today</div>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-text-muted" />
-        </div>
-      </div>
-
+    <div>
+      <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-text-muted">{date}</p>
+      <h1 className="font-display text-[clamp(1.5rem,6.5vw,1.9rem)] font-bold tracking-tight text-text-primary">{title}</h1>
     </div>
   )
 }
 
-function RepDashboard() {
+function Tile({ to, icon, label, sub }: { to: string; icon: ReactNode; label: string; sub: string }) {
+  return (
+    <Link to={to} className="flex min-h-[88px] flex-col justify-between rounded-2xl bg-bg-card p-3.5 ring-1 ring-border-subtle active:bg-bg-elevated">
+      <span className="text-brand-hover">{icon}</span>
+      <span>
+        <span className="block text-[14.5px] font-bold text-text-primary">{label}</span>
+        <span className="block text-[11.5px] leading-snug text-text-secondary">{sub}</span>
+      </span>
+    </Link>
+  )
+}
+
+function NextAppointment() {
   const navigate = useNavigate()
-  const { data: today, loading } = useRepToday()
+  const { data, loading } = useRepToday()
+  const appt = data?.nextAppointment ?? null
+  if (loading) return <div className="rounded-2xl bg-bg-card p-4 text-sm text-text-muted ring-1 ring-border-subtle">Loading your schedule…</div>
+  if (!appt) {
+    return (
+      <div className="rounded-2xl bg-bg-card p-4 ring-1 ring-border-subtle">
+        <p className="text-[14px] font-semibold text-text-primary">No appointments booked</p>
+        <p className="mt-0.5 text-[12.5px] text-text-secondary">Confirm a request above and it shows up here.</p>
+      </div>
+    )
+  }
+  const when = new Date(appt.time)
+  const label = Number.isFinite(when.getTime())
+    ? when.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+    : appt.time
+  return (
+    <div className="rounded-2xl bg-bg-card p-4 ring-1 ring-brand-primary/40">
+      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-brand-hover">
+        <CalendarClock size={14} /> Next appointment{appt.confirmed ? '' : ' · not confirmed'}
+      </div>
+      <p className="mt-1.5 text-[18px] font-bold leading-tight text-text-primary">{label}</p>
+      <p className="text-[13px] text-text-secondary">{appt.address}</p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(appt.address)}`} target="_blank" rel="noreferrer"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-primary text-[14px] font-bold text-white">
+          <Navigation size={16} /> Drive
+        </a>
+        <button type="button" disabled={!appt.leadId} onClick={() => appt.leadId && navigate(`/leads/${appt.leadId}`)}
+          className="min-h-12 rounded-xl bg-bg-elevated text-[14px] font-bold text-text-primary disabled:opacity-40">
+          Open lead
+        </button>
+      </div>
+    </div>
+  )
+}
 
-  const nextTarget = today?.nextAppointment 
-    ? { type: 'appointment', label: 'Upcoming Appointment', title: today.nextAppointment.time, subtitle: today.nextAppointment.address, id: today.nextAppointment.leadId } 
-    : today?.nextBestAction 
-      ? { type: 'lead', label: 'Next Best Action', title: today.nextBestAction.address, subtitle: today.nextBestAction.reason || 'Recommended target', id: today.nextBestAction.id }
-      : null;
-
+function RepToday() {
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-[clamp(1.35rem,6vw,1.75rem)] font-bold font-display tracking-tight text-text-primary">Your Day</h1>
-      </div>
-
+      <Greeting title="Today" />
       <HotLeadsPanel />
+      <section>
+        <h2 className="mb-2 text-[12px] font-bold uppercase tracking-[0.14em] text-text-muted">Schedule</h2>
+        <NextAppointment />
+      </section>
+      <section className="grid grid-cols-2 gap-2.5">
+        <Tile to="/mission" icon={<Route size={22} />} label="Start route" sub="GPS-logged doors, works offline" />
+        <Tile to="/new" icon={<ClipboardPlus size={22} />} label="New inspection" sub="Checklist, photos, voice notes" />
+        <Tile to="/map" icon={<MapIcon size={22} />} label="Map" sub="Hail, leads and your location" />
+        <Tile to="/leads" icon={<Target size={22} />} label="Leads" sub="Every door, scored by storm and roof age" />
+      </section>
+    </div>
+  )
+}
 
-      <div>
-        <SectionTitle>NEXT APPOINTMENT</SectionTitle>
-        {loading ? (
-          <Card className="mt-2 p-4 text-center text-text-secondary text-sm">Loading...</Card>
-        ) : nextTarget ? (
-          <Card className="mt-2 border-l-4 border-l-brand-500 bg-brand-500/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-3 opacity-10">
-              {nextTarget.type === 'appointment' ? <CalendarClock size={48} /> : <Target size={48} />}
-            </div>
-            <div className="flex flex-col gap-3 relative z-10">
-              <div>
-                <span className="text-[10px] uppercase tracking-wider text-brand-500 font-bold">{nextTarget.label}</span>
-                <h3 className="font-bold text-[18px] text-text-primary leading-tight mt-1">{nextTarget.title}</h3>
-                <p className="text-[13px] text-text-secondary font-medium mt-0.5">{nextTarget.subtitle}</p>
-              </div>
-              
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <Button variant="primary" className="flex-1 text-[13px] py-2.5 font-bold" onClick={() => navigate('/mission')}>GO</Button>
-                {nextTarget.id && (
-                  <Button variant="secondary" className="flex-1 text-[13px] py-2.5" onClick={() => navigate('/leads/' + nextTarget.id)}>OPEN</Button>
-                )}
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <Card className="mt-2 p-4 text-center text-text-secondary text-sm border border-border-subtle">
-            You have no upcoming appointments.
-          </Card>
-        )}
-      </div>
-
-      <div>
-        <SectionTitle>ACTIVE ROUTE</SectionTitle>
-        <Card className="mt-2 bg-bg-card p-0 shadow-sm ring-1 ring-border-subtle divide-y divide-border-subtle overflow-hidden">
-          <div className="flex justify-between items-center p-3">
-            <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Route Status</span>
-            <Button variant="primary" className="py-1 px-3 text-xs" onClick={() => navigate('/mission')}>Start Route</Button>
-          </div>
-          <div className="flex justify-between items-center p-3 cursor-pointer hover:bg-bg-elevated transition-colors" onClick={() => navigate('/map')}>
-            <span className="text-[13px] text-text-secondary font-medium uppercase tracking-wide">Nearby Opportunities</span>
-            <div className="flex items-center gap-2">
-              <span className="text-[14px] font-bold text-text-primary">{today?.nearbyOpportunities?.length || 0}</span>
-              <MapPin className="w-4 h-4 text-text-muted" />
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div>
-        <SectionTitle>OPEN INSPECTIONS</SectionTitle>
-        <div className="mt-2 p-4 text-center text-text-secondary text-sm rounded-xl ring-1 ring-border-subtle shadow-sm bg-bg-card cursor-pointer hover:bg-bg-elevated transition-colors" onClick={() => navigate('/inspections')}>
-          View your assigned jobs and open inspections.
-        </div>
-      </div>
+function ManagerToday() {
+  return (
+    <div className="space-y-5">
+      <Greeting title="Today" />
+      <HotLeadsPanel manager />
+      <StatusSummaryCard />
+      <section className="grid grid-cols-2 gap-2.5">
+        <Tile to="/manager" icon={<Users size={22} />} label="Team" sub="Who's out, doors, assignments" />
+        <Tile to="/storm-os" icon={<CloudLightning size={22} />} label="Storms" sub="Hail swaths and target areas" />
+        <Tile to="/leads" icon={<Target size={22} />} label="Pipeline" sub="All leads by stage" />
+        <Tile to="/routes" icon={<History size={22} />} label="Route history" sub="Trails and door outcomes" />
+      </section>
     </div>
   )
 }
@@ -135,7 +119,5 @@ function RepDashboard() {
 export default function HomePage() {
   const { membership } = useSession()
   const role = membership?.role?.toLowerCase() || 'rep'
-  const isManager = role === 'admin' || role === 'manager'
-
-  return isManager ? <ManagerDashboard /> : <RepDashboard />
+  return role === 'admin' || role === 'manager' ? <ManagerToday /> : <RepToday />
 }
