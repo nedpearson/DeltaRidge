@@ -74,10 +74,10 @@ export class HailTraceStormProvider implements StormProvider {
         if (shape.weather_type === 'TORNADO') eventType = 'tornado'
 
         events.push({
-          externalId: \\-\\,
+          externalId: `${result.date}-${shape.weather_type}`,
           provider: 'hailtrace',
           eventType,
-          occurredAt: \\T00:00:00Z\,
+          occurredAt: `${result.date}T00:00:00Z`,
           hailSizeInches: meta.hail_size_inches || result.max_algorithm_hail_size,
           windSpeedMph: meta.wind_speed_mph || result.max_meteorologist_wind_speed_mph,
           latitude: centerLat,
