@@ -20,7 +20,7 @@ import type { InspectionResolver } from './resolve'
  */
 export async function pushHandoff(localInspectionId: string, orgId: string, userId: string, resolve: InspectionResolver): Promise<void> {
   const inspection = await readInspection(localInspectionId)
-  if (!inspection) throw new Error('inspection missing locally')
+  if (!inspection) return
 
   const supabase = getSupabase()
   if (!supabase) throw new Error('not configured')
@@ -79,3 +79,4 @@ export async function pushHandoff(localInspectionId: string, orgId: string, user
   if (error) throw new Error(`handoff: ${error.message}`)
   await setRemoteId('handoff', localInspectionId, data.id as string)
 }
+

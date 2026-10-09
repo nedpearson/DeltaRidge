@@ -122,6 +122,7 @@ export async function syncOutbox(orgId: string | null, userId: string | null): P
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
+        if (message.includes('missing locally')) { await clearOutboxItem(item.id); continue; }
       await markOutboxError(item.id, message)
       result.failed += 1
       if (result.errors.length < 5) result.errors.push(`${item.entity}: ${message}`)
@@ -224,6 +225,7 @@ async function drainRoutePoints(
           result.pushed += 1
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err)
+        if (message.includes('missing locally')) { await clearOutboxItem(itemId); continue; }
           await markOutboxError(itemId, message)
           result.failed += 1
           if (result.errors.length < 5) result.errors.push(`routePoint: ${message}`)
@@ -256,3 +258,7 @@ export async function pendingWork(
     blocked: all.filter((i) => i.blockedReason === 'auth').length,
   }
 }
+
+
+
+

@@ -10,14 +10,16 @@ Deno.serve(async (req: Request) => {
   const { asCaller } = await requireOrgMember(req,organizationId)
   const { data: runs, error } = await asCaller.from('integration_runs').select('integration,status,detail,created_at')
    .eq('organization_id',organizationId).gte('created_at',new Date(Date.now()-7*86400000).toISOString()).order('created_at',{ascending:false}).limit(1000)
-  if (error) return json({ error: 'Integration telemetry has not been deployed.' },503)
+  if (error) return json({ error: 'Integration telemetry has not been deployed.', dbError: error },503)
   const {data:contactSettings,error:contactError}=await asCaller.from('contact_provider_settings').select('entitlement,commercial_use_confirmed').eq('organization_id',organizationId).maybeSingle()
-  if(contactError)return json({error:'Contact provider configuration cannot be read.'},503)
+  if(contactError)return json({error:'Contact provider configuration cannot be read.', dbError: contactError},503)
   const present = (name: string) => Boolean(Deno.env.get(name))
   return json({ configured: {
    contacts: contactSettings?.entitlement==='business_api' && contactSettings.commercial_use_confirmed===true && (present('BATCHDATA_API_KEY') || present('SKIPTRACE_API_KEY') || present('REALESTATE_API_KEY')),
    push: present('VAPID_PUBLIC_KEY') && present('VAPID_PRIVATE_KEY') && present('VAPID_SUBJECT'),
    roofr: present('ZAPIER_ROOFR_HOOK_URL'),
   }, runs: runs ?? [] })
- } catch { return json({ error: 'Sign in with an active organization account.' },401) }
+ } catch (e) { return json({ error: 'Sign in with an active organization account.', detail: e.message },401) }
 })
+
+

@@ -30,7 +30,7 @@ function voicePath(orgId: string, inspectionId: string, noteId: string): string 
 
 export async function pushPhoto(localId: string, orgId: string, userId: string, resolve: InspectionResolver): Promise<void> {
   const photo = await readPhoto(localId)
-  if (!photo) throw new Error('photo missing locally')
+  if (!photo) return
 
   const supabase = getSupabase()
   if (!supabase) throw new Error('not configured')
@@ -83,7 +83,7 @@ export async function pushPhoto(localId: string, orgId: string, userId: string, 
 
 export async function pushObservation(localId: string, orgId: string, userId: string, resolve: InspectionResolver): Promise<void> {
   const o = await readObservation(localId)
-  if (!o) throw new Error('observation missing locally')
+  if (!o) return
 
   const supabase = getSupabase()
   if (!supabase) throw new Error('not configured')
@@ -116,7 +116,7 @@ export async function pushObservation(localId: string, orgId: string, userId: st
 
 export async function pushVoiceNote(localId: string, orgId: string, userId: string, resolve: InspectionResolver): Promise<void> {
   const v = await readVoiceNote(localId)
-  if (!v) throw new Error('voice note missing locally')
+  if (!v) return
 
   const supabase = getSupabase()
   if (!supabase) throw new Error('not configured')
@@ -152,3 +152,4 @@ export async function pushVoiceNote(localId: string, orgId: string, userId: stri
   await setRemoteId('voiceNote', localId, data.id as string)
   await markSynced('voiceNotes', localId, 'synced')
 }
+

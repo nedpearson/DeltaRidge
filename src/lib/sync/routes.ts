@@ -55,7 +55,7 @@ export async function pushRouteSession(
 
 export async function pushRoutePoint(localId: string, orgId: string, userId: string): Promise<void> {
   const point = await readPoint(localId)
-  if (!point) throw new Error('route point missing locally')
+  if (!point) return
 
   const supabase = getSupabase()
   if (!supabase) throw new Error('not configured')
@@ -181,3 +181,5 @@ export async function unsyncedPointCount(sessionId: string): Promise<number> {
   }
   return pending
 }
+
+

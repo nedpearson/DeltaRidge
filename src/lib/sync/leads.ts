@@ -243,7 +243,7 @@ async function pushAppointment(
 
 export async function pushLeadActivity(localId: string, orgId: string, userId: string): Promise<void> {
   const event = await readEvent(localId)
-  if (!event) throw new Error('activity missing locally')
+  if (!event) return
 
   const supabase = getSupabase()
   if (!supabase) throw new Error('not configured')
@@ -312,7 +312,7 @@ function attachmentPath(orgId: string, leadId: string, id: string, kind: string)
 
 export async function pushLeadAttachment(localId: string, orgId: string, userId: string): Promise<void> {
   const attachment = await readAttachment(localId)
-  if (!attachment) throw new Error('attachment missing locally')
+  if (!attachment) return
 
   const supabase = getSupabase()
   if (!supabase) throw new Error('not configured')
@@ -376,3 +376,5 @@ export async function pushLeadAttachment(localId: string, orgId: string, userId:
   if (error) throw new Error(`attachment row: ${error.message}`)
   await setRemoteId('leadAttachment', localId, data.id as string)
 }
+
+
