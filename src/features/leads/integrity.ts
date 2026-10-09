@@ -80,6 +80,10 @@ export interface IntegrityEvidence {
   readonly pendingSyncItems: number
   readonly failedSyncItems: number
   readonly now: string
+  readonly roofAgeSource?: string | null
+  readonly ownerSource?: string | null
+  readonly permitSource?: string | null
+  readonly subdivisionSource?: string | null
 }
 
 /** Aerial imagery older than this is quoted with its age rather than presented as current. */
@@ -114,6 +118,24 @@ export function integrityChecks(evidence: IntegrityEvidence): IntegrityCheck[] {
       ? { key: 'address', label: 'Property', state: 'established', basis: 'On the parcel list' }
       : { key: 'address', label: 'Property', state: 'attention', basis: 'No address on this lead' },
   )
+
+  if (evidence.ownerSource) {
+    checks.push({ key: 'owner', label: 'Owner', state: 'established', basis: evidence.ownerSource })
+  } else {
+    checks.push({ key: 'owner', label: 'Owner', state: 'absent', basis: 'Not verified' })
+  }
+
+  if (evidence.roofAgeSource) {
+    checks.push({ key: 'roofAge', label: 'Roof Age', state: 'established', basis: evidence.roofAgeSource })
+  }
+  
+  if (evidence.subdivisionSource) {
+    checks.push({ key: 'subdivision', label: 'Subdivision', state: 'established', basis: evidence.subdivisionSource })
+  }
+
+  if (evidence.permitSource) {
+    checks.push({ key: 'permit', label: 'Permit History', state: 'established', basis: evidence.permitSource })
+  }
 
   // A phone number is never "verified" here. The only thing this app can
   // witness is where it came from, and that is what decides whether it may be

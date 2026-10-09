@@ -589,6 +589,13 @@ export interface ApplyOptions {
   gps?: KnockVerificationRecord
   /** The open route, if one is running. See ContactEvent.routeSessionId. */
   routeSessionId?: string
+  roofAgeSource?: string | null
+  ownerSource?: string | null
+  permitSource?: string | null
+  subdivisionSource?: string | null
+  stormSource?: string | null
+  stormEventAt?: string | null
+  imageryCapturedAt?: string | null
 }
 
 /**
