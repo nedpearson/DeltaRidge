@@ -54,9 +54,6 @@ verify_jwt = false
 [functions.ingest-mrms]
 verify_jwt = false
 
-[functions.run-sql]
-enabled = true
-verify_jwt = false
 import_map = "./functions/run-sql/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
