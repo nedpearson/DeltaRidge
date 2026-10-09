@@ -964,7 +964,7 @@ export default function LeadPage() {
                 imageryCapturedAt: lead.imageryCapturedAt ?? null,
                 roofAgeSource: (profile?.roof?.ageYears?.certainty !== 'unknown' ? profile?.roof?.ageYears?.source?.label : null) ?? lead.roofAgeSource ?? null,
                 ownerSource: (profile?.owner?.name?.certainty !== 'unknown' ? profile?.owner?.name?.source?.label : null) ?? lead.ownerSource ?? null,
-                permitSource: (profile?.roof?.permits?.length ? profile?.roof?.permits[0]?.source?.label : null) ?? lead.permitSource ?? null,
+                permitSource: (profile?.roof?.permits?.length ? profile?.roof?.permits[0]?.provider : null) ?? lead.permitSource ?? null,
                 subdivisionSource: (profile?.subdivision?.certainty !== 'unknown' ? profile?.subdivision?.source?.label : null) ?? lead.subdivisionSource ?? null,
                 gpsVerifiedKnocks: history.filter((e) => e.gps?.verification === 'verified').length,
                 totalKnocks: history.filter((e) => e.gps !== undefined).length,

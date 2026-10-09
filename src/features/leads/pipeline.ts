@@ -167,6 +167,14 @@ export interface ManagedLead {
    * could set a number at all — not because absent means trustworthy.
    */
   contactSource?: ContactSource
+  roofAgeSource?: string | null
+  ownerSource?: string | null
+  permitSource?: string | null
+  subdivisionSource?: string | null
+  stormSource?: string | null
+  stormEventAt?: string | null
+  imageryCapturedAt?: string | null
+  opportunitySummary?: string | null
   /** When to come back. ISO. */
   nextActionAt?: string
   /** An agreed time, which is a stronger claim than a follow-up. ISO. */
